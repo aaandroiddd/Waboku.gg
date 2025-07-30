@@ -27,6 +27,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import MfaEnrollment from '@/components/MfaEnrollment';
 import { BlockedUsersManager } from '@/components/BlockedUsersManager';
+import { EmailChangeForm } from '@/components/EmailChangeForm';
 import { NotificationPreferences } from '@/types/notification';
 
 const DashboardLayout = dynamic(
@@ -51,6 +52,7 @@ const SettingsPageContent = () => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  const [isEmailSecurityOpen, setIsEmailSecurityOpen] = useState(false);
   const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
   const [isTroubleshootingOpen, setIsTroubleshootingOpen] = useState(false);
   const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
@@ -846,6 +848,42 @@ const SettingsPageContent = () => {
                     <MfaEnrollment />
                   </div>
                 </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Email & Account Security */}
+        <Card>
+          <Collapsible open={isEmailSecurityOpen} onOpenChange={setIsEmailSecurityOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    <div>
+                      <CardTitle>Email & Account Security</CardTitle>
+                      <CardDescription>
+                        Manage your email address and account access
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <EmailChangeForm 
+                  onSuccess={() => {
+                    setSuccess("Email address updated successfully!");
+                    setTimeout(() => setSuccess(""), 5000);
+                  }}
+                  onError={(error) => {
+                    setError(error);
+                    setTimeout(() => setError(""), 5000);
+                  }}
+                />
               </CardContent>
             </CollapsibleContent>
           </Collapsible>
