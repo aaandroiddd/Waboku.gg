@@ -24,6 +24,7 @@ import { MockListingGenerator } from '@/components/admin/MockListingGenerator';
 import { PickupCodeDebugger } from '@/components/admin/PickupCodeDebugger';
 import { ListingUsernameDebugger } from '@/components/admin/ListingUsernameDebugger';
 import ProductionUsernameDebugger from '@/components/admin/ProductionUsernameDebugger';
+import { ListingExpirationDebugger } from '@/components/ListingExpirationDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -47,6 +48,7 @@ const SECTIONS = [
   { id: "firebase", label: "Firebase Diagnostics" },
   { id: "listing-analytics", label: "Listing Analytics & Capacity Monitoring" },
   { id: "listing-debug", label: "Listing Debug Tool" },
+  { id: "listing-expiration-debug", label: "Listing Expiration Debugger" },
   { id: "listing-username-debug", label: "Listing Username Debugger" },
   { id: "listing-visibility", label: "Listing Visibility Diagnostics" },
   { id: "mock-listings", label: "Mock Listing Generator" },
@@ -971,6 +973,19 @@ export default function AdminDashboard() {
                       </ScrollArea>
                     </div>
                   )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Expiration Debugger */}
+            <AccordionItem value="listing-expiration-debug" id="listing-expiration-debug" ref={el => (sectionRefs.current["listing-expiration-debug"] = el)}>
+              <AccordionTrigger>Listing Expiration Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug and analyze listing expiration times to ensure they match the user's account tier. This tool can identify listings with incorrect expiration times and fix them automatically.
+                  </p>
+                  <ListingExpirationDebugger listings={[]} visible={true} />
                 </div>
               </AccordionContent>
             </AccordionItem>
