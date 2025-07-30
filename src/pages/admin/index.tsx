@@ -25,6 +25,7 @@ import { PickupCodeDebugger } from '@/components/admin/PickupCodeDebugger';
 import { ListingUsernameDebugger } from '@/components/admin/ListingUsernameDebugger';
 import ProductionUsernameDebugger from '@/components/admin/ProductionUsernameDebugger';
 import { ListingExpirationDebugger } from '@/components/ListingExpirationDebugger';
+import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -43,6 +44,7 @@ const SECTIONS = [
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
+  { id: "dashboard-offer-debug", label: "Dashboard Offer Debugger" },
   { id: "db-usage", label: "Database Usage Monitoring" },
   { id: "email-test", label: "Email Notification Testing" },
   { id: "firebase", label: "Firebase Diagnostics" },
@@ -849,6 +851,19 @@ export default function AdminDashboard() {
               <AccordionContent>
                 <div className="py-4">
                   <ApiTestPanel adminSecret={adminSecret} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Dashboard Offer Debugger */}
+            <AccordionItem value="dashboard-offer-debug" id="dashboard-offer-debug" ref={el => (sectionRefs.current["dashboard-offer-debug"] = el)}>
+              <AccordionTrigger>Dashboard Offer Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug why offers are not appearing in the dashboard overview "Latest Offers" section. This tool replicates the exact same logic used in the dashboard overview to help identify discrepancies between the dashboard and offers page.
+                  </p>
+                  <DashboardOfferDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
