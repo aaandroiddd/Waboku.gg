@@ -85,7 +85,6 @@ export default function DashboardOverview() {
       return [];
     }
   }, [receivedOffers]);
-=======
 
   const safeReviews = React.useMemo(() => {
     try {
