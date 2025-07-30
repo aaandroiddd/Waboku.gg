@@ -57,6 +57,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const lastRefreshTimeRef = useRef<number>(0);
   const lastCheckTimeRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
+  const initialLoadCompleteRef = useRef<boolean>(false);
   
   useEffect(() => {
     let isMounted = true;
@@ -243,6 +244,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           setAccountTier('free');
           setSubscription(defaultSubscription);
           setIsLoading(false);
+          initialLoadCompleteRef.current = true;
         }
         return;
       }
@@ -252,10 +254,36 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         if (!db) {
           console.error('[AccountContext] Firestore not initialized');
           setIsLoading(false);
+          initialLoadCompleteRef.current = true;
           return;
         }
         
         const userDocRef = doc(db, 'users', user.uid);
+
+        // Try to load cached account data first for faster initial display
+        let cachedAccountData = null;
+        try {
+          if (typeof window !== 'undefined') {
+            const cacheKey = `account_data_${user.uid}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              const parsedCache = JSON.parse(cached);
+              const cacheAge = Date.now() - parsedCache.timestamp;
+              // Use cache if it's less than 5 minutes old
+              if (cacheAge < 5 * 60 * 1000) {
+                cachedAccountData = parsedCache.data;
+                console.log('[AccountContext] Using cached account data for faster initial load');
+                
+                // Set cached data immediately for faster UI response
+                setAccountTier(cachedAccountData.accountTier || 'free');
+                setSubscription(cachedAccountData.subscription || defaultSubscription);
+                // Don't set loading to false yet - we still want to verify with fresh data
+              }
+            }
+          }
+        } catch (cacheError) {
+          console.warn('[AccountContext] Error loading cached account data:', cacheError);
+        }
 
         // Initialize account for new users
         try {
@@ -294,8 +322,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             try {
               const data = docSnapshot.data();
               if (data) {
-                // Check subscription status
-                const subscriptionStatus = await checkSubscriptionStatus();
+                // Check subscription status only on initial load or if we don't have cached data
+                let subscriptionStatus = null;
+                if (!initialLoadCompleteRef.current || !cachedAccountData) {
+                  subscriptionStatus = await checkSubscriptionStatus();
+                }
                 
                 // Get subscription data
                 const subscriptionData = subscriptionStatus || data.subscription || defaultSubscription;
@@ -342,7 +373,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                   subscriptionStatus: subscriptionData.status,
                   hasStripeId: !!subscriptionData.stripeSubscriptionId,
                   isManuallyUpdated: !!subscriptionData.manuallyUpdated,
-                  currentPlan: subscriptionData.currentPlan
+                  currentPlan: subscriptionData.currentPlan,
+                  initialLoad: !initialLoadCompleteRef.current
                 });
                 
                 // Set subscription data with enhanced validation
@@ -373,6 +405,23 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 setSubscription(subscriptionDetails);
                 const newTier = isActivePremium ? 'premium' : 'free';
                 setAccountTier(newTier);
+
+                // Cache the account data for faster future loads
+                try {
+                  if (typeof window !== 'undefined') {
+                    const cacheKey = `account_data_${user.uid}`;
+                    const cacheData = {
+                      timestamp: Date.now(),
+                      data: {
+                        accountTier: newTier,
+                        subscription: subscriptionDetails
+                      }
+                    };
+                    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+                  }
+                } catch (cacheError) {
+                  console.warn('[AccountContext] Error caching account data:', cacheError);
+                }
 
                 // Clear and refresh caches when tier changes
                 if (data.accountTier !== newTier) {
@@ -442,6 +491,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               setSubscription(defaultSubscription);
             } finally {
               setIsLoading(false);
+              initialLoadCompleteRef.current = true;
             }
           },
           (error) => {
@@ -450,6 +500,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               setAccountTier('free');
               setSubscription(defaultSubscription);
               setIsLoading(false);
+              initialLoadCompleteRef.current = true;
             }
           }
         );
@@ -462,6 +513,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           setAccountTier('free');
           setSubscription(defaultSubscription);
           setIsLoading(false);
+          initialLoadCompleteRef.current = true;
         }
       }
     };

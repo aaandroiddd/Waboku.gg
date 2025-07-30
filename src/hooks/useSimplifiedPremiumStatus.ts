@@ -32,6 +32,43 @@ export function useSimplifiedPremiumStatus() {
       return;
     }
 
+    // Try to load cached data first for immediate display
+    const loadCachedData = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const cacheKey = `account_data_${user.uid}`;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsedCache = JSON.parse(cached);
+            const cacheAge = Date.now() - parsedCache.timestamp;
+            // Use cache if it's less than 5 minutes old
+            if (cacheAge < 5 * 60 * 1000) {
+              const cachedData = parsedCache.data;
+              console.log('[useSimplifiedPremiumStatus] Using cached data for immediate display');
+              
+              setPremiumStatus({
+                isPremium: cachedData.accountTier === 'premium',
+                tier: cachedData.accountTier || 'free',
+                status: cachedData.subscription?.status || 'none',
+                source: 'cache',
+                lastChecked: parsedCache.timestamp,
+                subscription: cachedData.subscription
+              });
+              
+              // Don't set loading to false yet - we still want fresh data
+              return true;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('[useSimplifiedPremiumStatus] Error loading cached data:', error);
+      }
+      return false;
+    };
+
+    // Load cached data immediately if available
+    const hasCachedData = loadCachedData();
+
     // If AccountContext is available and not loading, use it as the primary source
     if (!accountLoading) {
       const isPremium = accountTier === 'premium';
@@ -64,12 +101,16 @@ export function useSimplifiedPremiumStatus() {
       return;
     }
 
-    // Fallback to direct API call if AccountContext is still loading
+    // Fallback to direct API call if AccountContext is still loading and we don't have cached data
     let isMounted = true;
 
     const checkPremiumStatus = async () => {
       try {
-        setIsLoading(true);
+        // Only set loading if we don't have cached data
+        if (!hasCachedData) {
+          setIsLoading(true);
+        }
+        
         const status = await getPremiumStatus(user.uid);
         
         if (isMounted) {
