@@ -69,6 +69,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check if user has email/password provider
     const hasEmailProvider = currentUser.providerData.some(provider => provider.providerId === 'password');
     const hasGoogleProvider = currentUser.providerData.some(provider => provider.providerId === 'google.com');
+    const isGoogleOnlyUser = hasGoogleProvider && !hasEmailProvider;
+
+    // Prevent Google-only users from changing email directly
+    if (isGoogleOnlyUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Google users cannot change their email directly. Please use account linking or contact support for migration assistance.',
+        code: 'GOOGLE_USER_EMAIL_CHANGE_BLOCKED'
+      });
+    }
 
     // For email/password users, we need to verify their current password
     if (hasEmailProvider && !password) {
