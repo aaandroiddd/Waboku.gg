@@ -22,7 +22,7 @@ import { useOptimizedListings } from '@/hooks/useOptimizedListings';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useOffers } from '@/hooks/useOffers';
 import { useReviews } from '@/hooks/useReviews';
-import { useMessages } from '@/hooks/useMessages';
+import { useMessageThreads } from '@/hooks/useMessageThreads';
 import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
 import { useStripeConnectAccount } from '@/hooks/useStripeConnectAccount';
 import { ProfileName } from '@/components/ProfileName';
@@ -42,7 +42,7 @@ export default function DashboardOverview() {
   const { notifications, loading: notificationsLoading } = useNotifications();
   const { receivedOffers, loading: offersLoading } = useOffers();
   const { reviews, averageRating, loading: reviewsLoading } = useReviews(user?.uid);
-  const { messageThreads, loading: messagesLoading } = useMessages();
+  const { threads: messageThreads, loading: messagesLoading } = useMessageThreads();
   const { isPremium, tier } = useSimplifiedPremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
