@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Package, 
   Bell, 
@@ -25,6 +26,7 @@ import { useMessages } from '@/hooks/useMessages';
 import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
 import { useStripeConnectAccount } from '@/hooks/useStripeConnectAccount';
 import { ProfileName } from '@/components/ProfileName';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { RatingStars } from '@/components/RatingStars';
 
 export default function DashboardOverview() {
@@ -158,14 +160,25 @@ export default function DashboardOverview() {
             Welcome back, <ProfileName user={user} />
           </p>
         </div>
-        <Button 
-          onClick={handleViewProfile}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          View My Profile
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={handleViewProfile}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <ProfileAvatar 
+                  user={user} 
+                  size="md" 
+                  className="border-2 border-primary/20 hover:border-primary/40 transition-colors"
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View profile</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Stats Grid */}
