@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Shield, AlertTriangle } from 'lucide-react';
-import { hasEmailAuth, hasGoogleAuth } from '@/lib/auth-utils';
 
 interface EmailChangeFormProps {
   onSuccess?: () => void;
@@ -24,8 +23,8 @@ export function EmailChangeForm({ onSuccess, onError }: EmailChangeFormProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Check user's authentication providers
-  const isEmailPasswordUser = hasEmailAuth(user);
-  const isGoogleUser = hasGoogleAuth(user);
+  const isEmailPasswordUser = user?.providerData?.some(provider => provider.providerId === 'password') || false;
+  const isGoogleUser = user?.providerData?.some(provider => provider.providerId === 'google.com') || false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
