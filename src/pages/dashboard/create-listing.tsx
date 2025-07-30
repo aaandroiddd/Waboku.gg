@@ -433,7 +433,7 @@ const CreateListingPage = () => {
 
   // Check if form has unsaved changes
   const checkForUnsavedChanges = useCallback(() => {
-    const hasContent = 
+    const hasSingleListingContent = 
       formData.title.trim() !== "" ||
       formData.description.trim() !== "" ||
       formData.price.trim() !== "" ||
@@ -447,9 +447,14 @@ const CreateListingPage = () => {
       formData.finalSale ||
       formData.language !== "English";
     
+    // Check for bulk listing progress
+    const hasBulkListingProgress = bulkListings.length > 0;
+    
+    const hasContent = hasSingleListingContent || hasBulkListingProgress;
+    
     setHasUnsavedChanges(hasContent);
     return hasContent;
-  }, [formData]);
+  }, [formData, bulkListings]);
 
   // Monitor form changes
   useEffect(() => {
