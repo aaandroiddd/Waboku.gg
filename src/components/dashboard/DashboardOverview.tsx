@@ -67,12 +67,25 @@ export default function DashboardOverview() {
 
   const safeReceivedOffers = React.useMemo(() => {
     try {
-      return Array.isArray(receivedOffers) ? receivedOffers.filter(Boolean) : [];
+      const offers = Array.isArray(receivedOffers) ? receivedOffers.filter(Boolean) : [];
+      console.log('DashboardOverview - Processing received offers:', {
+        totalOffers: offers.length,
+        offers: offers.map(offer => ({
+          id: offer.id,
+          amount: offer.amount,
+          status: offer.status,
+          listingTitle: offer.listingSnapshot?.title,
+          createdAt: offer.createdAt,
+          cleared: offer.cleared
+        }))
+      });
+      return offers;
     } catch (error) {
       console.warn('Error processing offers:', error);
       return [];
     }
   }, [receivedOffers]);
+=======
 
   const safeReviews = React.useMemo(() => {
     try {
@@ -327,7 +340,7 @@ export default function DashboardOverview() {
                     <div>
                       <p className="font-medium text-sm">${offer.amount}</p>
                       <p className="text-xs text-muted-foreground">
-                        {offer.listingTitle || 'Unknown listing'}
+                        {offer.listingSnapshot?.title || 'Unknown listing'}
                       </p>
                     </div>
                     <Badge variant={offer.status === 'pending' ? 'default' : 'secondary'}>
