@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,10 +41,25 @@ export default function DashboardOverview() {
   });
   const { notifications, loading: notificationsLoading } = useNotifications();
   const { receivedOffers, loading: offersLoading } = useOffers();
-  const { reviews, averageRating, loading: reviewsLoading } = useReviews(user?.uid);
+  const { 
+    sellerReviews, 
+    reviewStats, 
+    totalReviews,
+    averageRating,
+    loading: reviewsLoading, 
+    fetchSellerReviews 
+  } = useReviews();
   const { threads: messageThreads, loading: messagesLoading } = useMessageThreads();
   const { isPremium, tier } = useSimplifiedPremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
+
+  // Fetch reviews when component mounts
+  useEffect(() => {
+    if (user?.uid && fetchSellerReviews) {
+      console.log('DashboardOverview: Fetching seller reviews for user:', user.uid);
+      fetchSellerReviews(user.uid);
+    }
+  }, [user?.uid, fetchSellerReviews]);
 
   // Calculate stats with comprehensive null/undefined checks and error boundaries
   const safeListings = React.useMemo(() => {
@@ -120,12 +135,12 @@ export default function DashboardOverview() {
 
   const safeReviews = React.useMemo(() => {
     try {
-      return Array.isArray(reviews) ? reviews.filter(Boolean) : [];
+      return Array.isArray(sellerReviews) ? sellerReviews.filter(Boolean) : [];
     } catch (error) {
       console.warn('Error processing reviews:', error);
       return [];
     }
-  }, [reviews]);
+  }, [sellerReviews]);
 
   const safeMessageThreads = React.useMemo(() => {
     try {
@@ -180,6 +195,15 @@ export default function DashboardOverview() {
       return null;
     }
   }, [safeMessageThreads]);
+
+  const latestReview = React.useMemo(() => {
+    try {
+      return safeReviews.length > 0 && safeReviews[0] ? safeReviews[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest review:', error);
+      return null;
+    }
+  }, [safeReviews]);
 
   // Calculate current month's revenue (placeholder - would need actual sales data)
   const currentMonthRevenue = 0; // TODO: Implement actual revenue calculation
@@ -332,7 +356,7 @@ export default function DashboardOverview() {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground">
-              {safeReviews.length} total reviews
+              {totalReviews || 0} total reviews
             </p>
           </CardContent>
         </Card>
