@@ -25,6 +25,7 @@ import CardSearchInput from "@/components/CardSearchInput";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { useAccount } from "@/contexts/AccountContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RouteGuard } from "@/components/RouteGuard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -199,6 +200,7 @@ const CreateListingPage = () => {
   const [overallProgress, setOverallProgress] = useState(0);
   const [showImageUploadDialog, setShowImageUploadDialog] = useState(false);
   const [currentEditingListingId, setCurrentEditingListingId] = useState<string | null>(null);
+  const [removeConfirmListingId, setRemoveConfirmListingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -1554,13 +1556,37 @@ const CreateListingPage = () => {
                                     )}
                                   </TableCell>
                                   <TableCell>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => removeListing(listing.id)}
-                                    >
-                                      Remove
-                                    </Button>
+                                    <AlertDialog open={removeConfirmListingId === listing.id} onOpenChange={(open) => !open && setRemoveConfirmListingId(null)}>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => setRemoveConfirmListingId(listing.id)}
+                                        >
+                                          Remove
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Remove Listing</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to remove "{listing.title}" from your bulk creation? This action cannot be undone and you'll lose all the information entered for this listing.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => {
+                                              removeListing(listing.id);
+                                              setRemoveConfirmListingId(null);
+                                            }}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Remove
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
                                   </TableCell>
                                 </TableRow>
                               ))}
