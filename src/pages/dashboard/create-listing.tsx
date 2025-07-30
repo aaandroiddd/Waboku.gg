@@ -1646,22 +1646,20 @@ const CreateListingPage = () => {
             {/* Multi-Image Upload Dialog */}
             {showImageUploadDialog && (
               <MultiImageUpload
-                isOpen={showImageUploadDialog}
-                onClose={() => {
-                  setShowImageUploadDialog(false);
-                  setCurrentEditingListingId(null);
+                open={showImageUploadDialog}
+                onOpenChange={(open) => {
+                  setShowImageUploadDialog(open);
+                  if (!open) {
+                    setCurrentEditingListingId(null);
+                  }
                 }}
-                onConfirm={handleImagesConfirm}
-                initialImages={
+                onImagesConfirm={handleImagesConfirm}
+                existingImages={
                   currentEditingListingId 
                     ? bulkListings.find(l => l.id === currentEditingListingId)?.images || []
                     : []
                 }
-                initialCoverIndex={
-                  currentEditingListingId 
-                    ? bulkListings.find(l => l.id === currentEditingListingId)?.coverImageIndex || 0
-                    : 0
-                }
+                maxImages={10}
               />
             )}
           </CardContent>
