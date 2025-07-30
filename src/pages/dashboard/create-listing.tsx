@@ -26,6 +26,7 @@ import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { useAccount } from "@/contexts/AccountContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { RouteGuard } from "@/components/RouteGuard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -192,6 +193,7 @@ const CreateListingPage = () => {
   const [stripeConnectStatus, setStripeConnectStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeListingCount, setActiveListingCount] = useState<number | null>(null);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Bulk listing states
   const [activeTab, setActiveTab] = useState("single");
@@ -748,6 +750,22 @@ const CreateListingPage = () => {
   // Remove a listing from the list
   const removeListing = (listingId: string) => {
     setBulkListings(prev => prev.filter(listing => listing.id !== listingId));
+  };
+
+  // Handle remove listing with mobile-friendly confirmation
+  const handleRemoveListing = (listing: BulkListingItem) => {
+    if (isMobile) {
+      // Use native HTML confirm for mobile
+      const confirmed = window.confirm(
+        `Are you sure you want to remove "${listing.title}" from your bulk creation? This action cannot be undone and you'll lose all the information entered for this listing.`
+      );
+      if (confirmed) {
+        removeListing(listing.id);
+      }
+    } else {
+      // Use AlertDialog for desktop
+      setRemoveConfirmListingId(listing.id);
+    }
   };
 
   // Handle relist functionality - pre-fill form with data from URL parameters
@@ -1556,37 +1574,47 @@ const CreateListingPage = () => {
                                     )}
                                   </TableCell>
                                   <TableCell>
-                                    <AlertDialog open={removeConfirmListingId === listing.id} onOpenChange={(open) => !open && setRemoveConfirmListingId(null)}>
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="destructive"
-                                          onClick={() => setRemoveConfirmListingId(listing.id)}
-                                        >
-                                          Remove
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Remove Listing</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to remove "{listing.title}" from your bulk creation? This action cannot be undone and you'll lose all the information entered for this listing.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => {
-                                              removeListing(listing.id);
-                                              setRemoveConfirmListingId(null);
-                                            }}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    {isMobile ? (
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleRemoveListing(listing)}
+                                      >
+                                        Remove
+                                      </Button>
+                                    ) : (
+                                      <AlertDialog open={removeConfirmListingId === listing.id} onOpenChange={(open) => !open && setRemoveConfirmListingId(null)}>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => handleRemoveListing(listing)}
                                           >
                                             Remove
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Remove Listing</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to remove "{listing.title}" from your bulk creation? This action cannot be undone and you'll lose all the information entered for this listing.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => {
+                                                removeListing(listing.id);
+                                                setRemoveConfirmListingId(null);
+                                              }}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              Remove
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               ))}
