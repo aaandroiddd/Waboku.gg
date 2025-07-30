@@ -70,21 +70,45 @@ export default function DashboardOverview() {
       const offers = Array.isArray(receivedOffers) ? receivedOffers.filter(Boolean) : [];
       console.log('DashboardOverview - Processing received offers:', {
         totalOffers: offers.length,
+        rawReceivedOffers: receivedOffers,
         offers: offers.map(offer => ({
           id: offer.id,
           amount: offer.amount,
           status: offer.status,
           listingTitle: offer.listingSnapshot?.title,
           createdAt: offer.createdAt,
-          cleared: offer.cleared
+          cleared: offer.cleared,
+          expiresAt: offer.expiresAt
         }))
       });
-      return offers;
+      
+      // Filter to only show non-cleared, active offers for the dashboard overview
+      const activeOffers = offers.filter(offer => {
+        const isNotCleared = !offer.cleared;
+        const isActiveStatus = ['pending', 'accepted', 'countered'].includes(offer.status);
+        
+        console.log(`Offer ${offer.id}: cleared=${offer.cleared}, status=${offer.status}, isNotCleared=${isNotCleared}, isActiveStatus=${isActiveStatus}`);
+        
+        return isNotCleared && isActiveStatus;
+      });
+      
+      console.log('DashboardOverview - Filtered active offers:', {
+        totalActiveOffers: activeOffers.length,
+        activeOffers: activeOffers.map(offer => ({
+          id: offer.id,
+          amount: offer.amount,
+          status: offer.status,
+          listingTitle: offer.listingSnapshot?.title
+        }))
+      });
+      
+      return activeOffers;
     } catch (error) {
       console.warn('Error processing offers:', error);
       return [];
     }
   }, [receivedOffers]);
+=======
 
   const safeReviews = React.useMemo(() => {
     try {
