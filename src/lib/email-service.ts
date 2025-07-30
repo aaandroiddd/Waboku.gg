@@ -49,6 +49,10 @@ import {
   SupportTicketEmailData,
   SupportConfirmationEmailData
 } from './email-templates/support-templates';
+import {
+  getShippingReminderTemplate,
+  ShippingReminderData
+} from './email-templates/shipping-reminder-templates';
 
 // Conditionally import and initialize Resend only on server-side
 let Resend: any = null;
@@ -1131,6 +1135,46 @@ export class EmailService {
       return true;
     } catch (error) {
       console.error('Error sending support confirmation email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send shipping reminder email
+   */
+  async sendShippingReminderEmail(data: ShippingReminderData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping shipping reminder email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getShippingReminderTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <shipping@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending shipping reminder email:', result.error);
+        return false;
+      }
+
+      console.log(`Shipping reminder email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending shipping reminder email:', error);
       return false;
     }
   }

@@ -27,6 +27,7 @@ import ProductionUsernameDebugger from '@/components/admin/ProductionUsernameDeb
 import { ListingExpirationDebugger } from '@/components/ListingExpirationDebugger';
 import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
 import UserMigrationTool from '@/components/admin/UserMigrationTool';
+import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
 import {
   Accordion,
   AccordionItem,
@@ -62,6 +63,7 @@ const SECTIONS = [
   { id: "production-username-debug", label: "Production Username Debugger" },
   { id: "review-system", label: "Review System Debug" },
   { id: "review-migration", label: "Review Username Migration" },
+  { id: "shipping-reminders", label: "Shipping Reminder System" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
   { id: "user-migration", label: "User Account Migration" },
@@ -1333,6 +1335,16 @@ export default function AdminDashboard() {
                   >
                     Support Management Dashboard
                   </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Shipping Reminder System */}
+            <AccordionItem value="shipping-reminders" id="shipping-reminders" ref={el => (sectionRefs.current["shipping-reminders"] = el)}>
+              <AccordionTrigger>Shipping Reminder System</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <ShippingReminderTester />
                 </div>
               </AccordionContent>
             </AccordionItem>
