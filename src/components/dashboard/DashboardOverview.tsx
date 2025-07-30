@@ -78,18 +78,25 @@ export default function DashboardOverview() {
           listingTitle: offer.listingSnapshot?.title,
           createdAt: offer.createdAt,
           cleared: offer.cleared,
-          expiresAt: offer.expiresAt
+          expiresAt: offer.expiresAt,
+          isExpired: offer.expiresAt ? new Date() > new Date(offer.expiresAt) : false
         }))
       });
       
-      // Filter to only show non-cleared, active offers for the dashboard overview
+      // Filter to show non-cleared offers that are still relevant for the dashboard
+      // Include pending, accepted, countered, and non-expired offers
       const activeOffers = offers.filter(offer => {
         const isNotCleared = !offer.cleared;
-        const isActiveStatus = ['pending', 'accepted', 'countered'].includes(offer.status);
+        const now = new Date();
+        const isExpired = offer.expiresAt ? now > new Date(offer.expiresAt) : false;
         
-        console.log(`Offer ${offer.id}: cleared=${offer.cleared}, status=${offer.status}, isNotCleared=${isNotCleared}, isActiveStatus=${isActiveStatus}`);
+        // Include all non-cleared offers that haven't expired, regardless of status
+        // This matches the behavior of the offers page more closely
+        const shouldInclude = isNotCleared && !isExpired;
         
-        return isNotCleared && isActiveStatus;
+        console.log(`Offer ${offer.id}: cleared=${offer.cleared}, status=${offer.status}, expired=${isExpired}, shouldInclude=${shouldInclude}`);
+        
+        return shouldInclude;
       });
       
       console.log('DashboardOverview - Filtered active offers:', {
@@ -98,7 +105,9 @@ export default function DashboardOverview() {
           id: offer.id,
           amount: offer.amount,
           status: offer.status,
-          listingTitle: offer.listingSnapshot?.title
+          listingTitle: offer.listingSnapshot?.title,
+          expiresAt: offer.expiresAt,
+          isExpired: offer.expiresAt ? new Date() > new Date(offer.expiresAt) : false
         }))
       });
       
