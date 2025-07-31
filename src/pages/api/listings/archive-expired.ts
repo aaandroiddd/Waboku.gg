@@ -94,17 +94,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return null;
         }
 
-        const createdAt = data.createdAt?.toDate() || new Date();
+        // CRITICAL FIX: Properly parse createdAt timestamp
+        let createdAt: Date;
+        try {
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate();
+          } else if (data.createdAt instanceof Date) {
+            createdAt = data.createdAt;
+          } else if (data.createdAt) {
+            createdAt = new Date(data.createdAt);
+          } else {
+            console.error(`[Archive Expired] No createdAt found for listing ${doc.id}`);
+            createdAt = new Date(); // Fallback to current date
+          }
+        } catch (timestampError) {
+          console.error(`[Archive Expired] Error parsing createdAt for listing ${doc.id}:`, timestampError);
+          createdAt = new Date(); // Fallback to current date
+        }
         
         // Get user account tier with enhanced function
         const accountTier = await determineUserAccountTier(data.userId);
         const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
         
-        // Calculate expiration time based on tier duration
+        // Calculate CORRECT expiration time based on tier duration
         const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+        
+        // Calculate how long the listing has been active
+        const hoursActive = Math.round((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60));
+        
+        console.log(`[Archive Expired] Listing ${doc.id} analysis:`, {
+          createdAt: createdAt.toISOString(),
+          accountTier,
+          tierDurationHours: tierDuration,
+          hoursActive,
+          expirationTime: expirationTime.toISOString(),
+          isExpired: now > expirationTime,
+          title: data.title?.substring(0, 50) + '...'
+        });
         
         // Check if listing has expired
         if (now > expirationTime) {
+          console.log(`[Archive Expired] Listing ${doc.id} has expired (${hoursActive}h active, ${tierDuration}h limit)`);
+          
           // Use TTL for automatic deletion - Firestore will handle the deletion
           const ttlData = addTTLToListing({
             ...data,
@@ -112,7 +143,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             expirationReason: 'tier_duration_exceeded',
             // Store previous state for debugging
             previousStatus: data.status,
-            previousExpiresAt: data.expiresAt
+            previousExpiresAt: data.expiresAt,
+            // Store the correct expiration calculation for debugging
+            correctExpirationTime: Timestamp.fromDate(expirationTime),
+            accountTierAtArchival: accountTier,
+            hoursActiveAtArchival: hoursActive
           }, now);
           
           return {
@@ -123,8 +158,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             accountTier,
             createdAt: createdAt.toISOString(),
             expirationTime: expirationTime.toISOString(),
+            hoursActive,
             ttlDeleteAt: ttlData[LISTING_TTL_CONFIG.ttlField].toDate().toISOString()
           };
+        } else {
+          const hoursUntilExpiration = Math.round((expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+          console.log(`[Archive Expired] Listing ${doc.id} not expired yet (${hoursActive}h active, expires in ${hoursUntilExpiration}h)`);
         }
         
         return null; // Not expired

@@ -50,6 +50,8 @@ const SECTIONS = [
   { id: "db-usage", label: "Database Usage Monitoring" },
   { id: "email-test", label: "Email Notification Testing" },
   { id: "firebase", label: "Firebase Diagnostics" },
+  { id: "fix-archived-listings", label: "Fix Archived Listings Visibility" },
+  { id: "fix-specific-listing", label: "Fix Specific Listing" },
   { id: "listing-analytics", label: "Listing Analytics & Capacity Monitoring" },
   { id: "listing-debug", label: "Listing Debug Tool" },
   { id: "listing-expiration-debug", label: "Listing Expiration Debugger" },
@@ -1365,6 +1367,114 @@ export default function AdminDashboard() {
               <AccordionContent>
                 <div className="py-4">
                   <WantedPostsDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Fix Archived Listings Visibility */}
+            <AccordionItem value="fix-archived-listings" id="fix-archived-listings" ref={el => (sectionRefs.current["fix-archived-listings"] = el)}>
+              <AccordionTrigger>Fix Archived Listings Visibility</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Fix archived listings that are still showing on public pages. This tool ensures archived listings have proper TTL fields, correct timestamps, and are properly filtered from public views.
+                  </p>
+                  <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                      ⚠️ This tool will update archived listings to ensure they don't appear on public pages and have proper TTL for automatic deletion.
+                    </AlertDescription>
+                  </Alert>
+                  <Button 
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const response = await fetch('/api/debug/fix-archived-listings-visibility', {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${adminSecret}`,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        const data = await response.json();
+                        setApiResponse(data);
+                        setResponseDialog(true);
+                      } catch (error) {
+                        setApiResponse({ error: 'Failed to fix archived listings visibility' });
+                        setResponseDialog(true);
+                      }
+                      setLoading(false);
+                    }}
+                    disabled={loading}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    {loading ? 'Fixing Archived Listings...' : 'Fix Archived Listings Visibility'}
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Fix Specific Listing */}
+            <AccordionItem value="fix-specific-listing" id="fix-specific-listing" ref={el => (sectionRefs.current["fix-specific-listing"] = el)}>
+              <AccordionTrigger>Fix Specific Listing</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Analyze and fix a specific listing's expiration status. This tool can determine if a listing should be archived based on its creation date and account tier, or restore incorrectly archived premium listings.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="specificListingId">Listing ID</Label>
+                      <Input
+                        id="specificListingId"
+                        placeholder="Enter listing ID to analyze and fix"
+                        value={testTtlListingId}
+                        onChange={(e) => setTestTtlListingId(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      onClick={async () => {
+                        if (!testTtlListingId) {
+                          setApiResponse({ error: 'Listing ID is required' });
+                          setResponseDialog(true);
+                          return;
+                        }
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/debug/fix-specific-listing', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              listingId: testTtlListingId
+                            })
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                          
+                          // Clear the input on success
+                          if (response.ok) {
+                            setTestTtlListingId('');
+                          }
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to fix specific listing' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading || !testTtlListingId}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {loading ? 'Analyzing & Fixing...' : 'Analyze & Fix Listing'}
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Archive:</strong> If listing should be expired but isn't archived</p>
+                    <p><strong>Add TTL:</strong> If listing is archived but missing automatic deletion</p>
+                    <p><strong>Restore:</strong> If premium user listing was incorrectly archived</p>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>

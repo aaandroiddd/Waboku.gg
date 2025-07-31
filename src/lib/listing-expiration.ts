@@ -179,62 +179,48 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
       
       const now = new Date();
       
-      // Check if listing has explicit expiresAt field
-      let expirationTime: Date;
-      
-      if (data.expiresAt) {
-        try {
-          // Use our utility function to safely parse the date
-          expirationTime = parseDate(data.expiresAt);
-          
-          console.log(`[ListingExpiration] Listing ${listingId} has explicit expiresAt: ${expirationTime.toISOString()}`);
-        } catch (expiresAtError) {
-          console.error(`[ListingExpiration] Error converting expiresAt timestamp for listing ${listingId}:`, expiresAtError);
-          
-          // Fall back to calculating from createdAt
-          let createdAt: Date;
-          try {
-            // Use our utility function to safely parse the date
-            createdAt = parseDate(data.createdAt, new Date());
-          } catch (timestampError) {
-            console.error(`[ListingExpiration] Error converting createdAt timestamp for listing ${listingId}:`, timestampError);
-            createdAt = new Date(); // Fallback to current date
-          }
-          
-          // Get user account tier with enhanced function
-          const accountTier = await determineUserAccountTier(data.userId);
-          const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
-          
-          // Calculate expiration time based on tier duration
-          expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
-        }
-      } else {
-        // No expiresAt field, calculate from createdAt
-        let createdAt: Date;
-        try {
-          createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
-                    data.createdAt instanceof Date ? data.createdAt : 
-                    new Date(data.createdAt || Date.now());
-        } catch (timestampError) {
-          console.error(`[ListingExpiration] Error converting createdAt timestamp for listing ${listingId}:`, timestampError);
+      // CRITICAL FIX: Always calculate expiration from createdAt and account tier
+      // Don't rely on potentially incorrect expiresAt field
+      let createdAt: Date;
+      try {
+        // Parse createdAt timestamp properly
+        if (data.createdAt?.toDate) {
+          createdAt = data.createdAt.toDate();
+        } else if (data.createdAt instanceof Date) {
+          createdAt = data.createdAt;
+        } else if (data.createdAt) {
+          createdAt = new Date(data.createdAt);
+        } else {
+          console.error(`[ListingExpiration] No createdAt found for listing ${listingId}`);
           createdAt = new Date(); // Fallback to current date
         }
-        
-        // Get user account tier with enhanced function
-        const accountTier = await determineUserAccountTier(data.userId);
-        const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
-        
-        // Calculate expiration time based on tier duration
-        expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+      } catch (timestampError) {
+        console.error(`[ListingExpiration] Error converting createdAt timestamp for listing ${listingId}:`, timestampError);
+        createdAt = new Date(); // Fallback to current date
       }
       
-      console.log(`[ListingExpiration] Listing ${listingId} expiration time: ${expirationTime.toISOString()}, current time: ${now.toISOString()}`);
+      // Get user account tier with enhanced function
+      const accountTier = await determineUserAccountTier(data.userId);
+      const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
+      
+      // Calculate CORRECT expiration time based on tier duration
+      const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+      
+      console.log(`[ListingExpiration] Listing ${listingId} details:`, {
+        createdAt: createdAt.toISOString(),
+        accountTier,
+        tierDurationHours: tierDuration,
+        calculatedExpiration: expirationTime.toISOString(),
+        currentTime: now.toISOString(),
+        isExpired: now > expirationTime,
+        hoursActive: Math.round((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60))
+      });
       
       // Check if listing has expired
       if (now > expirationTime) {
         console.log(`[ListingExpiration] Listing ${listingId} has expired. Archiving...`);
         
-        // Archive the listing
+        // Archive the listing with TTL for automatic deletion after 7 days
         const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
         
         try {
@@ -243,19 +229,32 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
             archivedAt: Timestamp.now(),
             originalCreatedAt: data.createdAt,
             expirationReason: 'tier_duration_exceeded',
-            expiresAt: Timestamp.fromDate(sevenDaysFromNow),
+            // Set TTL for automatic deletion after 7 days
+            deleteAt: Timestamp.fromDate(sevenDaysFromNow),
+            ttlSetAt: Timestamp.now(),
+            ttlReason: 'automated_archive',
             updatedAt: Timestamp.now(),
-            // Store previous state
+            // Store previous state for debugging
             previousStatus: data.status,
-            previousExpiresAt: data.expiresAt
+            previousExpiresAt: data.expiresAt,
+            // Store the correct expiration calculation for debugging
+            correctExpirationTime: Timestamp.fromDate(expirationTime),
+            accountTierAtArchival: accountTier
           });
           
-          console.log(`[ListingExpiration] Successfully archived listing ${listingId}`);
+          console.log(`[ListingExpiration] Successfully archived listing ${listingId} with TTL deletion at ${sevenDaysFromNow.toISOString()}`);
           
           return { 
             success: true, 
             status: 'archived',
-            message: 'Listing has been archived due to expiration'
+            message: 'Listing has been archived due to expiration',
+            details: {
+              createdAt: createdAt.toISOString(),
+              expirationTime: expirationTime.toISOString(),
+              accountTier,
+              tierDurationHours: tierDuration,
+              ttlDeleteAt: sevenDaysFromNow.toISOString()
+            }
           };
         } catch (updateError: any) {
           console.error(`[ListingExpiration] Error updating listing ${listingId}:`, updateError);
@@ -265,11 +264,13 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
           };
         }
       } else {
-        console.log(`[ListingExpiration] Listing ${listingId} is not expired yet. Expires at: ${expirationTime.toISOString()}`);
+        const hoursUntilExpiration = Math.round((expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+        console.log(`[ListingExpiration] Listing ${listingId} is not expired yet. Expires in ${hoursUntilExpiration} hours at: ${expirationTime.toISOString()}`);
         return { 
           success: true, 
           status: 'active',
-          expiresAt: expirationTime.toISOString()
+          expiresAt: expirationTime.toISOString(),
+          hoursUntilExpiration
         };
       }
     } catch (docError: any) {
