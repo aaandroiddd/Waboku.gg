@@ -105,22 +105,8 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
         };
       }
 
-      // Add shipping reminder data for shipping-reminder type
-      if (emailType === 'shipping-reminder') {
-        // Use userEmail as seller, and mock the rest
-        requestBody.shippingReminderData = {
-          sellerEmail: userEmail,
-          sellerName: userName,
-          buyerName: 'Test Buyer',
-          buyerEmail: 'buyer@example.com',
-          orderId: 'test-order-' + Math.random().toString(36).substr(2, 8),
-          orderNumber: 'ORD-' + Math.random().toString(36).substr(2, 7).toUpperCase(),
-          listingTitle: listingData.cardName + ' - ' + listingData.setName + ' (' + listingData.condition + ')',
-          createdAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString(), // 49 hours ago
-          shippingType: 'shipping',
-          shippingAddress: '123 Main St, Anytown, CA 12345',
-        };
-      }
+      // Shipping reminder type is handled internally by the API
+      // No additional data needed as it builds the ShippingReminderData object automatically
 
       // Add support ticket data for support-specific email types
       if (['support-ticket', 'support-confirmation'].includes(emailType)) {

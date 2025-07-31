@@ -337,19 +337,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Shipping Reminder test email
       case 'shipping-reminder': {
-        // Accepts either a shippingReminderData object or builds one from the request
-        // For test UI, just use userEmail as sellerEmail, and mock the rest
-        const shippingReminderData = req.body.shippingReminderData || {
-          sellerEmail: userEmail,
-          sellerName: userName,
-          buyerName: 'Test Buyer',
-          buyerEmail: 'buyer@example.com',
-          orderId: 'test-order-' + Math.random().toString(36).substr(2, 8),
+        // Build proper ShippingReminderData object matching the template interface
+        const orderDate = new Date(Date.now() - 49 * 60 * 60 * 1000); // 49 hours ago
+        const hoursOverdue = Math.floor((Date.now() - orderDate.getTime()) / (1000 * 60 * 60)) - 48; // Hours past 48 hour deadline
+        
+        const shippingReminderData = {
+          userName: userName, // Seller name
+          userEmail: userEmail, // Seller email
           orderNumber: 'ORD-' + Math.random().toString(36).substr(2, 7).toUpperCase(),
+          orderId: 'test-order-' + Math.random().toString(36).substr(2, 8),
+          buyerName: 'Test Buyer',
           listingTitle: 'Charizard - Base Set (Near Mint)',
-          createdAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString(), // 49 hours ago
-          shippingType: 'shipping',
-          shippingAddress: '123 Main St, Anytown, CA 12345',
+          orderAmount: 299.99,
+          orderDate: orderDate.toLocaleDateString(),
+          hoursOverdue: Math.max(1, hoursOverdue), // Ensure at least 1 hour overdue
+          shippingAddress: '123 Main St\nAnytown, CA 12345\nUnited States'
         };
 
         success = await emailService.sendShippingReminderEmail(shippingReminderData);
