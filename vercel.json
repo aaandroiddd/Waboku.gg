@@ -3,53 +3,43 @@
   "crons": [
     {
       "path": "/api/listings/archive-expired",
-      "schedule": "0 * * * *",
-      "comment": "Archive expired listings - Every hour at minute 0"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/cleanup-ttl-listings",
-      "schedule": "15 */2 * * *",
-      "comment": "TTL cleanup backup - Every 2 hours at minute 15 (after archival has run)"
+      "schedule": "15 */2 * * *"
     },
     {
       "path": "/api/listings/cleanup-related-data",
-      "schedule": "30 */4 * * *",
-      "comment": "Related data cleanup - Every 4 hours at minute 30"
+      "schedule": "30 */4 * * *"
     },
     {
       "path": "/api/admin/sync-account-tiers",
-      "schedule": "45 */3 * * *",
-      "comment": "Account tier sync - Every 3 hours at minute 45"
+      "schedule": "45 */3 * * *"
     },
     {
       "path": "/api/offers/expire-old",
-      "schedule": "*/20 * * * *",
-      "comment": "Expire old offers - Every 20 minutes"
+      "schedule": "*/20 * * * *"
     },
     {
       "path": "/api/cron/cleanup-old-offers",
-      "schedule": "0 3 * * *",
-      "comment": "Cleanup old offers - Daily at 3 AM"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/search/cleanup",
-      "schedule": "0 */2 * * *",
-      "comment": "Search cleanup - Every 2 hours at minute 0"
+      "schedule": "0 */2 * * *"
     },
     {
       "path": "/api/orders/update-all-tracking",
-      "schedule": "0 */3 * * *",
-      "comment": "Update tracking - Every 3 hours at minute 0"
+      "schedule": "0 */3 * * *"
     },
     {
       "path": "/api/cron/shipping-reminders",
-      "schedule": "0 */8 * * *",
-      "comment": "Shipping reminders - Every 8 hours at minute 0"
+      "schedule": "0 */8 * * *"
     },
     {
       "path": "/api/cleanup/storage-cleanup",
-      "schedule": "0 4 1 * *",
-      "comment": "Storage cleanup - Monthly on 1st at 4 AM"
+      "schedule": "0 4 1 * *"
     }
   ]
 }
