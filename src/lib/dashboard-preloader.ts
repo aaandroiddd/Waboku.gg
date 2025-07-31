@@ -134,21 +134,100 @@ class DashboardPreloader {
   // Load listings data
   private async loadListings(user: User): Promise<any[]> {
     try {
-      const listingsQuery = query(
+      // Fetch both active and archived listings separately to ensure we get all user's listings
+      const activeListingsQuery = query(
         collection(db, 'listings'),
         where('userId', '==', user.uid),
+        where('status', '==', 'active'),
         orderBy('createdAt', 'desc'),
-        limit(50)
+        limit(25)
       );
       
-      const snapshot = await getDocs(listingsQuery);
-      const listings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const archivedListingsQuery = query(
+        collection(db, 'listings'),
+        where('userId', '==', user.uid),
+        where('status', '==', 'archived'),
+        orderBy('createdAt', 'desc'),
+        limit(25)
+      );
       
-      this.saveToCache(user.uid, 'listings', listings);
-      return listings;
+      // Execute both queries concurrently
+      const [activeSnapshot, archivedSnapshot] = await Promise.all([
+        getDocs(activeListingsQuery),
+        getDocs(archivedListingsQuery)
+      ]);
+      
+      const processListing = (doc: any) => {
+        const data = doc.data();
+        
+        // Process timestamps properly
+        let createdAt = new Date();
+        let expiresAt = new Date();
+        let archivedAt = null;
+        let updatedAt = null;
+        
+        try {
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate();
+          } else if (data.createdAt) {
+            createdAt = new Date(data.createdAt);
+          }
+          
+          if (data.expiresAt?.toDate) {
+            expiresAt = data.expiresAt.toDate();
+          } else if (data.expiresAt) {
+            expiresAt = new Date(data.expiresAt);
+          }
+          
+          if (data.archivedAt?.toDate) {
+            archivedAt = data.archivedAt.toDate();
+          } else if (data.archivedAt) {
+            archivedAt = new Date(data.archivedAt);
+          }
+          
+          if (data.updatedAt?.toDate) {
+            updatedAt = data.updatedAt.toDate();
+          } else if (data.updatedAt) {
+            updatedAt = new Date(data.updatedAt);
+          }
+        } catch (e) {
+          console.error(`Error processing timestamps for listing ${doc.id}:`, e);
+        }
+        
+        return {
+          id: doc.id,
+          ...data,
+          createdAt,
+          expiresAt,
+          archivedAt,
+          updatedAt,
+          price: Number(data.price) || 0,
+          imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+          isGraded: Boolean(data.isGraded),
+          offersOnly: Boolean(data.offersOnly),
+          gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+          status: data.status || 'active',
+          condition: data.condition || 'Not specified',
+          game: data.game || 'Not specified',
+          city: data.city || 'Unknown',
+          state: data.state || 'Unknown',
+          gradingCompany: data.gradingCompany || undefined,
+          distance: 0 // Default distance
+        };
+      };
+      
+      const activeListings = activeSnapshot.docs.map(processListing);
+      const archivedListings = archivedSnapshot.docs.map(processListing);
+      
+      // Combine both arrays and sort by creation date
+      const allListings = [...activeListings, ...archivedListings].sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      
+      console.log(`Dashboard preloader loaded ${activeListings.length} active listings and ${archivedListings.length} archived listings`);
+      
+      this.saveToCache(user.uid, 'listings', allListings);
+      return allListings;
     } catch (error) {
       console.error('Failed to load listings:', error);
       return [];
@@ -396,29 +475,112 @@ class DashboardPreloader {
     const userId = user.uid;
     const listeners: Unsubscribe[] = [];
 
-    // Listings listener
-    const listingsQuery = query(
+    // Listings listeners - both active and archived
+    const activeListingsQuery = query(
       collection(db, 'listings'),
       where('userId', '==', userId),
+      where('status', '==', 'active'),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(25)
     );
     
-    listeners.push(onSnapshot(listingsQuery, (snapshot) => {
-      const listings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      const currentData = this.cache.get(userId);
-      if (currentData) {
-        currentData.listings = listings;
-        currentData.lastUpdated = Date.now();
-        this.cache.set(userId, currentData);
-        this.saveToCache(userId, 'listings', listings);
-        this.notifyCallbacks(userId);
-      }
-    }));
+    const archivedListingsQuery = query(
+      collection(db, 'listings'),
+      where('userId', '==', userId),
+      where('status', '==', 'archived'),
+      orderBy('createdAt', 'desc'),
+      limit(25)
+    );
+    
+    // Function to update listings data from both listeners
+    const updateListingsData = () => {
+      Promise.all([
+        getDocs(activeListingsQuery),
+        getDocs(archivedListingsQuery)
+      ]).then(([activeSnapshot, archivedSnapshot]) => {
+        const processListing = (doc: any) => {
+          const data = doc.data();
+          
+          // Process timestamps properly
+          let createdAt = new Date();
+          let expiresAt = new Date();
+          let archivedAt = null;
+          let updatedAt = null;
+          
+          try {
+            if (data.createdAt?.toDate) {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt) {
+              createdAt = new Date(data.createdAt);
+            }
+            
+            if (data.expiresAt?.toDate) {
+              expiresAt = data.expiresAt.toDate();
+            } else if (data.expiresAt) {
+              expiresAt = new Date(data.expiresAt);
+            }
+            
+            if (data.archivedAt?.toDate) {
+              archivedAt = data.archivedAt.toDate();
+            } else if (data.archivedAt) {
+              archivedAt = new Date(data.archivedAt);
+            }
+            
+            if (data.updatedAt?.toDate) {
+              updatedAt = data.updatedAt.toDate();
+            } else if (data.updatedAt) {
+              updatedAt = new Date(data.updatedAt);
+            }
+          } catch (e) {
+            console.error(`Error processing timestamps for listing ${doc.id}:`, e);
+          }
+          
+          return {
+            id: doc.id,
+            ...data,
+            createdAt,
+            expiresAt,
+            archivedAt,
+            updatedAt,
+            price: Number(data.price) || 0,
+            imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+            isGraded: Boolean(data.isGraded),
+            offersOnly: Boolean(data.offersOnly),
+            gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+            status: data.status || 'active',
+            condition: data.condition || 'Not specified',
+            game: data.game || 'Not specified',
+            city: data.city || 'Unknown',
+            state: data.state || 'Unknown',
+            gradingCompany: data.gradingCompany || undefined,
+            distance: 0 // Default distance
+          };
+        };
+        
+        const activeListings = activeSnapshot.docs.map(processListing);
+        const archivedListings = archivedSnapshot.docs.map(processListing);
+        
+        // Combine both arrays and sort by creation date
+        const allListings = [...activeListings, ...archivedListings].sort((a, b) => 
+          b.createdAt.getTime() - a.createdAt.getTime()
+        );
+        
+        const currentData = this.cache.get(userId);
+        if (currentData) {
+          currentData.listings = allListings;
+          currentData.lastUpdated = Date.now();
+          this.cache.set(userId, currentData);
+          this.saveToCache(userId, 'listings', allListings);
+          this.notifyCallbacks(userId);
+        }
+      }).catch(error => {
+        console.error('Error updating listings data from listeners:', error);
+      });
+    };
+    
+    // Set up listeners for both active and archived listings
+    listeners.push(onSnapshot(activeListingsQuery, updateListingsData));
+    listeners.push(onSnapshot(archivedListingsQuery, updateListingsData));
 
     // Offers listeners - both received and sent
     // Remove orderBy to avoid index requirements
