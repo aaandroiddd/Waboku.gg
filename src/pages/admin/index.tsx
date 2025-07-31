@@ -28,6 +28,7 @@ import { ListingExpirationDebugger } from '@/components/admin/ListingExpirationD
 import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
 import UserMigrationTool from '@/components/admin/UserMigrationTool';
 import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
+import AccountTierDebugger from '@/components/admin/AccountTierDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -43,6 +44,7 @@ interface ApiResponse {
 }
 
 const SECTIONS = [
+  { id: "account-tier-debug", label: "Account Tier Debugger" },
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
@@ -896,6 +898,19 @@ export default function AdminDashboard() {
                       Connection Debugger
                     </Button>
                   </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Account Tier Debugger */}
+            <AccordionItem value="account-tier-debug" id="account-tier-debug" ref={el => (sectionRefs.current["account-tier-debug"] = el)}>
+              <AccordionTrigger>Account Tier Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Test and debug the simplified account tier detection system. This tool allows you to test individual users, batch process multiple users, and manage the account tier cache for optimal performance.
+                  </p>
+                  <AccountTierDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>

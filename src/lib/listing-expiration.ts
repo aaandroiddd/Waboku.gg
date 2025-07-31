@@ -1,8 +1,7 @@
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
-import { parseDate } from '@/lib/date-utils';
-import { getSubscriptionData } from '@/lib/subscription-sync';
+import { getUserAccountTier } from '@/lib/account-tier-detection';
 
 // Add more detailed logging for debugging
 const logError = (message: string, error: any) => {
@@ -13,92 +12,6 @@ const logError = (message: string, error: any) => {
     name: error.name
   });
 };
-
-/**
- * Enhanced function to determine a user's account tier by checking both
- * the accountTier field and active subscription data
- */
-export async function determineUserAccountTier(userId: string) {
-  try {
-    console.log(`[ListingExpiration] Determining account tier for user ${userId}`);
-    
-    const { db } = getFirebaseAdmin();
-    
-    // Get user document from Firestore
-    const userRef = db.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    
-    if (!userDoc.exists) {
-      console.log(`[ListingExpiration] No user document found for ${userId}, defaulting to free tier`);
-      return 'free';
-    }
-    
-    const userData = userDoc.data();
-    if (!userData) {
-      console.log(`[ListingExpiration] Empty user data for ${userId}, defaulting to free tier`);
-      return 'free';
-    }
-    
-    // First check: accountTier field
-    const accountTierFromField = userData.accountTier || 'free';
-    
-    // Second check: subscription data
-    let accountTierFromSubscription = 'free';
-    
-    // Check if there's subscription data in the user document
-    if (userData.subscription) {
-      const now = new Date();
-      const subscription = userData.subscription;
-      
-      // Check if subscription is active or within paid period
-      if (subscription.status === 'active' || subscription.status === 'trialing') {
-        accountTierFromSubscription = 'premium';
-      } else if (subscription.status === 'canceled' && subscription.endDate) {
-        // For canceled subscriptions, check if still within paid period
-        try {
-          const endDate = new Date(subscription.endDate);
-          if (now < endDate) {
-            accountTierFromSubscription = 'premium';
-          }
-        } catch (error) {
-          console.error(`[ListingExpiration] Error parsing subscription end date for user ${userId}:`, error);
-        }
-      }
-      
-      // Check for admin subscriptions
-      if (subscription.stripeSubscriptionId && 
-          subscription.stripeSubscriptionId.startsWith('admin_') &&
-          subscription.status !== 'none') {
-        accountTierFromSubscription = 'premium';
-      }
-    }
-    
-    // Third check: Get subscription data from sync function for most accurate data
-    const subscriptionData = await getSubscriptionData(userId);
-    const accountTierFromSync = subscriptionData.data.accountTier || 'free';
-    
-    // Log all sources for debugging
-    console.log(`[ListingExpiration] Account tier sources for user ${userId}:`, {
-      fromField: accountTierFromField,
-      fromSubscription: accountTierFromSubscription,
-      fromSync: accountTierFromSync
-    });
-    
-    // Use the highest tier from all sources (premium > free)
-    if (accountTierFromField === 'premium' || 
-        accountTierFromSubscription === 'premium' || 
-        accountTierFromSync === 'premium') {
-      console.log(`[ListingExpiration] Determined premium tier for user ${userId}`);
-      return 'premium';
-    }
-    
-    console.log(`[ListingExpiration] Determined free tier for user ${userId}`);
-    return 'free';
-  } catch (error) {
-    console.error(`[ListingExpiration] Error determining account tier for user ${userId}:`, error);
-    return 'free'; // Default to free tier on error
-  }
-}
 
 /**
  * Enhanced middleware to handle listing expiration with improved account tier detection
@@ -199,8 +112,9 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
         createdAt = new Date(); // Fallback to current date
       }
       
-      // Get user account tier with enhanced function
-      const accountTier = await determineUserAccountTier(data.userId);
+      // Get user account tier with simplified centralized function
+      const accountTierResult = await getUserAccountTier(data.userId);
+      const accountTier = accountTierResult.tier;
       const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
       
       // Calculate CORRECT expiration time based on tier duration
@@ -300,8 +214,9 @@ export async function restoreIncorrectlyArchivedListings(userId: string) {
     // Get Firebase admin
     const { db } = getFirebaseAdmin();
     
-    // First, determine if the user is premium
-    const accountTier = await determineUserAccountTier(userId);
+    // First, determine if the user is premium using centralized function
+    const accountTierResult = await getUserAccountTier(userId);
+    const accountTier = accountTierResult.tier;
     
     if (accountTier !== 'premium') {
       console.log(`[ListingExpiration] User ${userId} is not premium, no restoration needed`);

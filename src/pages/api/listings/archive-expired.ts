@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
-import { determineUserAccountTier } from '@/lib/listing-expiration';
+import { getBatchAccountTiers } from '@/lib/account-tier-detection';
 import { addTTLToListing, LISTING_TTL_CONFIG } from '@/lib/listing-ttl';
 
 // Maximum number of operations in a single batch
@@ -85,13 +85,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`[Archive Expired] Processing ${activeListingsSnapshot.size} active listings`);
     
-    // Process each listing in parallel for better performance
-    const processPromises = activeListingsSnapshot.docs.map(async (doc) => {
+    // Extract unique user IDs for batch account tier lookup
+    const userIds = [...new Set(activeListingsSnapshot.docs.map(doc => doc.data()?.userId).filter(Boolean))];
+    console.log(`[Archive Expired] Getting account tiers for ${userIds.length} unique users`);
+    
+    // Get account tiers in batch for better performance
+    const accountTiers = await getBatchAccountTiers(userIds);
+    
+    // Process each listing with cached account tier data
+    const processedListings = [];
+    
+    for (const doc of activeListingsSnapshot.docs) {
       try {
         const data = doc.data();
         if (!data) {
           console.warn(`[Archive Expired] Empty listing data for ${doc.id}`);
-          return null;
+          continue;
         }
 
         // CRITICAL FIX: Properly parse createdAt timestamp
@@ -112,8 +121,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt = new Date(); // Fallback to current date
         }
         
-        // Get user account tier with enhanced function
-        const accountTier = await determineUserAccountTier(data.userId);
+        // Get user account tier from batch results
+        const accountTierResult = accountTiers.get(data.userId);
+        const accountTier = accountTierResult?.tier || 'free';
         const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
         
         // Calculate CORRECT expiration time based on tier duration
@@ -150,7 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             hoursActiveAtArchival: hoursActive
           }, now);
           
-          return {
+          processedListings.push({
             docRef: doc.ref,
             updateData: ttlData,
             listingId: doc.id,
@@ -160,24 +170,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             expirationTime: expirationTime.toISOString(),
             hoursActive,
             ttlDeleteAt: ttlData[LISTING_TTL_CONFIG.ttlField].toDate().toISOString()
-          };
+          });
         } else {
           const hoursUntilExpiration = Math.round((expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60));
           console.log(`[Archive Expired] Listing ${doc.id} not expired yet (${hoursActive}h active, expires in ${hoursUntilExpiration}h)`);
         }
-        
-        return null; // Not expired
       } catch (error) {
         logError('Processing active listing', error, {
           listingId: doc.id,
           data: doc.data()
         });
-        return null;
       }
-    });
-
-    // Wait for all processing to complete
-    const processedListings = (await Promise.all(processPromises)).filter(Boolean);
+    }
     
     console.log(`[Archive Expired] Found ${processedListings.length} expired listings to archive`);
     
