@@ -24,7 +24,7 @@ import { MockListingGenerator } from '@/components/admin/MockListingGenerator';
 import { PickupCodeDebugger } from '@/components/admin/PickupCodeDebugger';
 import { ListingUsernameDebugger } from '@/components/admin/ListingUsernameDebugger';
 import ProductionUsernameDebugger from '@/components/admin/ProductionUsernameDebugger';
-import { ListingExpirationDebugger } from '@/components/ListingExpirationDebugger';
+import { ListingExpirationDebugger } from '@/components/admin/ListingExpirationDebugger';
 import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
 import UserMigrationTool from '@/components/admin/UserMigrationTool';
 import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
@@ -1004,7 +1004,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-muted-foreground">
                     Debug and analyze listing expiration times to ensure they match the user's account tier. This tool can identify listings with incorrect expiration times and fix them automatically.
                   </p>
-                  <ListingExpirationDebugger listings={[]} visible={true} />
+                  <ListingExpirationDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
