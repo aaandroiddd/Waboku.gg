@@ -335,9 +335,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message = success ? 'Support confirmation email sent successfully to user' : 'Failed to send support confirmation email';
         break;
 
+      // Shipping Reminder test email
+      case 'shipping-reminder': {
+        // Accepts either a shippingReminderData object or builds one from the request
+        // For test UI, just use userEmail as sellerEmail, and mock the rest
+        const shippingReminderData = req.body.shippingReminderData || {
+          sellerEmail: userEmail,
+          sellerName: userName,
+          buyerName: 'Test Buyer',
+          buyerEmail: 'buyer@example.com',
+          orderId: 'test-order-' + Math.random().toString(36).substr(2, 8),
+          orderNumber: 'ORD-' + Math.random().toString(36).substr(2, 7).toUpperCase(),
+          listingTitle: 'Charizard - Base Set (Near Mint)',
+          createdAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString(), // 49 hours ago
+          shippingType: 'shipping',
+          shippingAddress: '123 Main St, Anytown, CA 12345',
+        };
+
+        success = await emailService.sendShippingReminderEmail(shippingReminderData);
+        message = success ? 'Shipping reminder email sent successfully' : 'Failed to send shipping reminder email';
+        break;
+      }
+
       default:
         return res.status(400).json({ 
-          error: 'Invalid type. Supported types: welcome, order-confirmation, payment-confirmation, shipping, verification, password-reset, notification, full-notification, marketplace-purchase, marketplace-sale, marketplace-shipping, marketplace-offer, marketplace-payment-received, marketplace-order-shipped, support-ticket, support-confirmation' 
+          error: 'Invalid type. Supported types: welcome, order-confirmation, payment-confirmation, shipping, verification, password-reset, notification, full-notification, marketplace-purchase, marketplace-sale, marketplace-shipping, marketplace-offer, marketplace-payment-received, marketplace-order-shipped, support-ticket, support-confirmation, shipping-reminder' 
         });
     }
 
