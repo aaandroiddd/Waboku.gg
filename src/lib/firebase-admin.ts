@@ -59,6 +59,13 @@ export async function verifyIdToken(idToken: string) {
   }
 }
 
+/**
+ * Get Firebase Admin services (alias for getFirebaseAdmin for compatibility)
+ */
+export function getFirebaseAdminServices() {
+  return getFirebaseAdmin();
+}
+
 export function getFirebaseAdmin() {
   if (firebaseAdmin) {
     return {

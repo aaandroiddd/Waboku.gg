@@ -28,8 +28,8 @@ export default async function handler(
     }
 
     try {
-      const { getFirebaseAdminServices } = await import('@/lib/firebase-admin');
-      const { auth } = getFirebaseAdminServices();
+      const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+      const { auth } = getFirebaseAdmin();
       
       // Get current user record
       const userRecord = await auth.getUser(userId);

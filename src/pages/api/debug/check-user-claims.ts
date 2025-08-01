@@ -28,8 +28,8 @@ export default async function handler(
 
     // Try to verify as Firebase token
     try {
-      const { getFirebaseAdminServices } = await import('@/lib/firebase-admin');
-      const { auth } = getFirebaseAdminServices();
+      const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+      const { auth } = getFirebaseAdmin();
       
       const decodedToken = await auth.verifyIdToken(token);
       const userId = decodedToken.uid;
