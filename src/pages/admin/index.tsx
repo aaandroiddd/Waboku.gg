@@ -30,6 +30,7 @@ import UserMigrationTool from '@/components/admin/UserMigrationTool';
 import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
 import AccountTierDebugger from '@/components/admin/AccountTierDebugger';
 import { TTLFieldValidator } from '@/components/admin/TTLFieldValidator';
+import { ListingProcessDiagnostic } from '@/components/admin/ListingProcessDiagnostic';
 import {
   Accordion,
   AccordionItem,
@@ -59,6 +60,7 @@ const SECTIONS = [
   { id: "listing-analytics", label: "Listing Analytics & Capacity Monitoring" },
   { id: "listing-debug", label: "Listing Debug Tool" },
   { id: "listing-expiration-debug", label: "Listing Expiration Debugger" },
+  { id: "listing-process-diagnostic", label: "Listing Process Diagnostic" },
   { id: "listing-username-debug", label: "Listing Username Debugger" },
   { id: "listing-visibility", label: "Listing Visibility Diagnostics" },
   { id: "mock-listings", label: "Mock Listing Generator" },
@@ -972,6 +974,19 @@ export default function AdminDashboard() {
                     Debug and analyze listing expiration times to ensure they match the user's account tier. This tool can identify listings with incorrect expiration times and fix them automatically.
                   </p>
                   <ListingExpirationDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Process Diagnostic */}
+            <AccordionItem value="listing-process-diagnostic" id="listing-process-diagnostic" ref={el => (sectionRefs.current["listing-process-diagnostic"] = el)}>
+              <AccordionTrigger>Listing Process Diagnostic</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Comprehensive analysis of the listing lifecycle, including expiration calculation, archival process, TTL-based cleanup, and automated issue detection with one-click fixes.
+                  </p>
+                  <ListingProcessDiagnostic />
                 </div>
               </AccordionContent>
             </AccordionItem>
