@@ -29,6 +29,7 @@ import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
 import UserMigrationTool from '@/components/admin/UserMigrationTool';
 import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
 import AccountTierDebugger from '@/components/admin/AccountTierDebugger';
+import { TTLFieldValidator } from '@/components/admin/TTLFieldValidator';
 import {
   Accordion,
   AccordionItem,
@@ -70,6 +71,7 @@ const SECTIONS = [
   { id: "shipping-reminders", label: "Shipping Reminder System" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
+  { id: "ttl-field-validator", label: "TTL Field Validator" },
   { id: "user-migration", label: "User Account Migration" },
   { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
@@ -1352,6 +1354,19 @@ export default function AdminDashboard() {
                   >
                     Support Management Dashboard
                   </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* TTL Field Validator */}
+            <AccordionItem value="ttl-field-validator" id="ttl-field-validator" ref={el => (sectionRefs.current["ttl-field-validator"] = el)}>
+              <AccordionTrigger>TTL Field Validator</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Validate and fix TTL field management across Firestore collections. This tool identifies fields set to null instead of using FieldValue.delete() and can automatically fix them to ensure proper TTL functionality.
+                  </p>
+                  <TTLFieldValidator />
                 </div>
               </AccordionContent>
             </AccordionItem>

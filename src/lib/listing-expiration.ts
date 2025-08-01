@@ -1,7 +1,8 @@
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
 import { getUserAccountTier } from '@/lib/account-tier-detection';
+import { createListingRestoreUpdate, safeTTLUpdate } from '@/lib/ttl-field-manager';
 
 // Add more detailed logging for debugging
 const logError = (message: string, error: any) => {
@@ -271,21 +272,16 @@ export async function restoreIncorrectlyArchivedListings(userId: string) {
         if (now < shouldExpireAt) {
           console.log(`[ListingExpiration] Restoring incorrectly archived listing ${doc.id}`);
           
-          // Restore to active status
-          await doc.ref.update({
-            status: data.previousStatus || 'active',
-            expiresAt: Timestamp.fromDate(shouldExpireAt),
-            updatedAt: Timestamp.now(),
-            restoredAt: Timestamp.now(),
-            restoredReason: 'premium_user_correction',
-            archivedAt: null,
-            expirationReason: null,
-            // CRITICAL: Remove TTL field to prevent automatic deletion
-            // When a listing is restored to active, it should not be automatically deleted
-            deleteAt: null,
-            ttlSetAt: null,
-            ttlReason: null
-          });
+          // Use the TTL field manager to safely restore the listing
+          const restoreUpdate = createListingRestoreUpdate(
+            data.previousStatus || 'active',
+            Timestamp.fromDate(shouldExpireAt)
+          );
+          
+          // Add premium-specific restoration reason
+          restoreUpdate.restoredReason = 'premium_user_correction';
+          
+          await safeTTLUpdate(doc.ref, restoreUpdate);
           
           restoredCount++;
         } else {

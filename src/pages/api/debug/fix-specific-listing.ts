@@ -1,8 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
-import { determineUserAccountTier } from '@/lib/listing-expiration';
+import { getUserAccountTier } from '@/lib/account-tier-detection';
+import { createListingArchiveUpdate, createListingRestoreUpdate, safeTTLUpdate } from '@/lib/ttl-field-manager';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -58,7 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get the user's account tier
-    const accountTier = await determineUserAccountTier(data.userId);
+    const accountTierResult = await getUserAccountTier(data.userId);
+    const accountTier = accountTierResult.tier;
     const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
 
     // Calculate correct expiration time
@@ -97,21 +99,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action = 'archive';
       const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
       
-      updateData = {
-        status: 'archived',
-        archivedAt: Timestamp.now(),
-        originalCreatedAt: data.createdAt,
-        expirationReason: 'tier_duration_exceeded',
-        deleteAt: Timestamp.fromDate(sevenDaysFromNow),
-        ttlSetAt: Timestamp.now(),
-        ttlReason: 'manual_fix',
-        updatedAt: Timestamp.now(),
-        previousStatus: data.status,
-        previousExpiresAt: data.expiresAt,
-        correctExpirationTime: Timestamp.fromDate(correctExpirationTime),
-        accountTierAtArchival: accountTier,
-        hoursActiveAtArchival: hoursActive
-      };
+      updateData = createListingArchiveUpdate(Timestamp.fromDate(sevenDaysFromNow), 'manual_fix');
+      
+      // Add additional debug fields
+      updateData.originalCreatedAt = data.createdAt;
+      updateData.expirationReason = 'tier_duration_exceeded';
+      updateData.previousStatus = data.status;
+      updateData.previousExpiresAt = data.expiresAt;
+      updateData.correctExpirationTime = Timestamp.fromDate(correctExpirationTime);
+      updateData.accountTierAtArchival = accountTier;
+      updateData.hoursActiveAtArchival = hoursActive;
     } else if (data.status === 'archived' && !data.deleteAt) {
       // Already archived but missing TTL
       action = 'add_ttl';
@@ -128,24 +125,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action = 'restore';
       const newExpirationTime = new Date(createdAt.getTime() + (ACCOUNT_TIERS.premium.listingDuration * 60 * 60 * 1000));
       
-      updateData = {
-        status: 'active',
-        expiresAt: Timestamp.fromDate(newExpirationTime),
-        updatedAt: Timestamp.now(),
-        restoredAt: Timestamp.now(),
-        restoredReason: 'premium_user_correction',
-        // Remove archive-related fields
-        archivedAt: null,
-        expirationReason: null,
-        deleteAt: null,
-        ttlSetAt: null,
-        ttlReason: null
-      };
+      updateData = createListingRestoreUpdate('active', Timestamp.fromDate(newExpirationTime));
+      updateData.restoredReason = 'premium_user_correction';
     }
 
     // Apply the fix if needed
     if (action !== 'none' && Object.keys(updateData).length > 0) {
-      await listingRef.update(updateData);
+      await safeTTLUpdate(listingRef, updateData);
       console.log(`[Fix Specific Listing] Applied ${action} to listing ${listingId}`);
     }
 
