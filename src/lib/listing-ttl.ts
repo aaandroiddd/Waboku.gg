@@ -1,4 +1,5 @@
-import { Timestamp } from 'firebase/firestore';
+// Import Timestamp from admin SDK for server-side usage
+import { Timestamp } from 'firebase-admin/firestore';
 
 /**
  * TTL-based listing lifecycle management
