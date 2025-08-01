@@ -31,6 +31,7 @@ import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
 import AccountTierDebugger from '@/components/admin/AccountTierDebugger';
 import { TTLFieldValidator } from '@/components/admin/TTLFieldValidator';
 import { ListingProcessDiagnostic } from '@/components/admin/ListingProcessDiagnostic';
+import AdminSecurityManager from '@/components/admin/AdminSecurityManager';
 import {
   Accordion,
   AccordionItem,
@@ -48,6 +49,7 @@ interface ApiResponse {
 const SECTIONS = [
   { id: "account-tier-debug", label: "Account Tier Debugger" },
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
+  { id: "admin-security", label: "Admin Security Manager" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
   { id: "moderation", label: "Content Moderation" },
@@ -391,6 +393,19 @@ export default function AdminDashboard() {
                   >
                     Account Tier Sync
                   </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Admin Security Manager */}
+            <AccordionItem value="admin-security" id="admin-security" ref={el => (sectionRefs.current["admin-security"] = el)}>
+              <AccordionTrigger>Admin Security Manager</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage two-factor authentication and backup codes for admin access. Enable MFA, generate backup codes, and test security features to enhance admin panel security.
+                  </p>
+                  <AdminSecurityManager />
                 </div>
               </AccordionContent>
             </AccordionItem>
