@@ -32,6 +32,7 @@ import AccountTierDebugger from '@/components/admin/AccountTierDebugger';
 import { TTLFieldValidator } from '@/components/admin/TTLFieldValidator';
 import { ListingProcessDiagnostic } from '@/components/admin/ListingProcessDiagnostic';
 import AdminSecurityManager from '@/components/admin/AdminSecurityManager';
+import AuthDebugger from '@/components/admin/AuthDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -50,6 +51,7 @@ const SECTIONS = [
   { id: "account-tier-debug", label: "Account Tier Debugger" },
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "admin-security", label: "Admin Security Manager" },
+  { id: "auth-debugger", label: "Authentication Debugger" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
   { id: "moderation", label: "Content Moderation" },
@@ -406,6 +408,19 @@ export default function AdminDashboard() {
                     Manage two-factor authentication and backup codes for admin access. Enable MFA, generate backup codes, and test security features to enhance admin panel security.
                   </p>
                   <AdminSecurityManager />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Authentication Debugger */}
+            <AccordionItem value="auth-debugger" id="auth-debugger" ref={el => (sectionRefs.current["auth-debugger"] = el)}>
+              <AccordionTrigger>Authentication Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug authentication issues and manage admin claims. Check user authentication status, verify admin secrets, and set custom claims for admin/moderator privileges.
+                  </p>
+                  <AuthDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
