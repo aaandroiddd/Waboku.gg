@@ -49,6 +49,7 @@ const SECTIONS = [
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
+  { id: "moderation", label: "Content Moderation" },
   { id: "dashboard-offer-debug", label: "Dashboard Offer Debugger" },
   { id: "db-usage", label: "Database Usage Monitoring" },
   { id: "email-test", label: "Email Notification Testing" },
@@ -61,21 +62,20 @@ const SECTIONS = [
   { id: "listing-username-debug", label: "Listing Username Debugger" },
   { id: "listing-visibility", label: "Listing Visibility Diagnostics" },
   { id: "mock-listings", label: "Mock Listing Generator" },
-  { id: "moderation", label: "Content Moderation" },
   { id: "moderator", label: "Moderator Management" },
   { id: "notification-debug", label: "Notification System Debugger" },
   { id: "pickup-code-debug", label: "Pickup Code Debugger" },
   { id: "production-username-debug", label: "Production Username Debugger" },
-  { id: "review-system", label: "Review System Debug" },
   { id: "review-migration", label: "Review Username Migration" },
+  { id: "review-system", label: "Review System Debug" },
   { id: "shipping-reminders", label: "Shipping Reminder System" },
+  { id: "webhook", label: "Stripe Webhook Fix" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
   { id: "ttl-field-validator", label: "TTL Field Validator" },
   { id: "user-migration", label: "User Account Migration" },
   { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
-  { id: "webhook", label: "Stripe Webhook Fix" },
   { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
 ];
 
@@ -362,38 +362,32 @@ export default function AdminDashboard() {
 
           {/* Accordion for all admin sections */}
           <Accordion type="multiple" className="w-full">
-            {/* User Tier Management */}
-            <AccordionItem value="user-tier" id="user-tier" ref={el => (sectionRefs.current["user-tier"] = el)}>
-              <AccordionTrigger>User Tier Management</AccordionTrigger>
+            {/* Account Tier Debugger */}
+            <AccordionItem value="account-tier-debug" id="account-tier-debug" ref={el => (sectionRefs.current["account-tier-debug"] = el)}>
+              <AccordionTrigger>Account Tier Debugger</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="userId">User ID</Label>
-                    <Input
-                      id="userId"
-                      placeholder="Enter Firebase User ID"
-                      value={userId}
-                      onChange={(e) => setUserId(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tier">Account Tier</Label>
-                    <MobileSelect
-                      value={selectedTier}
-                      onValueChange={setSelectedTier}
-                      placeholder="Select tier"
-                      options={[
-                        { value: "free", label: "Free" },
-                        { value: "premium", label: "Premium" }
-                      ]}
-                    />
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Test and debug the simplified account tier detection system. This tool allows you to test individual users, batch process multiple users, and manage the account tier cache for optimal performance.
+                  </p>
+                  <AccountTierDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Account Tier Sync */}
+            <AccordionItem value="account-tier-sync" id="account-tier-sync" ref={el => (sectionRefs.current["account-tier-sync"] = el)}>
+              <AccordionTrigger>Account Tier Synchronization</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Sync account tiers with Stripe subscription data to ensure correct listing expiration.
+                  </p>
                   <Button 
-                    onClick={handleUpdateUserTier}
-                    disabled={loading || !userId || !selectedTier}
+                    onClick={() => router.push(`/admin/account-tier-sync`)}
                     className="w-full"
                   >
-                    {loading ? 'Updating...' : 'Update User Tier'}
+                    Account Tier Sync
                   </Button>
                 </div>
               </AccordionContent>
@@ -701,30 +695,12 @@ export default function AdminDashboard() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* Mock Listing Generator */}
-            <AccordionItem value="mock-listings" id="mock-listings" ref={el => (sectionRefs.current["mock-listings"] = el)}>
-              <AccordionTrigger>Mock Listing Generator</AccordionTrigger>
+            {/* API Test Panel */}
+            <AccordionItem value="api-test" id="api-test" ref={el => (sectionRefs.current["api-test"] = el)}>
+              <AccordionTrigger>API Test Panel</AccordionTrigger>
               <AccordionContent>
                 <div className="py-4">
-                  <MockListingGenerator adminSecret={adminSecret} />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Subscription Management */}
-            <AccordionItem value="subscription" id="subscription" ref={el => (sectionRefs.current["subscription"] = el)}>
-              <AccordionTrigger>Subscription Management</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Fix subscription downgrades and synchronize subscription data between Stripe, Firestore, and Realtime Database.
-                  </p>
-                  <Button 
-                    onClick={() => router.push(`/admin/fix-subscriptions?adminSecret=${adminSecret}`)}
-                    className="w-full"
-                  >
-                    Fix Subscriptions
-                  </Button>
+                  <ApiTestPanel adminSecret={adminSecret} />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -743,6 +719,300 @@ export default function AdminDashboard() {
                   >
                     Moderation Dashboard
                   </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Dashboard Offer Debugger */}
+            <AccordionItem value="dashboard-offer-debug" id="dashboard-offer-debug" ref={el => (sectionRefs.current["dashboard-offer-debug"] = el)}>
+              <AccordionTrigger>Dashboard Offer Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug why offers are not appearing in the dashboard overview "Latest Offers" section. This tool replicates the exact same logic used in the dashboard overview to help identify discrepancies between the dashboard and offers page.
+                  </p>
+                  <DashboardOfferDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Database Usage Monitoring */}
+            <AccordionItem value="db-usage" id="db-usage" ref={el => (sectionRefs.current["db-usage"] = el)}>
+              <AccordionTrigger>Database Usage Monitoring</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Monitor and optimize Firebase Realtime Database usage to reduce quota issues.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button 
+                      onClick={() => router.push(`/admin/database-usage`)}
+                      className="w-full"
+                    >
+                      Database Usage Monitor
+                    </Button>
+                    <Button 
+                      onClick={() => router.push(`/admin/database-monitor`)}
+                      className="w-full"
+                    >
+                      Real-time Database Monitor
+                    </Button>
+                    <Button 
+                      onClick={() => router.push(`/admin/database-usage-audit`)}
+                      className="w-full"
+                    >
+                      Database Usage Audit
+                    </Button>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Email Notification Testing */}
+            <AccordionItem value="email-test" id="email-test" ref={el => (sectionRefs.current["email-test"] = el)}>
+              <AccordionTrigger>Email Notification Testing</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Test email notifications using Resend. Send welcome emails, notification emails, or test the full notification system.
+                  </p>
+                  <EmailNotificationTester adminSecret={adminSecret} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Firebase Diagnostics */}
+            <AccordionItem value="firebase" id="firebase" ref={el => (sectionRefs.current["firebase"] = el)}>
+              <AccordionTrigger>Firebase Diagnostics</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Troubleshoot Firebase connection issues and database rules.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      onClick={() => router.push(`/admin/firebase-diagnostics`)}
+                      className="w-full"
+                    >
+                      Firebase Diagnostics
+                    </Button>
+                    <Button 
+                      onClick={() => router.push(`/admin/firebase-connection-debug`)}
+                      className="w-full"
+                    >
+                      Connection Debugger
+                    </Button>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Fix Archived Listings Visibility */}
+            <AccordionItem value="fix-archived-listings" id="fix-archived-listings" ref={el => (sectionRefs.current["fix-archived-listings"] = el)}>
+              <AccordionTrigger>Fix Archived Listings Visibility</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Fix archived listings that are still showing on public pages. This tool ensures archived listings have proper TTL fields, correct timestamps, and are properly filtered from public views.
+                  </p>
+                  <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                      ⚠️ This tool will update archived listings to ensure they don't appear on public pages and have proper TTL for automatic deletion.
+                    </AlertDescription>
+                  </Alert>
+                  <Button 
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const response = await fetch('/api/debug/fix-archived-listings-visibility', {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${adminSecret}`,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        const data = await response.json();
+                        setApiResponse(data);
+                        setResponseDialog(true);
+                      } catch (error) {
+                        setApiResponse({ error: 'Failed to fix archived listings visibility' });
+                        setResponseDialog(true);
+                      }
+                      setLoading(false);
+                    }}
+                    disabled={loading}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    {loading ? 'Fixing Archived Listings...' : 'Fix Archived Listings Visibility'}
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Fix Specific Listing */}
+            <AccordionItem value="fix-specific-listing" id="fix-specific-listing" ref={el => (sectionRefs.current["fix-specific-listing"] = el)}>
+              <AccordionTrigger>Fix Specific Listing</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Analyze and fix a specific listing's expiration status. This tool can determine if a listing should be archived based on its creation date and account tier, or restore incorrectly archived premium listings.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="specificListingId">Listing ID</Label>
+                      <Input
+                        id="specificListingId"
+                        placeholder="Enter listing ID to analyze and fix"
+                        value={testTtlListingId}
+                        onChange={(e) => setTestTtlListingId(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      onClick={async () => {
+                        if (!testTtlListingId) {
+                          setApiResponse({ error: 'Listing ID is required' });
+                          setResponseDialog(true);
+                          return;
+                        }
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/debug/fix-specific-listing', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              listingId: testTtlListingId
+                            })
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                          
+                          // Clear the input on success
+                          if (response.ok) {
+                            setTestTtlListingId('');
+                          }
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to fix specific listing' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading || !testTtlListingId}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {loading ? 'Analyzing & Fixing...' : 'Analyze & Fix Listing'}
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Archive:</strong> If listing should be expired but isn't archived</p>
+                    <p><strong>Add TTL:</strong> If listing is archived but missing automatic deletion</p>
+                    <p><strong>Restore:</strong> If premium user listing was incorrectly archived</p>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Analytics & Capacity Monitoring */}
+            <AccordionItem value="listing-analytics" id="listing-analytics" ref={el => (sectionRefs.current["listing-analytics"] = el)}>
+              <AccordionTrigger>Listing Analytics & Capacity Monitoring</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Monitor marketplace health, listing counts per category, and 7-digit ID capacity usage.
+                  </p>
+                  <Button 
+                    onClick={() => router.push(`/admin/listing-analytics`)}
+                    className="w-full"
+                  >
+                    Listing Analytics Dashboard
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Debug Tool */}
+            <AccordionItem value="listing-debug" id="listing-debug" ref={el => (sectionRefs.current["listing-debug"] = el)}>
+              <AccordionTrigger>Listing Debug Tool</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Compare mock vs real listings, analyze status distribution, and debug why only mock listings might be showing on certain pages.
+                  </p>
+                  <Button 
+                    onClick={debugListings}
+                    disabled={isDebuggingListings}
+                    className="w-full"
+                  >
+                    {isDebuggingListings ? 'Analyzing...' : 'Analyze Listings'}
+                  </Button>
+                  
+                  {listingsDebugResult && (
+                    <div className="mt-4">
+                      <Label className="text-sm font-medium">Debug Results:</Label>
+                      <ScrollArea className="max-h-[400px] mt-2">
+                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs">
+                          {listingsDebugResult}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Expiration Debugger */}
+            <AccordionItem value="listing-expiration-debug" id="listing-expiration-debug" ref={el => (sectionRefs.current["listing-expiration-debug"] = el)}>
+              <AccordionTrigger>Listing Expiration Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug and analyze listing expiration times to ensure they match the user's account tier. This tool can identify listings with incorrect expiration times and fix them automatically.
+                  </p>
+                  <ListingExpirationDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Username Debugger */}
+            <AccordionItem value="listing-username-debug" id="listing-username-debug" ref={el => (sectionRefs.current["listing-username-debug"] = el)}>
+              <AccordionTrigger>Listing Username Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Diagnose and fix issues where user IDs are showing instead of usernames on listing cards. This tool can detect listings with user ID usernames and automatically fix them.
+                  </p>
+                  <ListingUsernameDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Visibility Diagnostics */}
+            <AccordionItem value="listing-visibility" id="listing-visibility" ref={el => (sectionRefs.current["listing-visibility"] = el)}>
+              <AccordionTrigger>Listing Visibility Diagnostics</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Diagnose and fix issues with listing visibility in the marketplace.
+                  </p>
+                  <Button 
+                    onClick={() => router.push(`/admin/listing-diagnostics`)}
+                    className="w-full"
+                  >
+                    Listing Diagnostics
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Mock Listing Generator */}
+            <AccordionItem value="mock-listings" id="mock-listings" ref={el => (sectionRefs.current["mock-listings"] = el)}>
+              <AccordionTrigger>Mock Listing Generator</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <MockListingGenerator adminSecret={adminSecret} />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -845,234 +1115,41 @@ export default function AdminDashboard() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* Stripe Webhook Fix */}
-            <AccordionItem value="webhook" id="webhook" ref={el => (sectionRefs.current["webhook"] = el)}>
-              <AccordionTrigger>Stripe Webhook Fix</AccordionTrigger>
-              <AccordionContent>
-                <div className="py-4">
-                  <WebhookFixTrigger adminSecret={adminSecret} />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* API Test Panel */}
-            <AccordionItem value="api-test" id="api-test" ref={el => (sectionRefs.current["api-test"] = el)}>
-              <AccordionTrigger>API Test Panel</AccordionTrigger>
-              <AccordionContent>
-                <div className="py-4">
-                  <ApiTestPanel adminSecret={adminSecret} />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Dashboard Offer Debugger */}
-            <AccordionItem value="dashboard-offer-debug" id="dashboard-offer-debug" ref={el => (sectionRefs.current["dashboard-offer-debug"] = el)}>
-              <AccordionTrigger>Dashboard Offer Debugger</AccordionTrigger>
+            {/* Notification System Debugger */}
+            <AccordionItem value="notification-debug" id="notification-debug" ref={el => (sectionRefs.current["notification-debug"] = el)}>
+              <AccordionTrigger>Notification System Debugger</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-muted-foreground">
-                    Debug why offers are not appearing in the dashboard overview "Latest Offers" section. This tool replicates the exact same logic used in the dashboard overview to help identify discrepancies between the dashboard and offers page.
+                    Test and debug the notification system functionality, including creation, delivery, and API endpoints.
                   </p>
-                  <DashboardOfferDebugger />
+                  <NotificationDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Firebase Diagnostics */}
-            <AccordionItem value="firebase" id="firebase" ref={el => (sectionRefs.current["firebase"] = el)}>
-              <AccordionTrigger>Firebase Diagnostics</AccordionTrigger>
+            {/* Pickup Code Debugger */}
+            <AccordionItem value="pickup-code-debug" id="pickup-code-debug" ref={el => (sectionRefs.current["pickup-code-debug"] = el)}>
+              <AccordionTrigger>Pickup Code Debugger</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-muted-foreground">
-                    Troubleshoot Firebase connection issues and database rules.
+                    Debug and test the 6-digit pickup code system for local pickup orders. Generate codes, verify them, and inspect database storage.
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      onClick={() => router.push(`/admin/firebase-diagnostics`)}
-                      className="w-full"
-                    >
-                      Firebase Diagnostics
-                    </Button>
-                    <Button 
-                      onClick={() => router.push(`/admin/firebase-connection-debug`)}
-                      className="w-full"
-                    >
-                      Connection Debugger
-                    </Button>
-                  </div>
+                  <PickupCodeDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Account Tier Debugger */}
-            <AccordionItem value="account-tier-debug" id="account-tier-debug" ref={el => (sectionRefs.current["account-tier-debug"] = el)}>
-              <AccordionTrigger>Account Tier Debugger</AccordionTrigger>
+            {/* Production Username Debugger */}
+            <AccordionItem value="production-username-debug" id="production-username-debug" ref={el => (sectionRefs.current["production-username-debug"] = el)}>
+              <AccordionTrigger>Production Username Debugger</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-muted-foreground">
-                    Test and debug the simplified account tier detection system. This tool allows you to test individual users, batch process multiple users, and manage the account tier cache for optimal performance.
+                    Fix production listings that show user IDs instead of usernames. This tool directly accesses the production database to identify and fix username issues that affect the live marketplace.
                   </p>
-                  <AccountTierDebugger />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Account Tier Sync */}
-            <AccordionItem value="account-tier-sync" id="account-tier-sync" ref={el => (sectionRefs.current["account-tier-sync"] = el)}>
-              <AccordionTrigger>Account Tier Synchronization</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Sync account tiers with Stripe subscription data to ensure correct listing expiration.
-                  </p>
-                  <Button 
-                    onClick={() => router.push(`/admin/account-tier-sync`)}
-                    className="w-full"
-                  >
-                    Account Tier Sync
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Database Usage Monitoring */}
-            <AccordionItem value="db-usage" id="db-usage" ref={el => (sectionRefs.current["db-usage"] = el)}>
-              <AccordionTrigger>Database Usage Monitoring</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Monitor and optimize Firebase Realtime Database usage to reduce quota issues.
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button 
-                      onClick={() => router.push(`/admin/database-usage`)}
-                      className="w-full"
-                    >
-                      Database Usage Monitor
-                    </Button>
-                    <Button 
-                      onClick={() => router.push(`/admin/database-monitor`)}
-                      className="w-full"
-                    >
-                      Real-time Database Monitor
-                    </Button>
-                    <Button 
-                      onClick={() => router.push(`/admin/database-usage-audit`)}
-                      className="w-full"
-                    >
-                      Database Usage Audit
-                    </Button>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Listing Analytics */}
-            <AccordionItem value="listing-analytics" id="listing-analytics" ref={el => (sectionRefs.current["listing-analytics"] = el)}>
-              <AccordionTrigger>Listing Analytics & Capacity Monitoring</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Monitor marketplace health, listing counts per category, and 7-digit ID capacity usage.
-                  </p>
-                  <Button 
-                    onClick={() => router.push(`/admin/listing-analytics`)}
-                    className="w-full"
-                  >
-                    Listing Analytics Dashboard
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Listing Debug Tool */}
-            <AccordionItem value="listing-debug" id="listing-debug" ref={el => (sectionRefs.current["listing-debug"] = el)}>
-              <AccordionTrigger>Listing Debug Tool</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Compare mock vs real listings, analyze status distribution, and debug why only mock listings might be showing on certain pages.
-                  </p>
-                  <Button 
-                    onClick={debugListings}
-                    disabled={isDebuggingListings}
-                    className="w-full"
-                  >
-                    {isDebuggingListings ? 'Analyzing...' : 'Analyze Listings'}
-                  </Button>
-                  
-                  {listingsDebugResult && (
-                    <div className="mt-4">
-                      <Label className="text-sm font-medium">Debug Results:</Label>
-                      <ScrollArea className="max-h-[400px] mt-2">
-                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs">
-                          {listingsDebugResult}
-                        </pre>
-                      </ScrollArea>
-                    </div>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Listing Expiration Debugger */}
-            <AccordionItem value="listing-expiration-debug" id="listing-expiration-debug" ref={el => (sectionRefs.current["listing-expiration-debug"] = el)}>
-              <AccordionTrigger>Listing Expiration Debugger</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Debug and analyze listing expiration times to ensure they match the user's account tier. This tool can identify listings with incorrect expiration times and fix them automatically.
-                  </p>
-                  <ListingExpirationDebugger />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Listing Username Debugger */}
-            <AccordionItem value="listing-username-debug" id="listing-username-debug" ref={el => (sectionRefs.current["listing-username-debug"] = el)}>
-              <AccordionTrigger>Listing Username Debugger</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Diagnose and fix issues where user IDs are showing instead of usernames on listing cards. This tool can detect listings with user ID usernames and automatically fix them.
-                  </p>
-                  <ListingUsernameDebugger />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Listing Visibility Diagnostics */}
-            <AccordionItem value="listing-visibility" id="listing-visibility" ref={el => (sectionRefs.current["listing-visibility"] = el)}>
-              <AccordionTrigger>Listing Visibility Diagnostics</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Diagnose and fix issues with listing visibility in the marketplace.
-                  </p>
-                  <Button 
-                    onClick={() => router.push(`/admin/listing-diagnostics`)}
-                    className="w-full"
-                  >
-                    Listing Diagnostics
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Review System Debug */}
-            <AccordionItem value="review-system" id="review-system" ref={el => (sectionRefs.current["review-system"] = el)}>
-              <AccordionTrigger>Review System Debug</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Diagnose and fix issues with the review system.
-                  </p>
-                  <Button 
-                    onClick={() => router.push(`/admin/review-system`)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    Review System Debug
-                  </Button>
+                  <ProductionUsernameDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -1119,54 +1196,146 @@ export default function AdminDashboard() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* Notification System Debugger */}
-            <AccordionItem value="notification-debug" id="notification-debug" ref={el => (sectionRefs.current["notification-debug"] = el)}>
-              <AccordionTrigger>Notification System Debugger</AccordionTrigger>
+            {/* Review System Debug */}
+            <AccordionItem value="review-system" id="review-system" ref={el => (sectionRefs.current["review-system"] = el)}>
+              <AccordionTrigger>Review System Debug</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-muted-foreground">
-                    Test and debug the notification system functionality, including creation, delivery, and API endpoints.
+                    Diagnose and fix issues with the review system.
                   </p>
-                  <NotificationDebugger />
+                  <Button 
+                    onClick={() => router.push(`/admin/review-system`)}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Review System Debug
+                  </Button>
                 </div>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Pickup Code Debugger */}
-            <AccordionItem value="pickup-code-debug" id="pickup-code-debug" ref={el => (sectionRefs.current["pickup-code-debug"] = el)}>
-              <AccordionTrigger>Pickup Code Debugger</AccordionTrigger>
+            {/* Shipping Reminder System */}
+            <AccordionItem value="shipping-reminders" id="shipping-reminders" ref={el => (sectionRefs.current["shipping-reminders"] = el)}>
+              <AccordionTrigger>Shipping Reminder System</AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Debug and test the 6-digit pickup code system for local pickup orders. Generate codes, verify them, and inspect database storage.
-                  </p>
-                  <PickupCodeDebugger />
+                <div className="py-4">
+                  <ShippingReminderTester />
                 </div>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Production Username Debugger */}
-            <AccordionItem value="production-username-debug" id="production-username-debug" ref={el => (sectionRefs.current["production-username-debug"] = el)}>
-              <AccordionTrigger>Production Username Debugger</AccordionTrigger>
+            {/* Stripe Webhook Fix */}
+            <AccordionItem value="webhook" id="webhook" ref={el => (sectionRefs.current["webhook"] = el)}>
+              <AccordionTrigger>Stripe Webhook Fix</AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Fix production listings that show user IDs instead of usernames. This tool directly accesses the production database to identify and fix username issues that affect the live marketplace.
-                  </p>
-                  <ProductionUsernameDebugger />
+                <div className="py-4">
+                  <WebhookFixTrigger adminSecret={adminSecret} />
                 </div>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Email Notification Testing */}
-            <AccordionItem value="email-test" id="email-test" ref={el => (sectionRefs.current["email-test"] = el)}>
-              <AccordionTrigger>Email Notification Testing</AccordionTrigger>
+            {/* Subscription Management */}
+            <AccordionItem value="subscription" id="subscription" ref={el => (sectionRefs.current["subscription"] = el)}>
+              <AccordionTrigger>Subscription Management</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-muted-foreground">
-                    Test email notifications using Resend. Send welcome emails, notification emails, or test the full notification system.
+                    Fix subscription downgrades and synchronize subscription data between Stripe, Firestore, and Realtime Database.
                   </p>
-                  <EmailNotificationTester adminSecret={adminSecret} />
+                  <Button 
+                    onClick={() => router.push(`/admin/fix-subscriptions?adminSecret=${adminSecret}`)}
+                    className="w-full"
+                  >
+                    Fix Subscriptions
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Support Ticket Management */}
+            <AccordionItem value="support-management" id="support-management" ref={el => (sectionRefs.current["support-management"] = el)}>
+              <AccordionTrigger>Support Ticket Management</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage and respond to user support tickets. View all tickets, respond to users, and update ticket statuses.
+                  </p>
+                  <Button 
+                    onClick={() => router.push(`/admin/support-management`)}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Support Management Dashboard
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* TTL Field Validator */}
+            <AccordionItem value="ttl-field-validator" id="ttl-field-validator" ref={el => (sectionRefs.current["ttl-field-validator"] = el)}>
+              <AccordionTrigger>TTL Field Validator</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Validate and fix TTL field management across Firestore collections. This tool identifies fields set to null instead of using FieldValue.delete() and can automatically fix them to ensure proper TTL functionality.
+                  </p>
+                  <TTLFieldValidator />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* User Account Migration */}
+            <AccordionItem value="user-migration" id="user-migration" ref={el => (sectionRefs.current["user-migration"] = el)}>
+              <AccordionTrigger>User Account Migration</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <UserMigrationTool />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* User Tier Management */}
+            <AccordionItem value="user-tier" id="user-tier" ref={el => (sectionRefs.current["user-tier"] = el)}>
+              <AccordionTrigger>User Tier Management</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="userId">User ID</Label>
+                    <Input
+                      id="userId"
+                      placeholder="Enter Firebase User ID"
+                      value={userId}
+                      onChange={(e) => setUserId(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tier">Account Tier</Label>
+                    <MobileSelect
+                      value={selectedTier}
+                      onValueChange={setSelectedTier}
+                      placeholder="Select tier"
+                      options={[
+                        { value: "free", label: "Free" },
+                        { value: "premium", label: "Premium" }
+                      ]}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleUpdateUserTier}
+                    disabled={loading || !userId || !selectedTier}
+                    className="w-full"
+                  >
+                    {loading ? 'Updating...' : 'Update User Tier'}
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Wanted Posts Debugging Tools */}
+            <AccordionItem value="wanted-posts" id="wanted-posts" ref={el => (sectionRefs.current["wanted-posts"] = el)}>
+              <AccordionTrigger>Wanted Posts Debugging Tools</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <WantedPostsDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -1335,175 +1504,6 @@ export default function AdminDashboard() {
                       <p><strong>Message Notifications:</strong> Tests message notification creation and email delivery</p>
                       <p><strong>Badge System:</strong> Tests UnreadContext data sources and badge counting logic</p>
                     </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Support Ticket Management */}
-            <AccordionItem value="support-management" id="support-management" ref={el => (sectionRefs.current["support-management"] = el)}>
-              <AccordionTrigger>Support Ticket Management</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Manage and respond to user support tickets. View all tickets, respond to users, and update ticket statuses.
-                  </p>
-                  <Button 
-                    onClick={() => router.push(`/admin/support-management`)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    Support Management Dashboard
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* TTL Field Validator */}
-            <AccordionItem value="ttl-field-validator" id="ttl-field-validator" ref={el => (sectionRefs.current["ttl-field-validator"] = el)}>
-              <AccordionTrigger>TTL Field Validator</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Validate and fix TTL field management across Firestore collections. This tool identifies fields set to null instead of using FieldValue.delete() and can automatically fix them to ensure proper TTL functionality.
-                  </p>
-                  <TTLFieldValidator />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Shipping Reminder System */}
-            <AccordionItem value="shipping-reminders" id="shipping-reminders" ref={el => (sectionRefs.current["shipping-reminders"] = el)}>
-              <AccordionTrigger>Shipping Reminder System</AccordionTrigger>
-              <AccordionContent>
-                <div className="py-4">
-                  <ShippingReminderTester />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* User Account Migration */}
-            <AccordionItem value="user-migration" id="user-migration" ref={el => (sectionRefs.current["user-migration"] = el)}>
-              <AccordionTrigger>User Account Migration</AccordionTrigger>
-              <AccordionContent>
-                <div className="py-4">
-                  <UserMigrationTool />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Wanted Posts Debugging Tools */}
-            <AccordionItem value="wanted-posts" id="wanted-posts" ref={el => (sectionRefs.current["wanted-posts"] = el)}>
-              <AccordionTrigger>Wanted Posts Debugging Tools</AccordionTrigger>
-              <AccordionContent>
-                <div className="py-4">
-                  <WantedPostsDebugger />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Fix Archived Listings Visibility */}
-            <AccordionItem value="fix-archived-listings" id="fix-archived-listings" ref={el => (sectionRefs.current["fix-archived-listings"] = el)}>
-              <AccordionTrigger>Fix Archived Listings Visibility</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Fix archived listings that are still showing on public pages. This tool ensures archived listings have proper TTL fields, correct timestamps, and are properly filtered from public views.
-                  </p>
-                  <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
-                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-                      ⚠️ This tool will update archived listings to ensure they don't appear on public pages and have proper TTL for automatic deletion.
-                    </AlertDescription>
-                  </Alert>
-                  <Button 
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        const response = await fetch('/api/debug/fix-archived-listings-visibility', {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${adminSecret}`,
-                            'Content-Type': 'application/json'
-                          }
-                        });
-                        const data = await response.json();
-                        setApiResponse(data);
-                        setResponseDialog(true);
-                      } catch (error) {
-                        setApiResponse({ error: 'Failed to fix archived listings visibility' });
-                        setResponseDialog(true);
-                      }
-                      setLoading(false);
-                    }}
-                    disabled={loading}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    {loading ? 'Fixing Archived Listings...' : 'Fix Archived Listings Visibility'}
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Fix Specific Listing */}
-            <AccordionItem value="fix-specific-listing" id="fix-specific-listing" ref={el => (sectionRefs.current["fix-specific-listing"] = el)}>
-              <AccordionTrigger>Fix Specific Listing</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Analyze and fix a specific listing's expiration status. This tool can determine if a listing should be archived based on its creation date and account tier, or restore incorrectly archived premium listings.
-                  </p>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="specificListingId">Listing ID</Label>
-                      <Input
-                        id="specificListingId"
-                        placeholder="Enter listing ID to analyze and fix"
-                        value={testTtlListingId}
-                        onChange={(e) => setTestTtlListingId(e.target.value)}
-                      />
-                    </div>
-                    <Button 
-                      onClick={async () => {
-                        if (!testTtlListingId) {
-                          setApiResponse({ error: 'Listing ID is required' });
-                          setResponseDialog(true);
-                          return;
-                        }
-                        setLoading(true);
-                        try {
-                          const response = await fetch('/api/debug/fix-specific-listing', {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${adminSecret}`,
-                              'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                              listingId: testTtlListingId
-                            })
-                          });
-                          const data = await response.json();
-                          setApiResponse(data);
-                          setResponseDialog(true);
-                          
-                          // Clear the input on success
-                          if (response.ok) {
-                            setTestTtlListingId('');
-                          }
-                        } catch (error) {
-                          setApiResponse({ error: 'Failed to fix specific listing' });
-                          setResponseDialog(true);
-                        }
-                        setLoading(false);
-                      }}
-                      disabled={loading || !testTtlListingId}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {loading ? 'Analyzing & Fixing...' : 'Analyze & Fix Listing'}
-                    </Button>
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p><strong>Archive:</strong> If listing should be expired but isn't archived</p>
-                    <p><strong>Add TTL:</strong> If listing is archived but missing automatic deletion</p>
-                    <p><strong>Restore:</strong> If premium user listing was incorrectly archived</p>
                   </div>
                 </div>
               </AccordionContent>
