@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useProfile } from '@/hooks/useProfile';
 import { User } from 'firebase/auth';
+import { getBestAvatarUrl, getGoogleAvatarSizes } from '@/lib/avatar-utils';
 
 interface ProfileAvatarProps {
   user: User | null;
@@ -21,20 +22,43 @@ export function ProfileAvatar({ user, size = 'md', className = '' }: ProfileAvat
     }
   }, [user?.uid, user?.photoURL, refreshProfile]);
   
-  // Determine avatar source with priority:
-  // 1. Profile avatarUrl (from Firestore)
-  // 2. User photoURL (from Firebase Auth)
-  // 3. Default fallback
-  const avatarSrc = profile?.avatarUrl || user?.photoURL || undefined;
+  // Get the best quality avatar URL using the new utility
+  const avatarSrc = getBestAvatarUrl(user, profile);
+  
+  // Get responsive sizes for Google photos
+  const avatarSizes = getGoogleAvatarSizes(avatarSrc);
+  
+  // Choose appropriate size based on component size
+  const getSizedAvatarUrl = () => {
+    if (!avatarSrc) return undefined;
+    
+    switch (size) {
+      case 'sm':
+        return avatarSizes.small;
+      case 'md':
+        return avatarSizes.medium;
+      case 'lg':
+        return avatarSizes.large;
+      case 'xl':
+        return avatarSizes.xlarge;
+      default:
+        return avatarSizes.medium;
+    }
+  };
+  
+  const finalAvatarSrc = getSizedAvatarUrl();
   
   // Log avatar source for debugging
   useEffect(() => {
     console.log('ProfileAvatar - Avatar source:', {
       profileAvatarUrl: profile?.avatarUrl,
       userPhotoURL: user?.photoURL,
-      finalSrc: avatarSrc
+      bestAvatarUrl: avatarSrc,
+      finalSizedUrl: finalAvatarSrc,
+      size: size,
+      availableSizes: avatarSizes
     });
-  }, [profile?.avatarUrl, user?.photoURL, avatarSrc]);
+  }, [profile?.avatarUrl, user?.photoURL, avatarSrc, finalAvatarSrc, size, avatarSizes]);
   
   // Size classes
   const sizeClasses = {
@@ -65,16 +89,24 @@ export function ProfileAvatar({ user, size = 'md', className = '' }: ProfileAvat
     <Avatar className={`${sizeClasses[size]} ${className}`}>
       <AvatarImage 
         key={avatarKey} // Force re-render when avatar changes
-        src={avatarSrc} 
+        src={finalAvatarSrc} 
         alt={profile?.username || user?.displayName || 'User avatar'} 
         onError={(e) => {
-          // If avatar fails to load, try to refresh profile data
-          console.log('Avatar failed to load, refreshing profile');
-          refreshProfile();
-          
-          // Set fallback image
+          // If high-quality avatar fails to load, try the original URL
           const target = e.target as HTMLImageElement;
-          target.src = '/images/default-avatar.svg';
+          
+          if (finalAvatarSrc !== avatarSrc && avatarSrc) {
+            console.log('High-quality avatar failed to load, trying original URL');
+            target.src = avatarSrc;
+          } else if (user?.photoURL && finalAvatarSrc !== user.photoURL) {
+            console.log('Avatar failed to load, trying user photoURL');
+            target.src = user.photoURL;
+          } else {
+            console.log('Avatar failed to load, using default');
+            target.src = '/images/default-avatar.svg';
+            // Also refresh profile data for next time
+            refreshProfile();
+          }
         }}
       />
       <AvatarFallback>{getInitials()}</AvatarFallback>

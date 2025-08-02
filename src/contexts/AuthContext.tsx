@@ -25,6 +25,7 @@ import {
   clearStoredAuthData, 
   checkAndClearStaleAuthData 
 } from '@/lib/auth-token-manager';
+import { enhanceGoogleAvatarQuality } from '@/lib/avatar-utils';
 
 interface AuthContextType {
   user: User | null;
@@ -304,27 +305,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.log('User profile found successfully');
                 
                 // Check if profile needs to be updated with latest auth data
+                const enhancedPhotoURL = enhanceGoogleAvatarQuality(user.photoURL);
                 const needsUpdate = (
                   (user.displayName && profileData.username !== user.displayName) ||
-                  (user.photoURL && profileData.avatarUrl !== user.photoURL) ||
+                  (enhancedPhotoURL && profileData.avatarUrl !== enhancedPhotoURL) ||
+                  (user.photoURL && profileData.photoURL !== user.photoURL) ||
                   (profileData.isEmailVerified !== user.emailVerified)
                 );
                 
                 if (needsUpdate) {
-                  console.log('Updating profile with latest auth data');
+                  console.log('Updating profile with latest auth data and enhanced avatar URL');
                   const updatedProfile = {
                     ...profileData,
                     username: profileData.username || user.displayName || user.email!.split('@')[0],
                     displayName: user.displayName || profileData.username || user.email!.split('@')[0],
-                    avatarUrl: profileData.avatarUrl || user.photoURL || '',
-                    photoURL: user.photoURL || profileData.avatarUrl || '',
+                    avatarUrl: enhancedPhotoURL || profileData.avatarUrl || user.photoURL || '',
+                    photoURL: user.photoURL || profileData.photoURL || '',
                     isEmailVerified: user.emailVerified,
                     lastUpdated: new Date().toISOString()
                   };
                   
                   await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
                   profileData = updatedProfile;
-                  console.log('Profile updated with latest auth data');
+                  console.log('Profile updated with latest auth data and enhanced avatar URL');
                 }
                 
                 break; // Success, exit retry loop
@@ -342,6 +345,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   username = `${username}${Math.floor(Math.random() * 10000)}`;
                 }
                 
+                const enhancedPhotoURL = enhanceGoogleAvatarQuality(user.photoURL);
                 const basicProfile = {
                   uid: user.uid,
                   email: user.email!,
@@ -352,7 +356,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   rating: 0,
                   bio: '',
                   location: '',
-                  avatarUrl: user.photoURL || '',
+                  avatarUrl: enhancedPhotoURL || user.photoURL || '',
                   photoURL: user.photoURL || '',
                   isEmailVerified: user.emailVerified,
                   verificationSentAt: null,
