@@ -237,8 +237,11 @@ const OffersContent = () => {
           description: data.message,
         });
         
-        // Refresh offers data
-        await refreshSection('offers');
+        // Refresh offers data from both sources
+        await Promise.all([
+          refreshSection('offers'), // Refresh dashboard context data
+          fetchOffers() // Refresh useOffers hook data
+        ]);
       } else {
         const errorData = await response.json();
         toast({
