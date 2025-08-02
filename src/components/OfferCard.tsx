@@ -19,6 +19,7 @@ import { OfferMessageDialog } from '@/components/OfferMessageDialog';
 import { toast } from 'sonner';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { getListingUrl } from '@/lib/listing-slug';
 
 interface OfferCardProps {
   offer: Offer;
@@ -112,7 +113,42 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
     }
   };
 
-  const handleViewListing = () => {
+  // Ensure we have valid data for the offer
+  const safeOffer = {
+    ...offer,
+    listingSnapshot: {
+      title: offer.listingSnapshot?.title || 'Unknown Listing',
+      price: offer.listingSnapshot?.price || 0,
+      imageUrl: offer.listingSnapshot?.imageUrl || '',
+    },
+    createdAt: offer.createdAt instanceof Date ? offer.createdAt : new Date(),
+    expiresAt: offer.expiresAt instanceof Date ? offer.expiresAt : null,
+    status: offer.status || 'pending'
+  };
+
+  const handleViewListing = async () => {
+    try {
+      // First, try to get the listing data to get the game information
+      const { db } = getFirebaseServices();
+      if (db) {
+        const listingDoc = await getDoc(doc(db, 'listings', offer.listingId));
+        if (listingDoc.exists()) {
+          const listingData = listingDoc.data();
+          const listingForUrl = {
+            id: offer.listingId,
+            title: safeOffer.listingSnapshot.title,
+            game: listingData.game || 'other'
+          };
+          const listingUrl = getListingUrl(listingForUrl);
+          router.push(listingUrl);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching listing data for URL generation:', error);
+    }
+    
+    // Fallback to old URL format if we can't get the listing data
     router.push(`/listings/${offer.listingId}`);
   };
 
@@ -130,19 +166,6 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
       default:
         return 'outline';
     }
-  };
-
-  // Ensure we have valid data for the offer
-  const safeOffer = {
-    ...offer,
-    listingSnapshot: {
-      title: offer.listingSnapshot?.title || 'Unknown Listing',
-      price: offer.listingSnapshot?.price || 0,
-      imageUrl: offer.listingSnapshot?.imageUrl || '',
-    },
-    createdAt: offer.createdAt instanceof Date ? offer.createdAt : new Date(),
-    expiresAt: offer.expiresAt instanceof Date ? offer.expiresAt : null,
-    status: offer.status || 'pending'
   };
 
   // Calculate expiration status
