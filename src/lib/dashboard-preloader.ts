@@ -257,23 +257,47 @@ class DashboardPreloader {
         getDocs(sentOffersQuery)
       ]);
       
-      const receivedOffers = receivedSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        expiresAt: doc.data().expiresAt?.toDate() || null,
-        cleared: doc.data().cleared === true
-      })).filter(offer => !offer.cleared);
+      const receivedOffers = receivedSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          expiresAt: data.expiresAt?.toDate() || null,
+          cleared: data.cleared === true,
+          clearedBy: data.clearedBy || {}
+        };
+      }).filter(offer => {
+        // Check if offer is cleared by current user using the new user-specific cleared field
+        if (offer.clearedBy && offer.clearedBy[user.uid]) return false;
+        
+        // Also check the old cleared field for backward compatibility
+        if (offer.cleared) return false;
+        
+        return true;
+      });
       
-      const sentOffers = sentSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        expiresAt: doc.data().expiresAt?.toDate() || null,
-        cleared: doc.data().cleared === true
-      })).filter(offer => !offer.cleared);
+      const sentOffers = sentSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          expiresAt: data.expiresAt?.toDate() || null,
+          cleared: data.cleared === true,
+          clearedBy: data.clearedBy || {}
+        };
+      }).filter(offer => {
+        // Check if offer is cleared by current user using the new user-specific cleared field
+        if (offer.clearedBy && offer.clearedBy[user.uid]) return false;
+        
+        // Also check the old cleared field for backward compatibility
+        if (offer.cleared) return false;
+        
+        return true;
+      });
       
       // Combine both arrays and sort by creation date
       const allOffers = [...receivedOffers, ...sentOffers].sort((a, b) => 
@@ -603,23 +627,47 @@ class DashboardPreloader {
         getDocs(receivedOffersQuery),
         getDocs(sentOffersQuery)
       ]).then(([receivedSnapshot, sentSnapshot]) => {
-        const receivedOffers = receivedSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-          expiresAt: doc.data().expiresAt?.toDate() || null,
-          cleared: doc.data().cleared === true
-        })).filter(offer => !offer.cleared);
+        const receivedOffers = receivedSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            expiresAt: data.expiresAt?.toDate() || null,
+            cleared: data.cleared === true,
+            clearedBy: data.clearedBy || {}
+          };
+        }).filter(offer => {
+          // Check if offer is cleared by current user using the new user-specific cleared field
+          if (offer.clearedBy && offer.clearedBy[userId]) return false;
+          
+          // Also check the old cleared field for backward compatibility
+          if (offer.cleared) return false;
+          
+          return true;
+        });
         
-        const sentOffers = sentSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-          expiresAt: doc.data().expiresAt?.toDate() || null,
-          cleared: doc.data().cleared === true
-        })).filter(offer => !offer.cleared);
+        const sentOffers = sentSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            expiresAt: data.expiresAt?.toDate() || null,
+            cleared: data.cleared === true,
+            clearedBy: data.clearedBy || {}
+          };
+        }).filter(offer => {
+          // Check if offer is cleared by current user using the new user-specific cleared field
+          if (offer.clearedBy && offer.clearedBy[userId]) return false;
+          
+          // Also check the old cleared field for backward compatibility
+          if (offer.cleared) return false;
+          
+          return true;
+        });
         
         // Combine both arrays and sort by creation date
         const allOffers = [...receivedOffers, ...sentOffers].sort((a, b) => 
