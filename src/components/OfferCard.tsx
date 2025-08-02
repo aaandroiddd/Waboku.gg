@@ -424,7 +424,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               {type === 'sent' && offer.status === 'declined' && (
                 <Button 
                   variant="outline"
-                  onClick={() => router.push(`/listings/${offer.listingId}?makeOffer=true`)}
+                  onClick={handleViewListing}
                 >
                   <Send className="mr-2 h-4 w-4" />
                   Make New Offer
