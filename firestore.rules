@@ -331,9 +331,17 @@ service cloud.firestore {
       allow delete: if false; // Never delete security events
     }
 
+    // Admin MFA collection rules
+    match /adminMfa/{userId} {
+      // Only allow authenticated users to read/write their own MFA data
+      // OR allow server-side operations (Firebase Admin SDK)
+      allow read, write: if (isAuthenticated() && request.auth.uid == userId) || request.auth == null;
+    }
+
     // Default rule - deny everything else
     match /{document=**} {
       allow read, write: if false;
     }
+=======
   }
 }
