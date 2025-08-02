@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = authResult.uid!;
     console.log(`Authenticated user: ${userId}`);
 
-    const { db } = getFirebaseAdmin();
+    const { db, FieldValue } = getFirebaseAdmin();
 
     // Get all offers for the user that are either expired or declined
     const offersSnapshot = await db
@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .get();
 
     const batch = db.batch();
-    let deletedCount = 0;
+    let clearedCount = 0;
 
     for (const doc of offersSnapshot.docs) {
       const offer = doc.data();
@@ -42,8 +42,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const isDeclined = offer.status === 'declined';
       
       if (isExpired || isDeclined) {
-        batch.delete(doc.ref);
-        deletedCount++;
+        // Instead of deleting, mark as cleared for this user
+        // Use a user-specific cleared field so it only affects this user's view
+        const clearedField = `clearedBy.${userId}`;
+        batch.update(doc.ref, {
+          [clearedField]: true,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        clearedCount++;
       }
     }
 
@@ -63,19 +69,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const isDeclined = offer.status === 'declined';
       
       if (isExpired || isDeclined) {
-        batch.delete(doc.ref);
-        deletedCount++;
+        // Instead of deleting, mark as cleared for this user
+        // Use a user-specific cleared field so it only affects this user's view
+        const clearedField = `clearedBy.${userId}`;
+        batch.update(doc.ref, {
+          [clearedField]: true,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        clearedCount++;
       }
     }
 
-    if (deletedCount > 0) {
+    if (clearedCount > 0) {
       await batch.commit();
     }
 
     res.status(200).json({ 
       success: true, 
-      message: `Successfully cleared ${deletedCount} expired and declined offers`,
-      deletedCount 
+      message: `Successfully cleared ${clearedCount} expired and declined offers from your view`,
+      deletedCount: clearedCount // Keep same field name for compatibility
     });
 
   } catch (error: any) {

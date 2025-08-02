@@ -7,6 +7,7 @@ export interface Offer {
   counterOffer?: number;
   status: 'pending' | 'accepted' | 'declined' | 'expired' | 'countered' | 'cancelled';
   cleared?: boolean;
+  clearedBy?: { [userId: string]: boolean }; // User-specific cleared flags
   createdAt: Date;
   updatedAt: Date;
   expiresAt?: Date; // When the offer expires (24h default, premium users can choose 24h, 48h, 3 days, or 7 days)

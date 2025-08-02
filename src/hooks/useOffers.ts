@@ -67,11 +67,16 @@ export function useOffers() {
                   imageUrl: data.listingSnapshot?.imageUrl || '',
                 },
                 // Ensure cleared property is properly typed
-                cleared: data.cleared === true
+                cleared: data.cleared === true,
+                clearedBy: data.clearedBy || {}
               } as Offer;
             })
             // Filter out cleared offers but keep expired offers for display
             .filter(offer => {
+              // Check if offer is cleared by current user using the new user-specific cleared field
+              if (offer.clearedBy && offer.clearedBy[user.uid]) return false;
+              
+              // Also check the old cleared field for backward compatibility
               if (offer.cleared) return false;
               
               // No longer filter out expired offers - let them show in the UI
@@ -104,11 +109,16 @@ export function useOffers() {
                   imageUrl: data.listingSnapshot?.imageUrl || '',
                 },
                 // Ensure cleared property is properly typed
-                cleared: data.cleared === true
+                cleared: data.cleared === true,
+                clearedBy: data.clearedBy || {}
               } as Offer;
             })
             // Filter out cleared offers but keep expired offers for display
             .filter(offer => {
+              // Check if offer is cleared by current user using the new user-specific cleared field
+              if (offer.clearedBy && offer.clearedBy[user.uid]) return false;
+              
+              // Also check the old cleared field for backward compatibility
               if (offer.cleared) return false;
               
               // No longer filter out expired offers - let them show in the UI
