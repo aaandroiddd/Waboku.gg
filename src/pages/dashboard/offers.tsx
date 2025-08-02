@@ -210,89 +210,48 @@ const OffersContent = () => {
     }
   };
 
-  const handleDebugOffers = async () => {
+  const handleClearExpiredDeclined = async () => {
     if (!user) return;
     
+    // Use native HTML confirm dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all expired and declined offers? This action cannot be undone."
+    );
+    
+    if (!confirmed) return;
+    
     try {
-      console.log('=== OFFERS DEBUG START ===');
-      console.log('Current user:', user.uid);
-      console.log('Preloaded offers:', preloadedOffers);
-      console.log('Fallback received offers:', fallbackReceivedOffers);
-      console.log('Fallback sent offers:', fallbackSentOffers);
-      console.log('All offers (combined):', allOffers);
-      console.log('Received offers (filtered):', receivedOffers);
-      console.log('Sent offers (filtered):', sentOffers);
-      
       const token = await user.getIdToken();
-      const response = await fetch('/api/debug/check-offers', {
+      const response = await fetch('/api/offers/clear-expired-declined', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('API Debug Data:', data);
         toast({
-          title: "Debug Complete",
-          description: "Check the browser console for detailed offer information",
+          title: "Offers Cleared",
+          description: data.message,
         });
+        
+        // Refresh offers data
+        await refreshSection('offers');
       } else {
         const errorData = await response.json();
-        console.error('Debug API Error:', errorData);
         toast({
-          title: "Debug Failed",
-          description: "Failed to fetch debug information",
+          title: "Error",
+          description: errorData.error || "Failed to clear offers",
           variant: "destructive",
         });
       }
-      console.log('=== OFFERS DEBUG END ===');
     } catch (error: any) {
-      console.error('Debug Error:', error);
+      console.error('Clear offers error:', error);
       toast({
-        title: "Debug Error",
-        description: "An error occurred while debugging",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleTestOfferCreation = async () => {
-    if (!user) return;
-    
-    try {
-      console.log('=== OFFER CREATION TEST START ===');
-      console.log('Current user:', user.uid);
-      
-      const token = await user.getIdToken();
-      const response = await fetch('/api/debug/test-offer-creation', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Offer Creation Test Data:', data);
-        toast({
-          title: "Test Complete",
-          description: "Check the browser console for offer creation test results",
-        });
-      } else {
-        const errorData = await response.json();
-        console.error('Test API Error:', errorData);
-        toast({
-          title: "Test Failed",
-          description: "Failed to run offer creation test",
-          variant: "destructive",
-        });
-      }
-      console.log('=== OFFER CREATION TEST END ===');
-    } catch (error: any) {
-      console.error('Test Error:', error);
-      toast({
-        title: "Test Error",
-        description: "An error occurred while testing",
+        title: "Error",
+        description: "An error occurred while clearing offers",
         variant: "destructive",
       });
     }
@@ -429,16 +388,9 @@ const OffersContent = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={handleDebugOffers}
+              onClick={handleClearExpiredDeclined}
             >
-              Debug Offers
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleTestOfferCreation}
-            >
-              Test Creation
+              Clear Expired & Declined
             </Button>
           </div>
         </div>
