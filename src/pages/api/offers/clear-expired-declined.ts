@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { verifyAuthToken } from '@/lib/auth-utils';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('POST /api/offers/clear-expired-declined START');
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = authResult.uid!;
     console.log(`Authenticated user: ${userId}`);
 
-    const { db, FieldValue } = getFirebaseAdmin();
+    const { db } = getFirebaseAdmin();
 
     // Get all offers for the user that are either expired or declined
     const offersSnapshot = await db
