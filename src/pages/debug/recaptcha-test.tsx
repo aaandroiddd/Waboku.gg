@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { ReCaptcha, useReCaptcha } from '@/components/ReCaptcha';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function RecaptchaTestPage() {
   const [configData, setConfigData] = useState<any>(null);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [domainInfo, setDomainInfo] = useState<any>(null);
   
   const {
     isVerified,
@@ -18,6 +20,19 @@ export default function RecaptchaTestPage() {
   } = useReCaptcha();
 
   useEffect(() => {
+    // Get domain information
+    if (typeof window !== 'undefined') {
+      setDomainInfo({
+        hostname: window.location.hostname,
+        origin: window.location.origin,
+        protocol: window.location.protocol,
+        port: window.location.port,
+        isProduction: window.location.hostname === 'waboku.gg',
+        isPreview: window.location.hostname.includes('preview.co.dev'),
+        isLocalhost: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
+      });
+    }
+
     // Test the reCAPTCHA configuration
     fetch('/api/debug/test-recaptcha-config')
       .then(res => {
@@ -98,6 +113,51 @@ export default function RecaptchaTestPage() {
               </div>
             ) : (
               <div>Loading configuration...</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Domain Information</CardTitle>
+            <CardDescription>
+              Current domain and environment details
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {domainInfo ? (
+              <div className="space-y-2">
+                <div><strong>Current Domain:</strong> {domainInfo.hostname}</div>
+                <div><strong>Full Origin:</strong> {domainInfo.origin}</div>
+                <div><strong>Protocol:</strong> {domainInfo.protocol}</div>
+                {domainInfo.port && <div><strong>Port:</strong> {domainInfo.port}</div>}
+                <div><strong>Environment:</strong> {
+                  domainInfo.isProduction ? 'Production (waboku.gg)' :
+                  domainInfo.isPreview ? 'Preview Environment' :
+                  domainInfo.isLocalhost ? 'Local Development' :
+                  'Unknown'
+                }</div>
+                
+                {!domainInfo.isProduction && (
+                  <Alert className="mt-4">
+                    <AlertDescription>
+                      <strong>Domain Configuration Issue:</strong> The reCAPTCHA is configured for "waboku.gg" 
+                      but you're currently on "{domainInfo.hostname}". You need to add this domain to your 
+                      reCAPTCHA configuration at{' '}
+                      <a 
+                        href="https://www.google.com/recaptcha/admin" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline hover:no-underline"
+                      >
+                        Google reCAPTCHA Admin Console
+                      </a>.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            ) : (
+              <div>Loading domain information...</div>
             )}
           </CardContent>
         </Card>

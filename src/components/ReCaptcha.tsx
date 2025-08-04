@@ -13,6 +13,7 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
   const [isLoaded, setIsLoaded] = useState(false);
   const [widgetId, setWidgetId] = useState<number | null>(null);
   const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [isScriptLoading, setIsScriptLoading] = useState(false);
 
   useEffect(() => {
     // Check if reCAPTCHA is already loaded
@@ -21,27 +22,47 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
       return;
     }
 
+    // Check if script is already loading
+    if (isScriptLoading) {
+      return;
+    }
+
     // Load reCAPTCHA script if not already loaded
     const existingScript = document.querySelector('script[src*="recaptcha"]');
     if (!existingScript) {
+      setIsScriptLoading(true);
+      
+      // Create a unique callback name to avoid conflicts
+      const callbackName = `onRecaptchaLoad_${Date.now()}`;
+      
+      // Add a global callback function
+      (window as any)[callbackName] = () => {
+        console.log('reCAPTCHA script loaded successfully');
+        if (window.grecaptcha && window.grecaptcha.render) {
+          setIsLoaded(true);
+          setInitializationError(null);
+        } else {
+          console.error('reCAPTCHA API not available after loading');
+          setInitializationError('reCAPTCHA API not available after loading');
+        }
+        setIsScriptLoading(false);
+        // Clean up the callback
+        delete (window as any)[callbackName];
+      };
+      
       const script = document.createElement('script');
-      script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+      script.src = `https://www.google.com/recaptcha/api.js?onload=${callbackName}&render=explicit`;
       script.async = true;
       script.defer = true;
-      script.onload = () => {
-        // Wait a bit for grecaptcha to be fully available
-        setTimeout(() => {
-          if (window.grecaptcha && window.grecaptcha.render) {
-            setIsLoaded(true);
-            setInitializationError(null);
-          } else {
-            setInitializationError('reCAPTCHA API not available after loading');
-          }
-        }, 100);
-      };
-      script.onerror = () => {
+      
+      script.onerror = (error) => {
+        console.error('Failed to load reCAPTCHA script:', error);
         setInitializationError('Failed to load reCAPTCHA script');
+        setIsScriptLoading(false);
+        // Clean up the callback
+        delete (window as any)[callbackName];
       };
+      
       document.head.appendChild(script);
     } else {
       // Script exists, wait for it to load
@@ -66,7 +87,7 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
         }
       }
     };
-  }, []);
+  }, [isScriptLoading]);
 
   useEffect(() => {
     if (isLoaded && recaptchaRef.current && !widgetId && !disabled && !initializationError) {
@@ -82,24 +103,48 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
           return;
         }
 
+        console.log('Rendering reCAPTCHA with site key:', siteKey.substring(0, 10) + '...');
+        console.log('Current domain:', window.location.hostname);
+
         const id = window.grecaptcha.render(recaptchaRef.current, {
           sitekey: siteKey,
           callback: (token: string) => {
+            console.log('reCAPTCHA verification successful');
             onVerify(token);
             setInitializationError(null);
           },
           'expired-callback': () => {
+            console.log('reCAPTCHA expired');
             onExpire();
           },
-          'error-callback': () => {
-            setInitializationError('reCAPTCHA verification failed');
+          'error-callback': (error: any) => {
+            console.error('reCAPTCHA error callback:', error);
+            const currentDomain = window.location.hostname;
+            let errorMessage = 'reCAPTCHA verification failed';
+            
+            // Provide more specific error messages
+            if (currentDomain !== 'waboku.gg' && !currentDomain.includes('preview.co.dev')) {
+              errorMessage = `Domain mismatch: reCAPTCHA is configured for waboku.gg but current domain is ${currentDomain}`;
+            }
+            
+            setInitializationError(errorMessage);
           },
         });
+        
         setWidgetId(id);
         setInitializationError(null);
+        console.log('reCAPTCHA widget rendered with ID:', id);
       } catch (error) {
         console.error('Error rendering reCAPTCHA:', error);
-        setInitializationError(`Failed to initialize reCAPTCHA: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const currentDomain = window.location.hostname;
+        let errorMessage = `Failed to initialize reCAPTCHA: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        
+        // Check for domain-related errors
+        if (error instanceof Error && error.message.includes('Invalid domain')) {
+          errorMessage = `Invalid domain for reCAPTCHA: Current domain '${currentDomain}' is not authorized. Please add this domain to your reCAPTCHA configuration.`;
+        }
+        
+        setInitializationError(errorMessage);
       }
     }
   }, [isLoaded, disabled, onVerify, onExpire, onError, initializationError]);
@@ -127,7 +172,7 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
   if (!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
     return (
       <div className={`text-sm text-muted-foreground ${className}`}>
-        reCAPTCHA not configured
+        reCAPTCHA not configured - missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY
       </div>
     );
   }
@@ -135,14 +180,28 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
   return (
     <div className={className}>
       <div ref={recaptchaRef} />
-      {!isLoaded && !initializationError && (
+      {(isScriptLoading || (!isLoaded && !initializationError)) && (
         <div className="text-sm text-muted-foreground">
           Loading reCAPTCHA...
         </div>
       )}
       {initializationError && (
         <div className="text-sm text-red-500">
-          reCAPTCHA Error: {initializationError}
+          <div className="font-medium">reCAPTCHA Error:</div>
+          <div className="mt-1">{initializationError}</div>
+          {initializationError.includes('domain') && (
+            <div className="mt-2 text-xs">
+              <strong>Solution:</strong> Add the current domain ({window.location.hostname}) to your reCAPTCHA configuration at{' '}
+              <a 
+                href="https://www.google.com/recaptcha/admin" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:no-underline"
+              >
+                Google reCAPTCHA Admin Console
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

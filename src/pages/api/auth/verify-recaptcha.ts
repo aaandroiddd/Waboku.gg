@@ -34,10 +34,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!verificationResult.success) {
       console.error('reCAPTCHA verification failed:', verificationResult);
+      
+      // Provide more specific error messages based on error codes
+      const errorCodes = verificationResult['error-codes'] || [];
+      let errorMessage = 'reCAPTCHA verification failed';
+      
+      if (errorCodes.includes('invalid-input-secret')) {
+        errorMessage = 'Invalid reCAPTCHA secret key configuration';
+      } else if (errorCodes.includes('invalid-input-response')) {
+        errorMessage = 'Invalid reCAPTCHA response token';
+      } else if (errorCodes.includes('bad-request')) {
+        errorMessage = 'Malformed reCAPTCHA request';
+      } else if (errorCodes.includes('timeout-or-duplicate')) {
+        errorMessage = 'reCAPTCHA token has expired or been used already';
+      } else if (errorCodes.length > 0) {
+        errorMessage = `reCAPTCHA verification failed: ${errorCodes.join(', ')}`;
+      }
+      
       return res.status(400).json({ 
         success: false, 
-        message: 'reCAPTCHA verification failed',
-        errors: verificationResult['error-codes'] || []
+        message: errorMessage,
+        errors: errorCodes
       });
     }
 
