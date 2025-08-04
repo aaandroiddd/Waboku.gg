@@ -26,7 +26,6 @@ import {
   checkAndClearStaleAuthData 
 } from '@/lib/auth-token-manager';
 import { enhanceGoogleAvatarQuality } from '@/lib/avatar-utils';
-import { securityMonitor } from '@/lib/security-monitor';
 
 interface AuthContextType {
   user: User | null;
@@ -588,13 +587,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = userCredential.user;
         success = true;
         
-        // Log successful authentication attempt
-        try {
-          await securityMonitor.logSuccessfulAuth(email, undefined, userAgent);
-        } catch (monitorError) {
-          console.error('Error logging successful auth attempt:', monitorError);
-          // Don't fail the sign-in if monitoring fails
-        }
+        // Log successful authentication attempt (moved to server-side)
+        console.log('User signed in successfully:', email);
         
         // After successful authentication, fetch the user profile
         const profileDoc = await getDoc(doc(db, 'users', user.uid));
@@ -647,14 +641,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error('Sign in error:', err);
       
-      // Log failed authentication attempt
+      // Log failed authentication attempt (moved to server-side)
       if (!success) {
-        try {
-          await securityMonitor.monitorAuthAttempt(false, email, undefined, userAgent);
-        } catch (monitorError) {
-          console.error('Error logging failed auth attempt:', monitorError);
-          // Don't fail the sign-in if monitoring fails
-        }
+        console.log('Failed authentication attempt for:', email);
       }
       
       let errorMessage = 'An error occurred during sign in';
