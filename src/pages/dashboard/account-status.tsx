@@ -3,7 +3,7 @@ import { useAccount } from '@/contexts/AccountContext';
 import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, CreditCard, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { Footer } from '@/components/Footer';
 import { useEffect, useRef, useState } from 'react';
@@ -240,6 +240,82 @@ export default function AccountStatus() {
     }
   };
 
+  const handleContinueSubscription = async () => {
+    try {
+      console.log('Initiating subscription continuation:', {
+        subscription,
+        accountTier
+      });
+
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Show loading state
+      toast({
+        title: "Processing...",
+        description: "Continuing your subscription...",
+      });
+
+      // Get a fresh token
+      const idToken = await user.getIdToken(true);
+
+      // Make API call to continue subscription
+      const response = await fetch('/api/stripe/continue-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to continue subscription');
+      }
+
+      const data = await response.json();
+      console.log('Continue subscription response:', data);
+
+      // Show success message
+      toast({
+        title: "Subscription Continued",
+        description: "Your subscription has been reactivated and will continue with the same payment method.",
+      });
+
+      // Refresh the account data to reflect the changes
+      await refreshAccountData();
+      await refreshStatus();
+    } catch (error: any) {
+      console.error('Subscription continuation failed:', {
+        error: error.message,
+        subscription,
+        accountTier
+      });
+
+      // Handle specific error cases
+      let errorMessage = "Failed to continue subscription. Please try again.";
+      let errorTitle = "Error";
+      
+      if (error.message.includes('No canceled subscription found')) {
+        errorMessage = "No canceled subscription found to continue. Please create a new subscription.";
+        errorTitle = "No Canceled Subscription";
+      } else if (error.message.includes('No payment method found')) {
+        errorMessage = "No payment method found. Please add a payment method and try again.";
+        errorTitle = "Payment Method Required";
+      } else if (error.message.includes('canceled too long ago')) {
+        errorMessage = "Your subscription was canceled too long ago to continue. Please create a new subscription.";
+        errorTitle = "Cannot Continue";
+      }
+
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -378,219 +454,32 @@ export default function AccountStatus() {
                     Your premium features will remain active until <span className="font-semibold">{formatDate(subscription.endDate)}</span>.
                   </p>
                   <p className="text-sm text-amber-700 dark:text-amber-400 mt-2">
-                    After this date, your account will revert to the free tier.
+                    You can continue your subscription to keep your premium features, or let it expire naturally.
                   </p>
                 </div>
 
-                {/* Resubscription Warning */}
-                <div className="p-4 mb-4 border rounded-md bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-                  <h3 className="text-base font-medium text-blue-800 dark:text-blue-300 mb-2">⚠️ Important: Resubscription Notice</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-400 mb-2">
-                    If you resubscribe now, your new subscription will start immediately and you'll be charged for the full month.
-                  </p>
-                  <p className="text-sm text-blue-700 dark:text-blue-400 mb-2">
-                    Since you already have premium access until <span className="font-semibold">{formatDate(subscription.endDate)}</span>, 
-                    resubscribing now would result in paying for overlapping premium time.
-                  </p>
-                  <div className="mt-3 p-3 bg-blue-100 dark:bg-blue-900 rounded-md">
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">💡 Recommendation:</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-400">
-                      Wait until <span className="font-semibold">{formatDate(subscription.endDate)}</span> to resubscribe, 
-                      or contact support if you'd like to discuss options for avoiding double billing.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {/* Recommended Option: Delayed Start */}
-                  <Button 
-                    onClick={async () => {
-                      try {
-                        // Show loading state
-                        toast({
-                          title: "Processing...",
-                          description: "Preparing delayed subscription checkout...",
-                        });
-
-                        if (!user) {
-                          throw new Error('User not authenticated');
-                        }
-
-                        // Force token refresh and get a fresh token
-                        const freshToken = await user.getIdToken(true);
-                        console.log('Token obtained successfully');
-
-                        // Calculate the start date (day after current subscription ends)
-                        const endDate = new Date(subscription.endDate);
-                        const startDate = new Date(endDate);
-                        startDate.setDate(startDate.getDate() + 1);
-
-                        // Make the API call to create a delayed checkout session
-                        const response = await fetch('/api/stripe/create-delayed-checkout', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${freshToken}`,
-                          },
-                          body: JSON.stringify({
-                            startDate: startDate.toISOString()
-                          })
-                        });
-                        
-                        if (!response.ok) {
-                          const errorText = await response.text();
-                          console.error('Delayed checkout error response:', errorText);
-                          try {
-                            const errorJson = JSON.parse(errorText);
-                            throw new Error(errorJson.message || 'Failed to create delayed checkout session');
-                          } catch (e) {
-                            throw new Error('Failed to create delayed checkout session: ' + errorText);
-                          }
-                        }
-
-                        const data = await response.json();
-                        
-                        // Show success message
-                        toast({
-                          title: "Redirecting to Checkout",
-                          description: data.message || "Setting up your subscription to start after your current access expires.",
-                        });
-                        
-                        if (data.isPreview) {
-                          // For preview environment, use Next.js router
-                          router.push(data.sessionUrl);
-                        } else {
-                          // Use client-side redirect for production Stripe checkout
-                          window.location.assign(data.sessionUrl);
-                        }
-                      } catch (error: any) {
-                        console.error('Delayed resubscribe error:', error);
-                        toast({
-                          title: "Error",
-                          description: error.message || "Unable to process delayed subscription. Please try again or contact support.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    className="w-full bg-green-600 hover:bg-green-700"
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <Button
+                    onClick={handleContinueSubscription}
+                    disabled={isLoading}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    ✅ Resubscribe Starting {formatDate(new Date(new Date(subscription.endDate).getTime() + 24 * 60 * 60 * 1000))} (Recommended)
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Continue Subscription
+                      </>
+                    )}
                   </Button>
-
-                  {/* Alternative Option: Immediate Start with Warning */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button className="w-full" variant="outline">
-                        ⚠️ Resubscribe Immediately (Double Billing Warning)
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Immediate Resubscription</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-3">
-                          <p>
-                            <strong>You currently have premium access until {formatDate(subscription.endDate)}.</strong>
-                          </p>
-                          <p>
-                            If you proceed with immediate resubscription, you will:
-                          </p>
-                          <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>Be charged immediately for a new monthly subscription</li>
-                            <li>Have overlapping premium access from now until {formatDate(subscription.endDate)}</li>
-                            <li>Essentially pay twice for premium features during this overlap period</li>
-                          </ul>
-                          <div className="p-3 bg-amber-50 dark:bg-amber-950 rounded-md border border-amber-200 dark:border-amber-800">
-                            <p className="text-sm text-amber-700 dark:text-amber-400">
-                              <strong>Better Option:</strong> Use the "Recommended" button above to start your subscription on {formatDate(new Date(new Date(subscription.endDate).getTime() + 24 * 60 * 60 * 1000))} and avoid double billing.
-                            </p>
-                          </div>
-                          <p className="text-sm">
-                            Are you sure you want to proceed with immediate resubscription and accept the double billing?
-                          </p>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel - Use Recommended Option</AlertDialogCancel>
-                        <AlertDialogAction onClick={async () => {
-                          try {
-                            // Show loading state
-                            toast({
-                              title: "Processing...",
-                              description: "Preparing immediate subscription checkout...",
-                            });
-
-                            // Always use Stripe checkout for all environments
-                            console.log('Starting immediate resubscription process with Stripe checkout');
-                            
-                            // First, clear the canceled subscription status
-                            try {
-                              const db = getDatabase();
-                              const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
-                              
-                              // Mark the subscription as replaced
-                              await set(subscriptionRef, {
-                                ...subscription,
-                                status: 'replaced',
-                                lastUpdated: Date.now()
-                              });
-                              
-                              console.log('Cleared canceled subscription status');
-                            } catch (clearError) {
-                              console.error('Error clearing canceled subscription:', clearError);
-                              // Continue anyway as this is not critical
-                            }
-
-                            if (!user) {
-                              throw new Error('User not authenticated');
-                            }
-
-                            // Force token refresh and get a fresh token
-                            const freshToken = await user.getIdToken(true);
-                            console.log('Token obtained successfully');
-
-                            // Now make the API call to create a new checkout session
-                            const response = await fetch('/api/stripe/create-checkout', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${freshToken}`,
-                              }
-                            });
-                            
-                            if (!response.ok) {
-                              const errorText = await response.text();
-                              console.error('Checkout error response:', errorText);
-                              try {
-                                const errorJson = JSON.parse(errorText);
-                                throw new Error(errorJson.message || 'Failed to create checkout session');
-                              } catch (e) {
-                                throw new Error('Failed to create checkout session: ' + errorText);
-                              }
-                            }
-
-                            const data = await response.json();
-                            
-                            if (data.isPreview) {
-                              // For preview environment, use Next.js router
-                              router.push(data.sessionUrl);
-                            } else {
-                              // Use client-side redirect for production Stripe checkout
-                              window.location.assign(data.sessionUrl);
-                            }
-                          } catch (error: any) {
-                            console.error('Immediate resubscribe error:', error);
-                            toast({
-                              title: "Error",
-                              description: error.message || "Unable to process subscription. Please try again or contact support.",
-                              variant: "destructive",
-                            });
-                          }
-                        }}>
-                          Yes, I Accept Double Billing
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  
+                  <div className="text-center text-sm text-muted-foreground py-2">
+                    <p>Or let it expire on {formatDate(subscription.endDate)}</p>
+                  </div>
                 </div>
               </div>
             )}
