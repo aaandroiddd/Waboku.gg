@@ -449,15 +449,5 @@ function SignUpComponent() {
 }
 
 export default function SignUpPage() {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return <LoadingState />;
-  }
-
   return <SignUpComponent />;
 }

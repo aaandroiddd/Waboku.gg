@@ -624,17 +624,7 @@ function SignInComponent() {
   );
 }
 
-// Export the component with client-side only rendering
+// Export the component directly without client-side rendering wrapper
 export default function SignInPage() {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return <LoadingState />;
-  }
-
   return <SignInComponent />;
 }

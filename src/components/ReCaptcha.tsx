@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface ReCaptchaProps {
   onVerify: (token: string) => void;
@@ -13,6 +13,9 @@ let globalRecaptchaState = {
   isLoaded: false,
   isLoading: false,
   activeWidgets: new Set<number>(),
+  scriptElement: null as HTMLScriptElement | null,
+  pendingCallbacks: new Set<() => void>(),
+  containerElements: new WeakSet<HTMLElement>(),
 };
 
 export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, className = '' }: ReCaptchaProps) {
@@ -22,9 +25,10 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isScriptLoading, setIsScriptLoading] = useState(globalRecaptchaState.isLoading);
   const mountedRef = useRef(true);
+  const initializationAttemptedRef = useRef(false);
 
   // Cleanup function to properly destroy widget
-  const cleanupWidget = () => {
+  const cleanupWidget = useCallback(() => {
     if (widgetId !== null && window.grecaptcha) {
       try {
         // Remove from active widgets set
@@ -38,6 +42,7 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
         // Clear the container
         if (recaptchaRef.current) {
           recaptchaRef.current.innerHTML = '';
+          globalRecaptchaState.containerElements.delete(recaptchaRef.current);
         }
         
         console.log('reCAPTCHA widget cleaned up:', widgetId);
@@ -46,8 +51,10 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
       }
       setWidgetId(null);
     }
-  };
+    initializationAttemptedRef.current = false;
+  }, [widgetId]);
 
+  // Script loading effect
   useEffect(() => {
     mountedRef.current = true;
     
@@ -58,9 +65,19 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
       return;
     }
 
-    // Check if script is already loading
+    // If script is already loading, add this component to pending callbacks
     if (globalRecaptchaState.isLoading) {
-      return;
+      const callback = () => {
+        if (mountedRef.current) {
+          setIsLoaded(true);
+          setIsScriptLoading(false);
+        }
+      };
+      globalRecaptchaState.pendingCallbacks.add(callback);
+      
+      return () => {
+        globalRecaptchaState.pendingCallbacks.delete(callback);
+      };
     }
 
     // Load reCAPTCHA script if not already loaded
@@ -78,14 +95,29 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
         if (window.grecaptcha && window.grecaptcha.render) {
           globalRecaptchaState.isLoaded = true;
           globalRecaptchaState.isLoading = false;
-          setIsLoaded(true);
-          setInitializationError(null);
-          setIsScriptLoading(false);
+          
+          // Notify all pending callbacks
+          globalRecaptchaState.pendingCallbacks.forEach(callback => {
+            try {
+              callback();
+            } catch (error) {
+              console.warn('Error in reCAPTCHA callback:', error);
+            }
+          });
+          globalRecaptchaState.pendingCallbacks.clear();
+          
+          if (mountedRef.current) {
+            setIsLoaded(true);
+            setInitializationError(null);
+            setIsScriptLoading(false);
+          }
         } else {
           console.error('reCAPTCHA API not available after loading');
-          setInitializationError('reCAPTCHA API not available after loading');
           globalRecaptchaState.isLoading = false;
-          setIsScriptLoading(false);
+          if (mountedRef.current) {
+            setInitializationError('reCAPTCHA API not available after loading');
+            setIsScriptLoading(false);
+          }
         }
         // Clean up the callback
         delete (window as any)[callbackName];
@@ -98,13 +130,16 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
       
       script.onerror = (error) => {
         console.error('Failed to load reCAPTCHA script:', error);
-        setInitializationError('Failed to load reCAPTCHA script');
         globalRecaptchaState.isLoading = false;
-        setIsScriptLoading(false);
+        if (mountedRef.current) {
+          setInitializationError('Failed to load reCAPTCHA script');
+          setIsScriptLoading(false);
+        }
         // Clean up the callback
         delete (window as any)[callbackName];
       };
       
+      globalRecaptchaState.scriptElement = script;
       document.head.appendChild(script);
     } else {
       // Script exists, wait for it to load
@@ -126,90 +161,111 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
       mountedRef.current = false;
       cleanupWidget();
     };
-  }, []);
+  }, [cleanupWidget]);
 
+  // Widget rendering effect
   useEffect(() => {
     if (!mountedRef.current) return;
-    
-    if (isLoaded && recaptchaRef.current && !widgetId && !disabled && !initializationError) {
-      try {
-        if (!window.grecaptcha || !window.grecaptcha.render) {
-          setInitializationError('reCAPTCHA API not available');
-          return;
-        }
+    if (!isLoaded || !recaptchaRef.current || widgetId !== null || disabled || initializationError) return;
+    if (initializationAttemptedRef.current) return;
 
-        const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-        if (!siteKey) {
-          setInitializationError('reCAPTCHA site key not configured');
-          return;
-        }
-
-        // Check if the container already has a reCAPTCHA widget
-        if (recaptchaRef.current.children.length > 0) {
-          console.warn('reCAPTCHA container already has content, clearing...');
-          recaptchaRef.current.innerHTML = '';
-        }
-
-        console.log('Rendering reCAPTCHA with site key:', siteKey.substring(0, 10) + '...');
-        console.log('Current domain:', window.location.hostname);
-
-        const id = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: siteKey,
-          callback: (token: string) => {
-            if (!mountedRef.current) return;
-            console.log('reCAPTCHA verification successful');
-            onVerify(token);
-            setInitializationError(null);
-          },
-          'expired-callback': () => {
-            if (!mountedRef.current) return;
-            console.log('reCAPTCHA expired');
-            onExpire();
-          },
-          'error-callback': (error: any) => {
-            if (!mountedRef.current) return;
-            console.error('reCAPTCHA error callback:', error);
-            const currentDomain = window.location.hostname;
-            let errorMessage = 'reCAPTCHA verification failed';
-            
-            // Provide more specific error messages
-            if (currentDomain !== 'waboku.gg' && !currentDomain.includes('preview.co.dev')) {
-              errorMessage = `Domain mismatch: reCAPTCHA is configured for waboku.gg but current domain is ${currentDomain}`;
-            }
-            
-            setInitializationError(errorMessage);
-            onError(errorMessage);
-          },
-        });
-        
-        // Track the widget ID globally
-        globalRecaptchaState.activeWidgets.add(id);
-        setWidgetId(id);
-        setInitializationError(null);
-        console.log('reCAPTCHA widget rendered with ID:', id);
-      } catch (error) {
-        console.error('Error rendering reCAPTCHA:', error);
-        const currentDomain = window.location.hostname;
-        let errorMessage = `Failed to initialize reCAPTCHA: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        
-        // Check for domain-related errors or duplicate rendering
-        if (error instanceof Error) {
-          if (error.message.includes('Invalid domain')) {
-            errorMessage = `Invalid domain for reCAPTCHA: Current domain '${currentDomain}' is not authorized. Please add this domain to your reCAPTCHA configuration.`;
-          } else if (error.message.includes('already been rendered')) {
-            errorMessage = 'Failed to initialize reCAPTCHA: reCAPTCHA has already been rendered in this element';
-            // Clear the container and try again after a short delay
-            if (recaptchaRef.current) {
-              recaptchaRef.current.innerHTML = '';
-            }
-          }
-        }
-        
-        setInitializationError(errorMessage);
-        onError(errorMessage);
-      }
+    // Check if this container has already been used
+    if (globalRecaptchaState.containerElements.has(recaptchaRef.current)) {
+      console.warn('reCAPTCHA container already used, skipping initialization');
+      return;
     }
-  }, [isLoaded, disabled, onVerify, onExpire, onError, initializationError]);
+
+    initializationAttemptedRef.current = true;
+
+    try {
+      if (!window.grecaptcha || !window.grecaptcha.render) {
+        setInitializationError('reCAPTCHA API not available');
+        return;
+      }
+
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      if (!siteKey) {
+        setInitializationError('reCAPTCHA site key not configured');
+        return;
+      }
+
+      // Ensure the container is clean
+      if (recaptchaRef.current.children.length > 0) {
+        console.warn('reCAPTCHA container already has content, clearing...');
+        recaptchaRef.current.innerHTML = '';
+      }
+
+      console.log('Rendering reCAPTCHA with site key:', siteKey.substring(0, 10) + '...');
+      console.log('Current domain:', window.location.hostname);
+
+      const id = window.grecaptcha.render(recaptchaRef.current, {
+        sitekey: siteKey,
+        callback: (token: string) => {
+          if (!mountedRef.current) return;
+          console.log('reCAPTCHA verification successful');
+          onVerify(token);
+          setInitializationError(null);
+        },
+        'expired-callback': () => {
+          if (!mountedRef.current) return;
+          console.log('reCAPTCHA expired');
+          onExpire();
+        },
+        'error-callback': (error: any) => {
+          if (!mountedRef.current) return;
+          console.error('reCAPTCHA error callback:', error);
+          const currentDomain = window.location.hostname;
+          let errorMessage = 'reCAPTCHA verification failed';
+          
+          // Provide more specific error messages
+          if (currentDomain !== 'waboku.gg' && !currentDomain.includes('preview.co.dev')) {
+            errorMessage = `Domain mismatch: reCAPTCHA is configured for waboku.gg but current domain is ${currentDomain}`;
+          }
+          
+          setInitializationError(errorMessage);
+          onError(errorMessage);
+        },
+      });
+      
+      // Track the widget ID globally and mark container as used
+      globalRecaptchaState.activeWidgets.add(id);
+      globalRecaptchaState.containerElements.add(recaptchaRef.current);
+      setWidgetId(id);
+      setInitializationError(null);
+      console.log('reCAPTCHA widget rendered with ID:', id);
+    } catch (error) {
+      console.error('Error rendering reCAPTCHA:', error);
+      const currentDomain = window.location.hostname;
+      let errorMessage = `Failed to initialize reCAPTCHA: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      
+      // Check for domain-related errors or duplicate rendering
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid domain')) {
+          errorMessage = `Invalid domain for reCAPTCHA: Current domain '${currentDomain}' is not authorized. Please add this domain to your reCAPTCHA configuration.`;
+        } else if (error.message.includes('already been rendered')) {
+          errorMessage = 'Failed to initialize reCAPTCHA: reCAPTCHA has already been rendered in this element';
+          // Clear the container and reset attempt flag
+          if (recaptchaRef.current) {
+            recaptchaRef.current.innerHTML = '';
+            globalRecaptchaState.containerElements.delete(recaptchaRef.current);
+          }
+          initializationAttemptedRef.current = false;
+          
+          // Try again after a short delay
+          setTimeout(() => {
+            if (mountedRef.current && !widgetId) {
+              initializationAttemptedRef.current = false;
+              setInitializationError(null);
+            }
+          }, 1000);
+          return;
+        }
+      }
+      
+      setInitializationError(errorMessage);
+      onError(errorMessage);
+    }
+  }, [isLoaded, disabled, onVerify, onExpire, onError, initializationError, widgetId]);
 
   // Reset reCAPTCHA when disabled state changes
   useEffect(() => {
@@ -239,7 +295,7 @@ export function ReCaptcha({ onVerify, onExpire, onError, disabled = false, class
       mountedRef.current = false;
       cleanupWidget();
     };
-  }, []);
+  }, [cleanupWidget]);
 
   if (!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
     return (
