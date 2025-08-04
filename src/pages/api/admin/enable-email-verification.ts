@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { verifyAuthToken } from '@/lib/auth-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,19 +7,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Verify admin authentication
-    const authResult = await verifyAuthToken(req);
-    if (!authResult.success || !authResult.uid) {
+    // Verify admin secret
+    const adminSecret = req.headers['x-admin-secret'] as string;
+    if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
       return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Check if user has admin privileges
-    const { auth } = getFirebaseAdmin();
-    const userRecord = await auth.getUser(authResult.uid);
-    const customClaims = userRecord.customClaims || {};
-    
-    if (!customClaims.admin && !customClaims.moderator) {
-      return res.status(403).json({ error: 'Admin privileges required' });
     }
 
     const { userId } = req.body;

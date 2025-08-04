@@ -853,7 +853,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-muted-foreground">
                     Look up users and manually enable email verification for their accounts. This tool allows you to search by user ID or email address and update their verification status in both Firebase Auth and Firestore.
                   </p>
-                  <EmailVerificationManager />
+                  <EmailVerificationManager adminKey={adminSecret} />
                 </div>
               </AccordionContent>
             </AccordionItem>

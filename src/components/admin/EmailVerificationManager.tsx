@@ -23,7 +23,11 @@ interface VerificationResult {
   updatedUser?: UserData;
 }
 
-export default function EmailVerificationManager() {
+interface EmailVerificationManagerProps {
+  adminKey?: string;
+}
+
+export default function EmailVerificationManager({ adminKey }: EmailVerificationManagerProps) {
   const [userInput, setUserInput] = useState('');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,6 +51,7 @@ export default function EmailVerificationManager() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-admin-secret': adminKey || '',
         },
         body: JSON.stringify({ 
           identifier: userInput.trim() 
@@ -79,6 +84,7 @@ export default function EmailVerificationManager() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-admin-secret': adminKey || '',
         },
         body: JSON.stringify({ 
           userId: userData.uid 
