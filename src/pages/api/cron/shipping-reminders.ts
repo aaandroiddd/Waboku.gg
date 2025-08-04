@@ -7,6 +7,9 @@ import { Order } from '@/types/order';
 // Maximum number of operations in a single batch
 const BATCH_SIZE = 100;
 
+// Reminder intervals in hours
+const REMINDER_INTERVALS = [48, 72, 96]; // 48h, 72h, 96h (4 days)
+
 // Helper function to log errors with context
 const logError = (context: string, error: any, additionalInfo?: any) => {
   console.error(`[${new Date().toISOString()}] Error in ${context}:`, {
@@ -39,10 +42,57 @@ const calculateHoursOverdue = (createdAt: Date): number => {
   return Math.max(0, diffHours - 48); // Only count hours after the 48-hour threshold
 };
 
+// Helper function to determine which reminder interval this order qualifies for
+const getQualifyingReminderInterval = (createdAt: Date, existingReminders: any[]): number | null => {
+  const now = new Date();
+  const orderAgeHours = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60));
+  
+  // Find the highest interval this order qualifies for that hasn't been sent yet
+  for (let i = REMINDER_INTERVALS.length - 1; i >= 0; i--) {
+    const interval = REMINDER_INTERVALS[i];
+    if (orderAgeHours >= interval) {
+      // Check if we've already sent a reminder for this interval
+      const hasReminderForInterval = existingReminders.some(reminder => 
+        reminder.reminderInterval === interval
+      );
+      if (!hasReminderForInterval) {
+        return interval;
+      }
+    }
+  }
+  
+  return null;
+};
+
+// Helper function to create in-app notification
+const createShippingNotification = async (db: any, orderData: Order, orderId: string, hoursOverdue: number) => {
+  try {
+    const notificationData = {
+      userId: orderData.sellerId,
+      type: 'shipping_reminder',
+      title: 'Shipping Reminder',
+      message: `Order #${orderId.substring(0, 8).toUpperCase()} is ${hoursOverdue} hours overdue for shipping`,
+      data: {
+        orderId,
+        orderAmount: orderData.amount,
+        hoursOverdue
+      },
+      read: false,
+      createdAt: Timestamp.now()
+    };
+
+    await db.collection('notifications').add(notificationData);
+    console.log(`[Shipping Reminders] Created in-app notification for order ${orderId}`);
+  } catch (error) {
+    console.error(`[Shipping Reminders] Failed to create notification for order ${orderId}:`, error);
+  }
+};
+
 /**
- * Cron job to send shipping reminder emails to sellers
+ * Enhanced cron job to send shipping reminder emails to sellers
  * Runs every 6 hours to check for orders that need shipping reminders
- * Sends reminders for orders that are 48+ hours old and haven't been shipped
+ * Sends reminders at 48h, 72h, and 96h intervals
+ * Creates in-app notifications alongside email reminders
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Verify that this is a cron job request from Vercel or an admin request
@@ -72,65 +122,102 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log(`[Shipping Reminders] Request authorized as ${requestType}`);
 
   try {
-    console.log('[Shipping Reminders] Starting shipping reminder process');
+    console.log('[Shipping Reminders] Starting enhanced shipping reminder process');
     const { db } = getFirebaseAdmin();
     const now = new Date();
     
-    // Find orders that are 48+ hours old and need shipping reminders
+    // Find orders that are at least 48 hours old and need shipping reminders
     const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
     const fortyEightHoursAgoTimestamp = Timestamp.fromDate(fortyEightHoursAgo);
     
     let totalReminders = 0;
+    let totalNotifications = 0;
     let totalErrors = 0;
     const processedOrders: string[] = [];
+    const reminderBreakdown: { [key: number]: number } = {};
 
     console.log('[Shipping Reminders] Checking for orders needing shipping reminders...');
+    console.log(`[Shipping Reminders] Looking for orders created before: ${fortyEightHoursAgo.toISOString()}`);
     
     // Query for orders that need shipping reminders
-    const ordersQuery = db.collection('orders')
-      .where('status', 'in', ['paid', 'awaiting_shipping'])
-      .where('createdAt', '<', fortyEightHoursAgoTimestamp)
-      .where('isPickup', '!=', true) // Exclude pickup orders
-      .limit(BATCH_SIZE);
+    // We'll check multiple statuses to catch all unshipped orders
+    const statusesToCheck = ['paid', 'awaiting_shipping'];
+    let allOrdersToProcess: any[] = [];
 
-    const ordersSnapshot = await ordersQuery.get();
+    for (const status of statusesToCheck) {
+      const ordersQuery = db.collection('orders')
+        .where('status', '==', status)
+        .where('createdAt', '<', fortyEightHoursAgoTimestamp)
+        .limit(BATCH_SIZE);
 
-    if (ordersSnapshot.empty) {
+      const ordersSnapshot = await ordersQuery.get();
+      allOrdersToProcess = allOrdersToProcess.concat(ordersSnapshot.docs);
+    }
+
+    // Remove duplicates and filter out pickup orders
+    const uniqueOrders = allOrdersToProcess.filter((doc, index, self) => 
+      index === self.findIndex(d => d.id === doc.id)
+    );
+
+    const eligibleOrders = uniqueOrders.filter(doc => {
+      const data = doc.data();
+      return !data.isPickup && !data.trackingInfo && data.status !== 'shipped';
+    });
+
+    if (eligibleOrders.length === 0) {
       console.log('[Shipping Reminders] No orders found needing shipping reminders');
       return res.status(200).json({
         message: 'No orders found needing shipping reminders',
         summary: {
           totalReminders: 0,
+          totalNotifications: 0,
           totalErrors: 0,
           processedOrders: [],
+          reminderBreakdown: {},
           timestamp: new Date().toISOString()
         }
       });
     }
 
-    console.log(`[Shipping Reminders] Found ${ordersSnapshot.size} orders that may need shipping reminders`);
+    console.log(`[Shipping Reminders] Found ${eligibleOrders.length} orders that may need shipping reminders`);
 
     // Process each order
-    for (const orderDoc of ordersSnapshot.docs) {
+    for (const orderDoc of eligibleOrders) {
       try {
         const orderData = orderDoc.data() as Order;
         const orderId = orderDoc.id;
 
-        // Skip if already shipped or has tracking info
+        // Double-check that order still needs shipping
         if (orderData.status === 'shipped' || orderData.trackingInfo) {
           console.log(`[Shipping Reminders] Skipping order ${orderId} - already shipped or has tracking`);
           continue;
         }
 
-        // Check if we've already sent a reminder recently (within last 24 hours)
-        const reminderCheckQuery = await db.collection('shippingReminders')
+        // Get existing reminders for this order
+        const existingRemindersQuery = await db.collection('shippingReminders')
           .where('orderId', '==', orderId)
-          .where('sentAt', '>', Timestamp.fromDate(new Date(now.getTime() - (24 * 60 * 60 * 1000))))
-          .limit(1)
           .get();
 
-        if (!reminderCheckQuery.empty) {
-          console.log(`[Shipping Reminders] Skipping order ${orderId} - reminder already sent within 24 hours`);
+        const existingReminders = existingRemindersQuery.docs.map(doc => doc.data());
+
+        // Determine if this order qualifies for a new reminder
+        const createdAt = orderData.createdAt instanceof Timestamp ? orderData.createdAt.toDate() : new Date(orderData.createdAt);
+        const qualifyingInterval = getQualifyingReminderInterval(createdAt, existingReminders);
+
+        if (!qualifyingInterval) {
+          console.log(`[Shipping Reminders] Skipping order ${orderId} - no qualifying reminder interval`);
+          continue;
+        }
+
+        // Check if we've sent any reminder in the last 6 hours to avoid spam
+        const recentReminderCheck = existingReminders.some(reminder => {
+          const sentAt = reminder.sentAt instanceof Timestamp ? reminder.sentAt.toDate() : new Date(reminder.sentAt);
+          const hoursSinceLast = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
+          return hoursSinceLast < 6;
+        });
+
+        if (recentReminderCheck) {
+          console.log(`[Shipping Reminders] Skipping order ${orderId} - reminder sent within last 6 hours`);
           continue;
         }
 
@@ -157,14 +244,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (orderData.listingSnapshot?.title) {
           listingTitle = orderData.listingSnapshot.title;
         } else if (orderData.listingId) {
-          const listingDoc = await db.collection('listings').doc(orderData.listingId).get();
-          if (listingDoc.exists) {
-            listingTitle = listingDoc.data()?.title || 'Unknown Item';
+          try {
+            const listingDoc = await db.collection('listings').doc(orderData.listingId).get();
+            if (listingDoc.exists) {
+              listingTitle = listingDoc.data()?.title || 'Unknown Item';
+            }
+          } catch (listingError) {
+            console.warn(`[Shipping Reminders] Could not fetch listing ${orderData.listingId}:`, listingError);
           }
         }
 
         // Calculate hours overdue
-        const createdAt = orderData.createdAt instanceof Timestamp ? orderData.createdAt.toDate() : new Date(orderData.createdAt);
         const hoursOverdue = calculateHoursOverdue(createdAt);
 
         // Format order number (use order ID if no specific order number format)
@@ -190,15 +280,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           shippingAddress: formatShippingAddress(orderData.shippingAddress)
         };
 
-        console.log(`[Shipping Reminders] Sending reminder for order ${orderId}`, {
+        console.log(`[Shipping Reminders] Sending ${qualifyingInterval}h reminder for order ${orderId}`, {
           seller: sellerData.email,
           buyer: buyerName,
           hoursOverdue,
-          orderAmount: orderData.amount
+          orderAmount: orderData.amount,
+          reminderInterval: qualifyingInterval
         });
 
         // Send the shipping reminder email
         const emailSent = await emailService.sendShippingReminderEmail(reminderData);
+
+        // Create in-app notification regardless of email success
+        await createShippingNotification(db, orderData, orderId, hoursOverdue);
+        totalNotifications++;
 
         if (emailSent) {
           // Record that we sent the reminder
@@ -208,17 +303,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             buyerId: orderData.buyerId,
             sellerEmail: sellerData.email,
             hoursOverdue,
+            reminderInterval: qualifyingInterval,
             sentAt: Timestamp.now(),
             orderAmount: orderData.amount,
-            listingTitle
+            listingTitle,
+            emailSent: true,
+            notificationCreated: true
           });
 
           totalReminders++;
           processedOrders.push(orderId);
-          console.log(`[Shipping Reminders] Successfully sent reminder for order ${orderId}`);
+          reminderBreakdown[qualifyingInterval] = (reminderBreakdown[qualifyingInterval] || 0) + 1;
+          console.log(`[Shipping Reminders] Successfully sent ${qualifyingInterval}h reminder for order ${orderId}`);
         } else {
+          // Still record the attempt even if email failed
+          await db.collection('shippingReminders').add({
+            orderId,
+            sellerId: orderData.sellerId,
+            buyerId: orderData.buyerId,
+            sellerEmail: sellerData.email,
+            hoursOverdue,
+            reminderInterval: qualifyingInterval,
+            sentAt: Timestamp.now(),
+            orderAmount: orderData.amount,
+            listingTitle,
+            emailSent: false,
+            notificationCreated: true,
+            error: 'Email sending failed'
+          });
+
           totalErrors++;
-          console.error(`[Shipping Reminders] Failed to send reminder for order ${orderId}`);
+          console.error(`[Shipping Reminders] Failed to send email for order ${orderId}, but notification was created`);
         }
 
       } catch (error) {
@@ -229,16 +344,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const summary = {
       totalReminders,
+      totalNotifications,
       totalErrors,
       processedOrders,
-      ordersChecked: ordersSnapshot.size,
+      ordersChecked: eligibleOrders.length,
+      reminderBreakdown,
       timestamp: new Date().toISOString()
     };
 
-    console.log('[Shipping Reminders] Shipping reminder process completed', summary);
+    console.log('[Shipping Reminders] Enhanced shipping reminder process completed', summary);
 
     return res.status(200).json({
-      message: `Successfully sent ${totalReminders} shipping reminders`,
+      message: `Successfully sent ${totalReminders} shipping reminder emails and created ${totalNotifications} notifications`,
       summary
     });
 
