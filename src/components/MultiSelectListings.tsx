@@ -16,7 +16,8 @@ import {
   RotateCcw,
   CheckSquare,
   Square,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
 import { ViewCounter } from "@/components/ViewCounter";
@@ -55,6 +56,7 @@ export function MultiSelectListings({
 }: MultiSelectListingsProps) {
   const [selectedListings, setSelectedListings] = useState<string[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<'archive' | 'delete' | 'restore' | null>(null);
   const { toast } = useToast();
 
   const formatPrice = (price: any): string => {
@@ -111,6 +113,9 @@ export function MultiSelectListings({
       return;
     }
 
+    // Set loading state
+    setLoadingAction(action);
+
     try {
       switch (action) {
         case 'archive':
@@ -152,6 +157,9 @@ export function MultiSelectListings({
         description: `Failed to ${action} selected listings. Please try again.`,
         variant: "destructive",
       });
+    } finally {
+      // Clear loading state
+      setLoadingAction(null);
     }
   };
 
@@ -159,6 +167,7 @@ export function MultiSelectListings({
   useEffect(() => {
     setSelectedListings([]);
     setIsSelectMode(false);
+    setLoadingAction(null);
   }, [type]);
 
   if (listings.length === 0) {
@@ -229,10 +238,18 @@ export function MultiSelectListings({
                   variant="outline"
                   size="sm"
                   onClick={() => handleBulkAction('archive')}
-                  className="text-orange-600 hover:text-orange-700 flex-shrink-0"
+                  disabled={loadingAction !== null}
+                  className="text-orange-600 hover:text-orange-700 flex-shrink-0 disabled:opacity-50"
                 >
-                  <Archive className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden xs:inline">Archive </span>({selectedListings.length})
+                  {loadingAction === 'archive' ? (
+                    <Loader2 className="h-4 w-4 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <Archive className="h-4 w-4 mr-1 sm:mr-2" />
+                  )}
+                  <span className="hidden xs:inline">
+                    {loadingAction === 'archive' ? 'Archiving...' : 'Archive '}
+                  </span>
+                  {loadingAction !== 'archive' && `(${selectedListings.length})`}
                 </Button>
               )}
               
@@ -241,10 +258,18 @@ export function MultiSelectListings({
                   variant="outline"
                   size="sm"
                   onClick={() => handleBulkAction('restore')}
-                  className="text-green-600 hover:text-green-700 flex-shrink-0"
+                  disabled={loadingAction !== null}
+                  className="text-green-600 hover:text-green-700 flex-shrink-0 disabled:opacity-50"
                 >
-                  <RotateCcw className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden xs:inline">Restore </span>({selectedListings.length})
+                  {loadingAction === 'restore' ? (
+                    <Loader2 className="h-4 w-4 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4 mr-1 sm:mr-2" />
+                  )}
+                  <span className="hidden xs:inline">
+                    {loadingAction === 'restore' ? 'Restoring...' : 'Restore '}
+                  </span>
+                  {loadingAction !== 'restore' && `(${selectedListings.length})`}
                 </Button>
               )}
               
@@ -253,10 +278,18 @@ export function MultiSelectListings({
                   variant="outline"
                   size="sm"
                   onClick={() => handleBulkAction('delete')}
-                  className="text-red-600 hover:text-red-700 flex-shrink-0"
+                  disabled={loadingAction !== null}
+                  className="text-red-600 hover:text-red-700 flex-shrink-0 disabled:opacity-50"
                 >
-                  <Trash2 className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden xs:inline">Delete </span>({selectedListings.length})
+                  {loadingAction === 'delete' ? (
+                    <Loader2 className="h-4 w-4 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1 sm:mr-2" />
+                  )}
+                  <span className="hidden xs:inline">
+                    {loadingAction === 'delete' ? 'Deleting...' : 'Delete '}
+                  </span>
+                  {loadingAction !== 'delete' && `(${selectedListings.length})`}
                 </Button>
               )}
             </div>
@@ -265,7 +298,7 @@ export function MultiSelectListings({
       </div>
 
       {/* Warning for bulk delete */}
-      {isSelectMode && selectedListings.length > 0 && (
+      {isSelectMode && selectedListings.length > 0 && !loadingAction && (
         <Alert variant="warning" className="bg-amber-50 text-amber-800 dark:bg-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-800">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription>
@@ -273,6 +306,18 @@ export function MultiSelectListings({
               ? `You have selected ${selectedListings.length} listing(s). Archiving will move them to your archived listings where they can be restored later.`
               : `You have selected ${selectedListings.length} listing(s). Deleting will permanently remove them and cannot be undone.`
             }
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Loading message during bulk operations */}
+      {loadingAction && (
+        <Alert className="bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-100 border-blue-300 dark:border-blue-800">
+          <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
+          <AlertDescription>
+            {loadingAction === 'archive' && `Archiving ${selectedListings.length} listing(s)... This may take a moment.`}
+            {loadingAction === 'delete' && `Deleting ${selectedListings.length} listing(s)... This may take a moment.`}
+            {loadingAction === 'restore' && `Restoring ${selectedListings.length} listing(s)... This may take a moment.`}
           </AlertDescription>
         </Alert>
       )}
@@ -370,6 +415,7 @@ export function MultiSelectListings({
                             <Button
                               variant="outline"
                               size="sm"
+                              disabled={loadingAction !== null}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(listing.id);
@@ -381,7 +427,8 @@ export function MultiSelectListings({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-orange-600 hover:text-orange-700"
+                              disabled={loadingAction !== null}
+                              className="text-orange-600 hover:text-orange-700 disabled:opacity-50"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onDelete(listing.id);
@@ -393,6 +440,7 @@ export function MultiSelectListings({
                             <Button
                               variant="outline"
                               size="sm"
+                              disabled={loadingAction !== null}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onMessage(listing.id);
@@ -407,7 +455,8 @@ export function MultiSelectListings({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-green-600 hover:text-green-700"
+                              disabled={loadingAction !== null}
+                              className="text-green-600 hover:text-green-700 disabled:opacity-50"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onRestore && onRestore(listing.id);
@@ -419,7 +468,8 @@ export function MultiSelectListings({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-red-600 hover:text-red-700"
+                              disabled={loadingAction !== null}
+                              className="text-red-600 hover:text-red-700 disabled:opacity-50"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onDelete(listing.id);
@@ -539,6 +589,7 @@ export function MultiSelectListings({
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={loadingAction !== null}
                             onClick={(e) => {
                               e.stopPropagation();
                               onEdit(listing.id);
@@ -550,7 +601,8 @@ export function MultiSelectListings({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-orange-600 hover:text-orange-700"
+                            disabled={loadingAction !== null}
+                            className="text-orange-600 hover:text-orange-700 disabled:opacity-50"
                             onClick={(e) => {
                               e.stopPropagation();
                               onDelete(listing.id);
@@ -562,6 +614,7 @@ export function MultiSelectListings({
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={loadingAction !== null}
                             onClick={(e) => {
                               e.stopPropagation();
                               onMessage(listing.id);
@@ -576,7 +629,8 @@ export function MultiSelectListings({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-green-600 hover:text-green-700"
+                            disabled={loadingAction !== null}
+                            className="text-green-600 hover:text-green-700 disabled:opacity-50"
                             onClick={(e) => {
                               e.stopPropagation();
                               onRestore && onRestore(listing.id);
@@ -588,7 +642,8 @@ export function MultiSelectListings({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-red-600 hover:text-red-700"
+                            disabled={loadingAction !== null}
+                            className="text-red-600 hover:text-red-700 disabled:opacity-50"
                             onClick={(e) => {
                               e.stopPropagation();
                               onDelete(listing.id);
