@@ -35,6 +35,7 @@ import { ListingProcessDiagnostic } from '@/components/admin/ListingProcessDiagn
 import AdminSecurityManager from '@/components/admin/AdminSecurityManager';
 import AuthDebugger from '@/components/admin/AuthDebugger';
 import CancelledSubscriptionDebugger from '@/components/admin/CancelledSubscriptionDebugger';
+import EmailVerificationManager from '@/components/admin/EmailVerificationManager';
 import {
   Accordion,
   AccordionItem,
@@ -62,6 +63,7 @@ const SECTIONS = [
   { id: "dashboard-offer-debug", label: "Dashboard Offer Debugger" },
   { id: "db-usage", label: "Database Usage Monitoring" },
   { id: "email-test", label: "Email Notification Testing" },
+  { id: "email-verification", label: "Email Verification Manager" },
   { id: "firebase", label: "Firebase Diagnostics" },
   { id: "fix-archived-listings", label: "Fix Archived Listings Visibility" },
   { id: "fix-specific-listing", label: "Fix Specific Listing" },
@@ -839,6 +841,19 @@ export default function AdminDashboard() {
                     Test email notifications using Resend. Send welcome emails, notification emails, or test the full notification system.
                   </p>
                   <EmailNotificationTester adminSecret={adminSecret} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Email Verification Manager */}
+            <AccordionItem value="email-verification" id="email-verification" ref={el => (sectionRefs.current["email-verification"] = el)}>
+              <AccordionTrigger>Email Verification Manager</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Look up users and manually enable email verification for their accounts. This tool allows you to search by user ID or email address and update their verification status in both Firebase Auth and Firestore.
+                  </p>
+                  <EmailVerificationManager />
                 </div>
               </AccordionContent>
             </AccordionItem>
