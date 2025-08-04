@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft } from 'lucide-react';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import AuthError from '@/components/AuthError';
+import { ReCaptcha, useReCaptcha } from '@/components/ReCaptcha';
 
 function LoadingState() {
   return (
@@ -60,6 +61,17 @@ function SignUpComponent() {
     username: '',
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  
+  // reCAPTCHA state
+  const {
+    isVerified: isRecaptchaVerified,
+    token: recaptchaToken,
+    error: recaptchaError,
+    handleVerify: handleRecaptchaVerify,
+    handleExpire: handleRecaptchaExpire,
+    handleError: handleRecaptchaError,
+    reset: resetRecaptcha
+  } = useReCaptcha();
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 6;
@@ -113,6 +125,29 @@ function SignUpComponent() {
       // Terms of Use agreement check
       if (!agreeToTerms) {
         throw new Error('You must agree to the Terms of Use to create an account.');
+      }
+
+      // reCAPTCHA verification check
+      if (!isRecaptchaVerified || !recaptchaToken) {
+        throw new Error('Please complete the reCAPTCHA verification.');
+      }
+
+      // Verify reCAPTCHA token on server
+      const recaptchaResponse = await fetch('/api/auth/verify-recaptcha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: recaptchaToken,
+          action: 'signup'
+        }),
+      });
+
+      const recaptchaResult = await recaptchaResponse.json();
+      if (!recaptchaResult.success) {
+        resetRecaptcha();
+        throw new Error(recaptchaResult.message || 'reCAPTCHA verification failed. Please try again.');
       }
 
       await signUp(formData.email, formData.password, formData.username);
@@ -279,6 +314,20 @@ function SignUpComponent() {
                   Privacy Policy
                 </Link>
               </label>
+            </div>
+
+            {/* reCAPTCHA */}
+            <div className="pt-2">
+              <ReCaptcha
+                onVerify={handleRecaptchaVerify}
+                onExpire={handleRecaptchaExpire}
+                onError={handleRecaptchaError}
+                disabled={isLoading}
+                className="flex justify-center"
+              />
+              {recaptchaError && (
+                <p className="text-sm text-destructive mt-2">{recaptchaError}</p>
+              )}
             </div>
           </CardContent>
           

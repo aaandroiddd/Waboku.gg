@@ -14,6 +14,8 @@ import PasswordResetForm from "@/components/PasswordResetForm";
 import MfaVerification from "@/components/MfaVerification";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { MultiFactorResolver } from "firebase/auth";
+import { ReCaptcha, useReCaptcha } from "@/components/ReCaptcha";
+import { securityMonitor } from "@/lib/security-monitor";
 
 function LoadingState() {
   return (
@@ -55,8 +57,21 @@ function SignInComponent() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [showRecaptcha, setShowRecaptcha] = useState(false);
+  const [recaptchaReason, setRecaptchaReason] = useState<string>('');
   const { user, signIn, signInWithGoogle } = useAuth();
   const { handlePostLoginRedirect, getRedirectState } = useAuthRedirect();
+
+  // reCAPTCHA state
+  const {
+    isVerified: isRecaptchaVerified,
+    token: recaptchaToken,
+    error: recaptchaError,
+    handleVerify: handleRecaptchaVerify,
+    handleExpire: handleRecaptchaExpire,
+    handleError: handleRecaptchaError,
+    reset: resetRecaptcha
+  } = useReCaptcha();
 
   useEffect(() => {
     setMounted(true);
@@ -68,6 +83,45 @@ function SignInComponent() {
       setRememberMe(true);
     }
   }, []);
+
+  // Check if reCAPTCHA is required when email changes
+  useEffect(() => {
+    const checkRecaptchaRequirement = async () => {
+      if (!email || !mounted) return;
+
+      try {
+        const response = await fetch('/api/auth/check-recaptcha-required', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setShowRecaptcha(result.required);
+            setRecaptchaReason(result.reason || '');
+            
+            // Reset reCAPTCHA if it's no longer required
+            if (!result.required && isRecaptchaVerified) {
+              resetRecaptcha();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking reCAPTCHA requirement:', error);
+        // Default to showing reCAPTCHA on error for security
+        setShowRecaptcha(true);
+        setRecaptchaReason('Security verification required');
+      }
+    };
+
+    // Debounce the check to avoid too many API calls
+    const timeoutId = setTimeout(checkRecaptchaRequirement, 500);
+    return () => clearTimeout(timeoutId);
+  }, [email, mounted, isRecaptchaVerified, resetRecaptcha]);
 
   useEffect(() => {
     if (user) {
@@ -148,6 +202,35 @@ function SignInComponent() {
         throw Object.assign(new Error("This email is associated with a Google account. Please sign in with Google instead."), {
           name: "auth/google-account"
         });
+      }
+
+      // reCAPTCHA verification check (if required)
+      if (showRecaptcha && (!isRecaptchaVerified || !recaptchaToken)) {
+        throw Object.assign(new Error('Please complete the reCAPTCHA verification.'), {
+          name: "auth/recaptcha-required"
+        });
+      }
+
+      // Verify reCAPTCHA token on server (if required)
+      if (showRecaptcha && recaptchaToken) {
+        const recaptchaResponse = await fetch('/api/auth/verify-recaptcha', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: recaptchaToken,
+            action: 'signin'
+          }),
+        });
+
+        const recaptchaResult = await recaptchaResponse.json();
+        if (!recaptchaResult.success) {
+          resetRecaptcha();
+          throw Object.assign(new Error(recaptchaResult.message || 'reCAPTCHA verification failed. Please try again.'), {
+            name: "auth/recaptcha-failed"
+          });
+        }
       }
 
       const result = await signIn(email, password);
@@ -356,6 +439,27 @@ function SignInComponent() {
                 Remember my email
               </label>
             </div>
+
+            {/* Conditional reCAPTCHA */}
+            {showRecaptcha && (
+              <div className="pt-2">
+                <div className="mb-2">
+                  <p className="text-sm text-muted-foreground">
+                    {recaptchaReason && `Security verification required: ${recaptchaReason}`}
+                  </p>
+                </div>
+                <ReCaptcha
+                  onVerify={handleRecaptchaVerify}
+                  onExpire={handleRecaptchaExpire}
+                  onError={handleRecaptchaError}
+                  disabled={isLoading}
+                  className="flex justify-center"
+                />
+                {recaptchaError && (
+                  <p className="text-sm text-destructive mt-2">{recaptchaError}</p>
+                )}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>

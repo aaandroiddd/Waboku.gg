@@ -321,6 +321,144 @@ class SecurityMonitor {
   }
 
   /**
+   * Check if reCAPTCHA should be required for authentication
+   */
+  async shouldRequireRecaptcha(
+    email?: string,
+    ip?: string
+  ): Promise<{ required: boolean; reason?: string }> {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      // Check failed attempts by IP in the last hour
+      if (ip) {
+        const ipFailedAttempts = await this.db.collection('securityEvents')
+          .where('type', '==', 'auth_abuse')
+          .where('details.ip', '==', ip)
+          .where('details.success', '==', false)
+          .where('timestamp', '>', oneHourAgo)
+          .get();
+
+        if (ipFailedAttempts.size >= 3) {
+          return {
+            required: true,
+            reason: 'Multiple failed attempts from this IP address'
+          };
+        }
+      }
+
+      // Check failed attempts by email in the last day
+      if (email) {
+        const emailFailedAttempts = await this.db.collection('securityEvents')
+          .where('type', '==', 'auth_abuse')
+          .where('details.email', '==', email)
+          .where('details.success', '==', false)
+          .where('timestamp', '>', oneDayAgo)
+          .get();
+
+        if (emailFailedAttempts.size >= 2) {
+          return {
+            required: true,
+            reason: 'Multiple failed attempts for this email address'
+          };
+        }
+      }
+
+      // Check for suspicious patterns (e.g., rapid attempts)
+      if (ip) {
+        const recentAttempts = await this.db.collection('securityEvents')
+          .where('type', '==', 'auth_abuse')
+          .where('details.ip', '==', ip)
+          .where('timestamp', '>', new Date(Date.now() - 10 * 60 * 1000)) // Last 10 minutes
+          .get();
+
+        if (recentAttempts.size >= 2) {
+          return {
+            required: true,
+            reason: 'Rapid authentication attempts detected'
+          };
+        }
+      }
+
+      return { required: false };
+    } catch (error) {
+      console.error('[security-monitor] Error checking reCAPTCHA requirement:', error);
+      // Default to requiring reCAPTCHA on error for security
+      return {
+        required: true,
+        reason: 'Security check failed'
+      };
+    }
+  }
+
+  /**
+   * Check if device is recognized for a user
+   */
+  async isRecognizedDevice(
+    email: string,
+    userAgent?: string,
+    ip?: string
+  ): Promise<boolean> {
+    try {
+      if (!userAgent && !ip) return false;
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      
+      // Look for successful auth attempts from this device/IP combination
+      const recognizedAttempts = await this.db.collection('securityEvents')
+        .where('type', '==', 'auth_abuse')
+        .where('details.email', '==', email)
+        .where('details.success', '==', true)
+        .where('timestamp', '>', sevenDaysAgo)
+        .get();
+
+      // Check if any of the successful attempts match this device
+      for (const doc of recognizedAttempts.docs) {
+        const data = doc.data();
+        const matchesUserAgent = userAgent && data.userAgent === userAgent;
+        const matchesIP = ip && data.details.ip === ip;
+        
+        if (matchesUserAgent || matchesIP) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('[security-monitor] Error checking device recognition:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Log successful authentication attempt
+   */
+  async logSuccessfulAuth(
+    email: string,
+    ip?: string,
+    userAgent?: string
+  ): Promise<void> {
+    try {
+      await this.logSecurityEvent({
+        type: 'auth_abuse',
+        severity: 'low',
+        details: {
+          email,
+          ip,
+          success: true,
+          reason: 'Successful authentication attempt'
+        },
+        timestamp: new Date(),
+        ip,
+        userAgent
+      });
+    } catch (error) {
+      console.error('[security-monitor] Error logging successful auth:', error);
+    }
+  }
+
+  /**
    * Monitor listing manipulation
    */
   async monitorListingActivity(
