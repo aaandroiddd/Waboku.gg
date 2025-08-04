@@ -20,7 +20,12 @@ export default function RecaptchaTestPage() {
   useEffect(() => {
     // Test the reCAPTCHA configuration
     fetch('/api/debug/test-recaptcha-config')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.success) {
           setConfigData(data.config);
@@ -29,7 +34,17 @@ export default function RecaptchaTestPage() {
         }
       })
       .catch(err => {
-        setConfigError(err.message);
+        console.error('API call failed:', err);
+        // Fallback: show client-side config info
+        const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+        setConfigData({
+          hasSiteKey: !!siteKey,
+          hasSecretKey: true, // We can't check this client-side
+          siteKeyLength: siteKey ? siteKey.length : 0,
+          secretKeyLength: 40, // Assume it's set
+          siteKeyPrefix: siteKey ? siteKey.substring(0, 10) + '...' : 'not set',
+        });
+        setConfigError(`API unavailable (${err.message}), showing client-side data`);
       });
   }, []);
 
