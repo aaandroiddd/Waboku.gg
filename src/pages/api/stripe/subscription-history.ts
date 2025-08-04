@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { subscriptionHistoryService } from '@/lib/subscription-history-service';
+import { subscriptionHistoryCache } from '@/lib/subscription-history-cache';
 import Stripe from 'stripe';
 
 // Initialize Stripe
@@ -38,25 +40,37 @@ export default async function handler(
     
     console.log('[Subscription History] Fetching history for user:', userId);
 
-    // Get Firestore and Realtime Database references
+    // Check cache first
+    const cachedData = subscriptionHistoryCache.get(userId);
+    if (cachedData) {
+      console.log('[Subscription History] Returning cached data');
+      return res.status(200).json(cachedData);
+    }
+
+    // Get Firestore reference
     const firestore = admin.firestore();
-    const realtimeDb = admin.database();
     
     // Fetch user data from Firestore
     const userDoc = await firestore.collection('users').doc(userId).get();
     const userData = userDoc.exists ? userDoc.data() : null;
     
-    // Fetch subscription history from Firestore
-    const subscriptionHistoryRef = firestore.collection('users').doc(userId).collection('subscription_history');
-    const historySnapshot = await subscriptionHistoryRef.orderBy('date', 'desc').limit(50).get();
-    
     let events = [];
-    let stripeCustomerId = null;
     let paymentMethods = [];
+    
+    try {
+      // Use the subscription history service to get events
+      events = await subscriptionHistoryService.getHistory(userId, 50);
+      console.log('[Subscription History] Fetched history from service:', {
+        count: events.length
+      });
+    } catch (historyError) {
+      console.error('[Subscription History] Error fetching from service:', historyError);
+      // Continue with empty events array
+    }
     
     // If we have user data with a Stripe customer ID, fetch payment methods
     if (userData?.stripeCustomerId) {
-      stripeCustomerId = userData.stripeCustomerId;
+      const stripeCustomerId = userData.stripeCustomerId;
       
       try {
         // Fetch payment methods from Stripe
@@ -82,24 +96,8 @@ export default async function handler(
       }
     }
     
-    // If we have history records in Firestore, use those
-    if (!historySnapshot.empty) {
-      events = historySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          type: data.type,
-          date: data.date,
-          description: data.description,
-          details: data.details || {}
-        };
-      });
-      
-      console.log('[Subscription History] Fetched history from Firestore:', {
-        count: events.length
-      });
-    } else {
-      // If no history records, try to reconstruct from subscription data
+    // If no events from service, try to reconstruct from subscription data (fallback)
+    if (events.length === 0) {
       console.log('[Subscription History] No history records found, reconstructing from subscription data');
       
       // Get current subscription data
@@ -118,7 +116,7 @@ export default async function handler(
             id: `sub_created_${subscription.id}`,
             type: 'subscription_created',
             date: new Date(subscription.created * 1000).toISOString(),
-            description: 'Subscription created',
+            description: 'Premium subscription activated',
             details: {
               status: subscription.status,
               tier: 'premium'
@@ -162,7 +160,7 @@ export default async function handler(
                   id: `payment_${invoice.id}`,
                   type: 'payment_succeeded',
                   date: new Date(invoice.created * 1000).toISOString(),
-                  description: 'Payment succeeded',
+                  description: 'Payment processed successfully',
                   details: {
                     amount: invoice.amount_paid / 100,
                     ...cardDetails
@@ -226,11 +224,17 @@ export default async function handler(
       events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
     
-    // Return the subscription history and payment methods
-    return res.status(200).json({
+    // Prepare response data
+    const responseData = {
       events,
       paymentMethods
-    });
+    };
+    
+    // Cache the response for 5 minutes
+    subscriptionHistoryCache.set(userId, responseData, 5 * 60 * 1000);
+    
+    // Return the subscription history and payment methods
+    return res.status(200).json(responseData);
   } catch (error: any) {
     console.error('[Subscription History] Error:', error);
     return res.status(500).json({ 

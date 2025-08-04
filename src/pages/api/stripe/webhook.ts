@@ -5,6 +5,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { emailService } from '@/lib/email-service';
+import { subscriptionHistoryService } from '@/lib/subscription-history-service';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -152,6 +153,18 @@ export default async function handler(
             startDate: currentDate.toISOString(),
             renewalDate: renewalDate.toISOString()
           });
+
+          // Add subscription history event
+          try {
+            await subscriptionHistoryService.addSubscriptionCreated(
+              userId,
+              session.subscription as string,
+              'premium'
+            );
+            console.log('[Stripe Webhook] Added subscription created event to history');
+          } catch (historyError) {
+            console.error('[Stripe Webhook] Error adding subscription history:', historyError);
+          }
 
           // Send subscription success email
           try {
@@ -1141,6 +1154,41 @@ export default async function handler(
           accountTier: accountTier,
           cancelAtPeriodEnd: cancelAtPeriodEnd
         });
+
+        // Add subscription history event
+        try {
+          if (event.type === 'customer.subscription.created') {
+            await subscriptionHistoryService.addSubscriptionCreated(
+              userId,
+              subscription.id,
+              'premium'
+            );
+          } else {
+            // For subscription updates
+            if (cancelAtPeriodEnd && !canceledAt) {
+              // Subscription was just set to cancel at period end
+              await subscriptionHistoryService.addSubscriptionCanceled(
+                userId,
+                subscription.id,
+                currentPeriodEnd
+              );
+            } else {
+              await subscriptionHistoryService.addSubscriptionUpdated(
+                userId,
+                subscription.id,
+                subscriptionStatus,
+                {
+                  cancelAtPeriodEnd,
+                  endDate: currentPeriodEnd,
+                  renewalDate: currentPeriodEnd
+                }
+              );
+            }
+          }
+          console.log('[Stripe Webhook] Added subscription history event');
+        } catch (historyError) {
+          console.error('[Stripe Webhook] Error adding subscription history:', historyError);
+        }
         break;
       }
 
@@ -1250,6 +1298,18 @@ export default async function handler(
             endDate: endDateIso
           });
         }
+
+        // Add subscription history event
+        try {
+          await subscriptionHistoryService.addSubscriptionCanceled(
+            userId,
+            subscription.id,
+            endDateIso
+          );
+          console.log('[Stripe Webhook] Added subscription deleted event to history');
+        } catch (historyError) {
+          console.error('[Stripe Webhook] Error adding subscription deletion history:', historyError);
+        }
         break;
       }
 
@@ -1275,6 +1335,18 @@ export default async function handler(
           userId,
           subscriptionId: subscription
         });
+
+        // Add subscription history event
+        try {
+          await subscriptionHistoryService.addPaymentFailed(
+            userId,
+            invoice.amount_due || 0,
+            invoice.id
+          );
+          console.log('[Stripe Webhook] Added payment failed event to history');
+        } catch (historyError) {
+          console.error('[Stripe Webhook] Error adding payment failed history:', historyError);
+        }
 
         // Send subscription payment failed email
         try {
@@ -1324,6 +1396,42 @@ export default async function handler(
               subscriptionId: subscription,
               amount: invoice.amount_paid / 100
             });
+
+            // Add subscription history event for successful payment
+            try {
+              // Get payment method details if available
+              let cardDetails = undefined;
+              if (invoice.payment_intent) {
+                try {
+                  const paymentIntent = await stripe.paymentIntents.retrieve(
+                    invoice.payment_intent as string,
+                    { expand: ['payment_method'] }
+                  );
+                  
+                  if (paymentIntent.payment_method && typeof paymentIntent.payment_method !== 'string') {
+                    const pm = paymentIntent.payment_method;
+                    if (pm.card) {
+                      cardDetails = {
+                        brand: pm.card.brand,
+                        last4: pm.card.last4
+                      };
+                    }
+                  }
+                } catch (pmError) {
+                  console.error('[Stripe Webhook] Error fetching payment method for history:', pmError);
+                }
+              }
+
+              await subscriptionHistoryService.addPaymentSucceeded(
+                userId,
+                invoice.amount_paid,
+                cardDetails,
+                invoice.id
+              );
+              console.log('[Stripe Webhook] Added payment succeeded event to history');
+            } catch (historyError) {
+              console.error('[Stripe Webhook] Error adding payment succeeded history:', historyError);
+            }
 
             // Send subscription charge email
             try {
