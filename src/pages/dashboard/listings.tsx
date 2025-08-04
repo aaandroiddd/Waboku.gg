@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
-import { ListingExpirationDebugger } from "@/components/ListingExpirationDebugger";
 import { AdvancedTools } from "@/components/dashboard/AdvancedTools";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
@@ -53,7 +52,7 @@ const ListingsContent = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
-  const [showExpirationDebugger, setShowExpirationDebugger] = useState<boolean>(false);
+
   const [listingsLoadAttempts, setListingsLoadAttempts] = useState<number>(0);
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
@@ -587,17 +586,7 @@ const ListingsContent = () => {
       setShowDiagnostics(true);
     }
     
-    // Show expiration debugger if there are expiration-related issues
-    const hasExpirationIssues = allListings.some(listing => {
-      const listingTier = listing.accountTier || 'free';
-      const currentTier = accountTier || 'free';
-      return listingTier !== currentTier || !listing.expiresAt;
-    });
-    
-    if (hasExpirationIssues && !showExpirationDebugger && allListings.length > 0) {
-      console.warn('Listings - Potential listing expiration issues detected');
-      setShowExpirationDebugger(true);
-    }
+
   }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery, user, listingsLoading, listingsLoadAttempts, showDiagnostics]);
   
   // Filter for archived listings specifically - ensure we're explicitly checking for 'archived' status
@@ -1005,11 +994,7 @@ const ListingsContent = () => {
         </div>
       )}
       
-      {/* Listing Expiration Debugger */}
-      <ListingExpirationDebugger 
-        listings={allListings} 
-        visible={showExpirationDebugger}
-      />
+
 
       {/* Tabs Section */}
       <Tabs defaultValue="active" className="space-y-4">
