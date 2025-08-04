@@ -36,6 +36,7 @@ import AdminSecurityManager from '@/components/admin/AdminSecurityManager';
 import AuthDebugger from '@/components/admin/AuthDebugger';
 import CancelledSubscriptionDebugger from '@/components/admin/CancelledSubscriptionDebugger';
 import EmailVerificationManager from '@/components/admin/EmailVerificationManager';
+import { SubscriptionStatusDebugger } from '@/components/admin/SubscriptionStatusDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -57,6 +58,7 @@ const SECTIONS = [
   { id: "admin-security", label: "Admin Security Manager" },
   { id: "auth-debugger", label: "Authentication Debugger" },
   { id: "cancelled-subscription-debug", label: "Cancelled Subscription Debugger" },
+  { id: "subscription-status-debug", label: "Subscription Status Debugger" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
   { id: "moderation", label: "Content Moderation" },
@@ -453,6 +455,19 @@ export default function AdminDashboard() {
                     Debug and fix cancelled premium subscriptions that should still have access until their end date. This tool identifies users who cancelled their subscription but should retain premium features until the billing period ends.
                   </p>
                   <CancelledSubscriptionDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Subscription Status Debugger */}
+            <AccordionItem value="subscription-status-debug" id="subscription-status-debug" ref={el => (sectionRefs.current["subscription-status-debug"] = el)}>
+              <AccordionTrigger>Subscription Status Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug subscription status discrepancies between history and account status display. This tool compares data from multiple sources including the check-subscription API, Firestore, and Realtime Database to identify why cancelled subscriptions might not show as cancelled on the account status page.
+                  </p>
+                  <SubscriptionStatusDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
