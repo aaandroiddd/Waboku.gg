@@ -322,34 +322,71 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             try {
               const data = docSnapshot.data();
               if (data) {
-                // Check subscription status only on initial load or if we don't have cached data
-                let subscriptionStatus = null;
-                if (!initialLoadCompleteRef.current || !cachedAccountData) {
-                  subscriptionStatus = await checkSubscriptionStatus();
-                }
+                // Always check subscription status to get fresh Stripe data
+                const subscriptionStatus = await checkSubscriptionStatus();
                 
-                // Get subscription data
-                const subscriptionData = subscriptionStatus || data.subscription || defaultSubscription;
+                // Prioritize fresh Stripe data over potentially stale Firestore data
+                let subscriptionData;
+                if (subscriptionStatus && !subscriptionStatus.error) {
+                  // Use fresh Stripe data and merge with Firestore data
+                  const firestoreSubscription = data.subscription || {};
+                  subscriptionData = {
+                    status: subscriptionStatus.status || 'none',
+                    stripeSubscriptionId: subscriptionStatus.subscriptionId || firestoreSubscription.stripeSubscriptionId,
+                    startDate: subscriptionStatus.startDate || firestoreSubscription.startDate,
+                    endDate: subscriptionStatus.renewalDate || firestoreSubscription.endDate,
+                    renewalDate: subscriptionStatus.renewalDate || firestoreSubscription.renewalDate,
+                    currentPeriodEnd: subscriptionStatus.currentPeriodEnd,
+                    cancelAtPeriodEnd: firestoreSubscription.cancelAtPeriodEnd || false,
+                    // Keep Firestore-specific fields for admin-assigned subscriptions
+                    currentPlan: firestoreSubscription.currentPlan,
+                    manuallyUpdated: firestoreSubscription.manuallyUpdated
+                  };
+                  
+                  console.log('[AccountContext] Using fresh Stripe data:', {
+                    stripeStatus: subscriptionStatus.status,
+                    stripePremium: subscriptionStatus.isPremium,
+                    firestoreStatus: firestoreSubscription.status,
+                    mergedStatus: subscriptionData.status
+                  });
+                } else {
+                  // Fall back to Firestore data if Stripe check failed
+                  subscriptionData = data.subscription || defaultSubscription;
+                  console.log('[AccountContext] Using Firestore data (Stripe check failed):', {
+                    error: subscriptionStatus?.error,
+                    firestoreStatus: subscriptionData.status
+                  });
+                }
                 
                 // Determine account status based on subscription
                 const now = new Date();
                 const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
                 const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
                 
-                // More strict premium status check with validation
-                let isActivePremium = (
-                  // Must have an active status AND one of the following conditions
-                  (subscriptionData.status === 'active' && (
-                    // Regular Stripe subscription
-                    (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
-                    // Admin-assigned subscription with proper format
-                    (subscriptionData.stripeSubscriptionId?.startsWith('admin_')) ||
-                    // Explicitly set premium plan with manual update flag
-                    (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated === true)
-                  )) ||
-                  // Special case for canceled but still valid subscriptions
-                  (subscriptionData.status === 'canceled' && endDate && endDate > now && subscriptionData.stripeSubscriptionId)
-                );
+                // Enhanced premium status check that properly handles cancelled subscriptions
+                let isActivePremium = false;
+                
+                // If we have fresh Stripe data, use it directly
+                if (subscriptionStatus && !subscriptionStatus.error) {
+                  isActivePremium = subscriptionStatus.isPremium === true;
+                  console.log('[AccountContext] Using Stripe premium status:', isActivePremium);
+                } else {
+                  // Fall back to Firestore-based logic for admin subscriptions or when Stripe is unavailable
+                  isActivePremium = (
+                    // Active subscriptions
+                    (subscriptionData.status === 'active' && (
+                      // Regular Stripe subscription
+                      (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+                      // Admin-assigned subscription with proper format
+                      (subscriptionData.stripeSubscriptionId?.startsWith('admin_')) ||
+                      // Explicitly set premium plan with manual update flag
+                      (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated === true)
+                    )) ||
+                    // Cancelled subscriptions that are still within the paid period
+                    (subscriptionData.status === 'canceled' && endDate && endDate > now && subscriptionData.stripeSubscriptionId)
+                  );
+                  console.log('[AccountContext] Using Firestore-based premium status:', isActivePremium);
+                }
                 
                 // Additional validation to prevent incorrect premium status
                 if (isActivePremium) {
@@ -704,26 +741,71 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (docSnapshot.exists()) {
         const data = docSnapshot.data();
         
+        // Get fresh subscription status during refresh
+        const subscriptionStatus = await checkSubscriptionStatus();
+        
+        // Prioritize fresh Stripe data over potentially stale Firestore data
+        let subscriptionData;
+        if (subscriptionStatus && !subscriptionStatus.error) {
+          // Use fresh Stripe data and merge with Firestore data
+          const firestoreSubscription = data.subscription || {};
+          subscriptionData = {
+            status: subscriptionStatus.status || 'none',
+            stripeSubscriptionId: subscriptionStatus.subscriptionId || firestoreSubscription.stripeSubscriptionId,
+            startDate: subscriptionStatus.startDate || firestoreSubscription.startDate,
+            endDate: subscriptionStatus.renewalDate || firestoreSubscription.endDate,
+            renewalDate: subscriptionStatus.renewalDate || firestoreSubscription.renewalDate,
+            currentPeriodEnd: subscriptionStatus.currentPeriodEnd,
+            cancelAtPeriodEnd: firestoreSubscription.cancelAtPeriodEnd || false,
+            // Keep Firestore-specific fields for admin-assigned subscriptions
+            currentPlan: firestoreSubscription.currentPlan,
+            manuallyUpdated: firestoreSubscription.manuallyUpdated
+          };
+          
+          console.log('[AccountContext] Refresh using fresh Stripe data:', {
+            stripeStatus: subscriptionStatus.status,
+            stripePremium: subscriptionStatus.isPremium,
+            firestoreStatus: firestoreSubscription.status,
+            mergedStatus: subscriptionData.status
+          });
+        } else {
+          // Fall back to Firestore data if Stripe check failed
+          subscriptionData = data.subscription || defaultSubscription;
+          console.log('[AccountContext] Refresh using Firestore data (Stripe check failed):', {
+            error: subscriptionStatus?.error,
+            firestoreStatus: subscriptionData.status
+          });
+        }
+        
         // Determine account status based on subscription
         const now = new Date();
-        const subscriptionData = data.subscription || defaultSubscription;
         const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
         const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
         
-        // Use the same improved premium status check logic
-        let isActivePremium = (
-          // Must have an active status AND one of the following conditions
-          (subscriptionData.status === 'active' && (
-            // Regular Stripe subscription
-            (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
-            // Admin-assigned subscription with proper format
-            (subscriptionData.stripeSubscriptionId?.startsWith('admin_')) ||
-            // Explicitly set premium plan with manual update flag
-            (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated === true)
-          )) ||
-          // Special case for canceled but still valid subscriptions
-          (subscriptionData.status === 'canceled' && endDate && endDate > now && subscriptionData.stripeSubscriptionId)
-        );
+        // Enhanced premium status check that properly handles cancelled subscriptions
+        let isActivePremium = false;
+        
+        // If we have fresh Stripe data, use it directly
+        if (subscriptionStatus && !subscriptionStatus.error) {
+          isActivePremium = subscriptionStatus.isPremium === true;
+          console.log('[AccountContext] Refresh using Stripe premium status:', isActivePremium);
+        } else {
+          // Fall back to Firestore-based logic for admin subscriptions or when Stripe is unavailable
+          isActivePremium = (
+            // Active subscriptions
+            (subscriptionData.status === 'active' && (
+              // Regular Stripe subscription
+              (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+              // Admin-assigned subscription with proper format
+              (subscriptionData.stripeSubscriptionId?.startsWith('admin_')) ||
+              // Explicitly set premium plan with manual update flag
+              (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated === true)
+            )) ||
+            // Cancelled subscriptions that are still within the paid period
+            (subscriptionData.status === 'canceled' && endDate && endDate > now && subscriptionData.stripeSubscriptionId)
+          );
+          console.log('[AccountContext] Refresh using Firestore-based premium status:', isActivePremium);
+        }
         
         // Additional validation to prevent incorrect premium status
         if (isActivePremium) {
