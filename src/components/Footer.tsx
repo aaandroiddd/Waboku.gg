@@ -46,6 +46,11 @@ export function Footer() {
                 Privacy Policy
               </Button>
             </Link>
+            <Link href="/terms-of-use" passHref>
+              <Button variant="link" className="text-muted-foreground hover:text-primary">
+                Terms of Use
+              </Button>
+            </Link>
             <Link href="/connection-troubleshoot" passHref>
               <Button variant="link" className="text-muted-foreground hover:text-primary">
                 Connection Help

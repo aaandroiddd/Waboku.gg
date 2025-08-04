@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Logo } from '@/components/Logo';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft } from 'lucide-react';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import AuthError from '@/components/AuthError';
@@ -58,6 +59,7 @@ function SignUpComponent() {
     confirmPassword: '',
     username: '',
   });
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 6;
@@ -106,6 +108,11 @@ function SignUpComponent() {
       // Password confirmation check
       if (formData.password !== formData.confirmPassword) {
         throw new Error('Passwords do not match.');
+      }
+
+      // Terms of Use agreement check
+      if (!agreeToTerms) {
+        throw new Error('You must agree to the Terms of Use to create an account.');
       }
 
       await signUp(formData.email, formData.password, formData.username);
@@ -242,6 +249,37 @@ function SignUpComponent() {
                 autoComplete="new-password"
               />
             </div>
+
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox
+                id="agree-terms"
+                checked={agreeToTerms}
+                onCheckedChange={(checked) => setAgreeToTerms(checked as boolean)}
+                disabled={isLoading}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="agree-terms"
+                className="text-sm leading-5 cursor-pointer"
+              >
+                I agree to the{' '}
+                <Link 
+                  href="/terms-of-use" 
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Terms of Use
+                </Link>
+                {' '}and{' '}
+                <Link 
+                  href="/privacy-policy" 
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+              </label>
+            </div>
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">
@@ -279,6 +317,12 @@ function SignUpComponent() {
               onClick={async () => {
                 try {
                   setError(null);
+                  
+                  // Terms of Use agreement check for Google sign-up
+                  if (!agreeToTerms) {
+                    throw new Error('You must agree to the Terms of Use to create an account.');
+                  }
+                  
                   setIsGoogleLoading(true);
                   console.log('Starting Google sign-up process');
                   const result = await signInWithGoogle();
