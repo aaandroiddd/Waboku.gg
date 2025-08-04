@@ -66,28 +66,58 @@ export class SubscriptionHistoryService {
     }
   }
 
-  async getHistory(userId: string, limit: number = 50): Promise<SubscriptionEvent[]> {
+  async getHistory(userId: string, limit: number = 50, startAfter?: string): Promise<{
+    events: SubscriptionEvent[];
+    hasMore: boolean;
+    lastEventId?: string;
+  }> {
     try {
       const historyRef = this.firestore
         .collection('users')
         .doc(userId)
         .collection('subscription_history');
 
-      const snapshot = await historyRef
-        .orderBy('date', 'desc')
-        .limit(limit)
-        .get();
+      let query = historyRef.orderBy('date', 'desc');
+
+      // If we have a cursor, start after it
+      if (startAfter) {
+        const startAfterDoc = await historyRef.doc(startAfter).get();
+        if (startAfterDoc.exists) {
+          query = query.startAfter(startAfterDoc);
+        }
+      }
+
+      // Fetch one extra to check if there are more results
+      const snapshot = await query.limit(limit + 1).get();
 
       const events: SubscriptionEvent[] = [];
-      snapshot.forEach((doc: any) => {
-        events.push(doc.data() as SubscriptionEvent);
-      });
+      const docs = snapshot.docs;
+      
+      // Process the results (excluding the extra one if it exists)
+      const actualLimit = Math.min(docs.length, limit);
+      for (let i = 0; i < actualLimit; i++) {
+        events.push(docs[i].data() as SubscriptionEvent);
+      }
 
-      return events;
+      // Check if there are more results
+      const hasMore = docs.length > limit;
+      const lastEventId = events.length > 0 ? events[events.length - 1].id : undefined;
+
+      return {
+        events,
+        hasMore,
+        lastEventId
+      };
     } catch (error) {
       console.error('[SubscriptionHistoryService] Error fetching history:', error);
       throw error;
     }
+  }
+
+  // Legacy method for backward compatibility
+  async getHistoryLegacy(userId: string, limit: number = 50): Promise<SubscriptionEvent[]> {
+    const result = await this.getHistory(userId, limit);
+    return result.events;
   }
 
   async addSubscriptionCreated(userId: string, subscriptionId: string, tier: string = 'premium'): Promise<void> {

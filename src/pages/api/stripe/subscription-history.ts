@@ -16,18 +16,25 @@ export default async function handler(
   console.log('[Subscription History] Request received:', {
     method: req.method,
     url: req.url,
+    query: req.query,
     headers: Object.keys(req.headers)
   });
 
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      error: 'Method not allowed',
+      code: 'METHOD_NOT_ALLOWED'
+    });
   }
 
   try {
     // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ 
+        error: 'Unauthorized - Missing or invalid authorization header',
+        code: 'UNAUTHORIZED'
+      });
     }
 
     // Extract the token
@@ -35,37 +42,73 @@ export default async function handler(
     
     // Initialize Firebase Admin and verify token
     const { admin } = getFirebaseAdmin();
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (tokenError) {
+      console.error('[Subscription History] Token verification failed:', tokenError);
+      return res.status(401).json({ 
+        error: 'Invalid authentication token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    
     const userId = decodedToken.uid;
     
-    console.log('[Subscription History] Fetching history for user:', userId);
+    // Parse query parameters for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50); // Max 50 items per page
+    const startAfter = req.query.startAfter as string;
+    
+    console.log('[Subscription History] Fetching history for user:', {
+      userId,
+      page,
+      limit,
+      startAfter
+    });
 
-    // Check cache first
-    const cachedData = subscriptionHistoryCache.get(userId);
+    // Check paginated cache first
+    const cachedData = subscriptionHistoryCache.getPaginated(userId, page, limit);
     if (cachedData) {
-      console.log('[Subscription History] Returning cached data');
-      return res.status(200).json(cachedData);
+      console.log('[Subscription History] Returning cached paginated data');
+      return res.status(200).json({
+        ...cachedData,
+        cached: true,
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Get Firestore reference
     const firestore = admin.firestore();
     
-    // Fetch user data from Firestore
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    const userData = userDoc.exists ? userDoc.data() : null;
+    // Fetch user data from Firestore with error handling
+    let userData = null;
+    try {
+      const userDoc = await firestore.collection('users').doc(userId).get();
+      userData = userDoc.exists ? userDoc.data() : null;
+    } catch (firestoreError) {
+      console.error('[Subscription History] Error fetching user data:', firestoreError);
+      return res.status(500).json({ 
+        error: 'Failed to fetch user data',
+        code: 'FIRESTORE_ERROR',
+        message: 'Unable to retrieve user information from database'
+      });
+    }
     
-    let events = [];
+    let historyResult = { events: [], hasMore: false, lastEventId: undefined };
     let paymentMethods = [];
     
     try {
-      // Use the subscription history service to get events
-      events = await subscriptionHistoryService.getHistory(userId, 50);
+      // Use the subscription history service to get paginated events
+      historyResult = await subscriptionHistoryService.getHistory(userId, limit, startAfter);
       console.log('[Subscription History] Fetched history from service:', {
-        count: events.length
+        count: historyResult.events.length,
+        hasMore: historyResult.hasMore,
+        lastEventId: historyResult.lastEventId
       });
     } catch (historyError) {
       console.error('[Subscription History] Error fetching from service:', historyError);
-      // Continue with empty events array
+      // Continue with empty events array - we'll try fallback reconstruction
     }
     
     // If we have user data with a Stripe customer ID, fetch payment methods
@@ -96,9 +139,11 @@ export default async function handler(
       }
     }
     
-    // If no events from service, try to reconstruct from subscription data (fallback)
-    if (events.length === 0) {
+    // If no events from service and this is the first page, try to reconstruct from subscription data (fallback)
+    if (historyResult.events.length === 0 && page === 1) {
       console.log('[Subscription History] No history records found, reconstructing from subscription data');
+      
+      let fallbackEvents = [];
       
       // Get current subscription data
       const subscriptionData = userData?.subscription || {};
@@ -106,13 +151,18 @@ export default async function handler(
       // If there's a Stripe subscription ID, fetch details from Stripe
       if (subscriptionData.stripeSubscriptionId && !subscriptionData.stripeSubscriptionId.includes('admin_')) {
         try {
-          // Fetch subscription from Stripe
-          const subscription = await stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId, {
-            expand: ['default_payment_method', 'latest_invoice.payment_intent']
-          });
+          // Fetch subscription from Stripe with timeout
+          const subscription = await Promise.race([
+            stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId, {
+              expand: ['default_payment_method', 'latest_invoice.payment_intent']
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Stripe API timeout')), 10000)
+            )
+          ]) as Stripe.Subscription;
           
           // Add subscription creation event
-          events.push({
+          fallbackEvents.push({
             id: `sub_created_${subscription.id}`,
             type: 'subscription_created',
             date: new Date(subscription.created * 1000).toISOString(),
@@ -127,7 +177,7 @@ export default async function handler(
           try {
             const invoices = await stripe.invoices.list({
               subscription: subscription.id,
-              limit: 10
+              limit: Math.min(limit, 10)
             });
             
             for (const invoice of invoices.data) {
@@ -156,7 +206,7 @@ export default async function handler(
                   }
                 }
                 
-                events.push({
+                fallbackEvents.push({
                   id: `payment_${invoice.id}`,
                   type: 'payment_succeeded',
                   date: new Date(invoice.created * 1000).toISOString(),
@@ -166,8 +216,8 @@ export default async function handler(
                     ...cardDetails
                   }
                 });
-              } else if (invoice.status === 'uncollectible' || invoice.status === 'open' && invoice.due_date && invoice.due_date < Math.floor(Date.now() / 1000)) {
-                events.push({
+              } else if (invoice.status === 'uncollectible' || (invoice.status === 'open' && invoice.due_date && invoice.due_date < Math.floor(Date.now() / 1000))) {
+                fallbackEvents.push({
                   id: `payment_failed_${invoice.id}`,
                   type: 'payment_failed',
                   date: new Date(invoice.created * 1000).toISOString(),
@@ -184,7 +234,7 @@ export default async function handler(
           
           // If subscription is canceled, add cancellation event
           if (subscription.canceled_at) {
-            events.push({
+            fallbackEvents.push({
               id: `sub_canceled_${subscription.id}`,
               type: 'subscription_canceled',
               date: new Date(subscription.canceled_at * 1000).toISOString(),
@@ -197,15 +247,20 @@ export default async function handler(
           }
           
           console.log('[Subscription History] Reconstructed history from Stripe:', {
-            count: events.length,
+            count: fallbackEvents.length,
             subscriptionId: subscription.id
           });
         } catch (stripeError) {
           console.error('[Subscription History] Error fetching subscription from Stripe:', stripeError);
+          return res.status(500).json({ 
+            error: 'Failed to fetch subscription data from Stripe',
+            code: 'STRIPE_ERROR',
+            message: stripeError instanceof Error ? stripeError.message : 'Unknown Stripe error'
+          });
         }
       } else if (subscriptionData.stripeSubscriptionId?.includes('admin_')) {
         // For admin-assigned subscriptions
-        events.push({
+        fallbackEvents.push({
           id: `admin_upgrade_${Date.now()}`,
           type: 'admin_update',
           date: subscriptionData.startDate || new Date().toISOString(),
@@ -221,25 +276,79 @@ export default async function handler(
       }
       
       // Sort events by date (newest first)
-      events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      fallbackEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      // Apply pagination to fallback events
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedFallbackEvents = fallbackEvents.slice(startIndex, endIndex);
+      
+      historyResult = {
+        events: paginatedFallbackEvents,
+        hasMore: endIndex < fallbackEvents.length,
+        lastEventId: paginatedFallbackEvents.length > 0 ? paginatedFallbackEvents[paginatedFallbackEvents.length - 1].id : undefined
+      };
     }
+    
+    // Calculate total pages (approximate)
+    const totalPages = historyResult.hasMore ? page + 1 : page;
     
     // Prepare response data
     const responseData = {
-      events,
-      paymentMethods
+      events: historyResult.events,
+      paymentMethods,
+      hasMore: historyResult.hasMore,
+      lastEventId: historyResult.lastEventId,
+      currentPage: page,
+      totalPages,
+      limit,
+      timestamp: new Date().toISOString()
     };
     
-    // Cache the response for 5 minutes
-    subscriptionHistoryCache.set(userId, responseData, 5 * 60 * 1000);
+    // Cache the paginated response for 5 minutes
+    subscriptionHistoryCache.setPaginated(userId, page, limit, responseData, 5 * 60 * 1000);
     
     // Return the subscription history and payment methods
     return res.status(200).json(responseData);
   } catch (error: any) {
-    console.error('[Subscription History] Error:', error);
+    console.error('[Subscription History] Unexpected error:', {
+      error: error.message,
+      stack: error.stack,
+      userId,
+      page,
+      limit
+    });
+    
+    // Determine error type and provide appropriate response
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ 
+        error: 'Authentication token expired',
+        code: 'TOKEN_EXPIRED',
+        message: 'Please sign in again'
+      });
+    }
+    
+    if (error.code === 'permission-denied') {
+      return res.status(403).json({ 
+        error: 'Permission denied',
+        code: 'PERMISSION_DENIED',
+        message: 'You do not have permission to access this resource'
+      });
+    }
+    
+    if (error.message?.includes('timeout')) {
+      return res.status(504).json({ 
+        error: 'Request timeout',
+        code: 'TIMEOUT',
+        message: 'The request took too long to complete. Please try again.'
+      });
+    }
+    
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message || 'Failed to fetch subscription history'
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred while fetching subscription history',
+      timestamp: new Date().toISOString()
     });
   }
 }
