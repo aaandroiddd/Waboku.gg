@@ -23,7 +23,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useOffers } from '@/hooks/useOffers';
 import { useReviews } from '@/hooks/useReviews';
 import { useMessageThreads } from '@/hooks/useMessageThreads';
-import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
+import { useReliablePremiumStatus } from '@/hooks/useReliablePremiumStatus';
 import { useStripeConnectAccount } from '@/hooks/useStripeConnectAccount';
 import { ProfileName } from '@/components/ProfileName';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
@@ -50,7 +50,7 @@ export default function DashboardOverview() {
     fetchSellerReviews 
   } = useReviews();
   const { threads: messageThreads, loading: messagesLoading } = useMessageThreads();
-  const { isPremium, tier } = useSimplifiedPremiumStatus();
+  const { isPremium, tier, isLoading: premiumLoading, error: premiumError } = useReliablePremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
   // Fetch reviews when component mounts
@@ -476,22 +476,39 @@ export default function DashboardOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              {isPremium ? (
-                <>
-                  <Crown className="h-5 w-5 text-yellow-500" />
-                  <Badge variant="default" className="bg-yellow-500">Premium</Badge>
-                </>
-              ) : (
-                <>
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <Badge variant="secondary">Free</Badge>
-                </>
-              )}
-            </div>
-            {!isPremium && (
+            {premiumLoading ? (
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ) : premiumError ? (
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-muted-foreground" />
+                <Badge variant="outline" className="text-red-500 border-red-500">Error</Badge>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {isPremium ? (
+                  <>
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                    <Badge variant="default" className="bg-yellow-500">Premium</Badge>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <Badge variant="secondary">Free</Badge>
+                  </>
+                )}
+              </div>
+            )}
+            {!premiumLoading && !premiumError && !isPremium && (
               <p className="text-xs text-muted-foreground mt-2">
                 Upgrade to unlock more features
+              </p>
+            )}
+            {premiumError && (
+              <p className="text-xs text-red-500 mt-2">
+                Unable to load account status
               </p>
             )}
           </CardContent>

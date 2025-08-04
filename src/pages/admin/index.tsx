@@ -29,6 +29,7 @@ import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
 import UserMigrationTool from '@/components/admin/UserMigrationTool';
 import ShippingReminderTester from '@/components/admin/ShippingReminderTester';
 import AccountTierDebugger from '@/components/admin/AccountTierDebugger';
+import AccountStatusDebugger from '@/components/admin/AccountStatusDebugger';
 import { TTLFieldValidator } from '@/components/admin/TTLFieldValidator';
 import { ListingProcessDiagnostic } from '@/components/admin/ListingProcessDiagnostic';
 import AdminSecurityManager from '@/components/admin/AdminSecurityManager';
@@ -48,6 +49,7 @@ interface ApiResponse {
 }
 
 const SECTIONS = [
+  { id: "account-status-debug", label: "Account Status Debugger" },
   { id: "account-tier-debug", label: "Account Tier Debugger" },
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "admin-security", label: "Admin Security Manager" },
@@ -368,6 +370,19 @@ export default function AdminDashboard() {
 
           {/* Accordion for all admin sections */}
           <Accordion type="multiple" className="w-full">
+            {/* Account Status Debugger */}
+            <AccordionItem value="account-status-debug" id="account-status-debug" ref={el => (sectionRefs.current["account-status-debug"] = el)}>
+              <AccordionTrigger>Account Status Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug and analyze user account status from multiple sources. This tool compares data from AccountContext, premium status detection, and account tier systems to identify inconsistencies and provide comprehensive debugging information.
+                  </p>
+                  <AccountStatusDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
             {/* Account Tier Debugger */}
             <AccordionItem value="account-tier-debug" id="account-tier-debug" ref={el => (sectionRefs.current["account-tier-debug"] = el)}>
               <AccordionTrigger>Account Tier Debugger</AccordionTrigger>
