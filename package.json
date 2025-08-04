@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@next/env": "14.2.6",
-    "styled-jsx": "5.1.6",
     "@next/swc-darwin-arm64": "14.2.6",
     "@next/swc-darwin-x64": "14.2.6",
     "@next/swc-linux-arm64-gnu": "14.2.6",
@@ -89,7 +88,8 @@
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "styled-jsx": "5.1.6"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.6",
@@ -101,7 +101,6 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
-    "styled-jsx": "5.1.6",
     "tailwindcss": "^3.4.13",
     "typescript": "^5"
   }
