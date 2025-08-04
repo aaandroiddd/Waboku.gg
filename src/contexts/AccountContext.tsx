@@ -416,6 +416,36 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 
                 // Set subscription data with enhanced validation
                 const currentStatus = (() => {
+                  // If we have fresh Stripe data, use it directly
+                  if (subscriptionStatus && !subscriptionStatus.error) {
+                    // Stripe returns 'active' for cancelled subscriptions still in their paid period
+                    // But we need to check Firestore for the actual cancellation status
+                    if (subscriptionStatus.status === 'active' && firestoreSubscription.cancelAtPeriodEnd) {
+                      return 'canceled'; // Show as canceled but still premium until end date
+                    }
+                    return subscriptionStatus.status;
+                  }
+                  
+                  // Fallback to Firestore-based logic
+                  if (subscriptionData.status === 'active') return 'active';
+                  if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
+                  if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
+                  return 'none';
+                })();
+=======
+                // Set subscription data with enhanced validation  
+                const currentStatus = (() => {
+                  // If we have fresh Stripe data, use it for status determination
+                  if (subscriptionStatus && !subscriptionStatus.error) {
+                    // Check if subscription was cancelled but still active (Firestore tracks cancellation intent)
+                    const firestoreSubscription = data.subscription || {};
+                    if (subscriptionStatus.status === 'active' && firestoreSubscription.cancelAtPeriodEnd) {
+                      return 'canceled'; // Show as canceled but still premium until end date
+                    }
+                    return subscriptionStatus.status;
+                  }
+                  
+                  // Fallback to Firestore-based logic
                   if (subscriptionData.status === 'active') return 'active';
                   if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
                   if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
