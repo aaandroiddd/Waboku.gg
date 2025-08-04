@@ -7,9 +7,9 @@ import { Loader2 } from 'lucide-react';
 export function AccountLinkingButton() {
   const { checkAndLinkAccounts, user } = useAuth();
   const { toast } = useToast();
-  const [isLinking, setIsLinking] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
-  const handleLinkAccounts = async () => {
+  const handleCheckAccounts = async () => {
     if (!user?.email) {
       toast({
         title: 'Error',
@@ -19,20 +19,22 @@ export function AccountLinkingButton() {
       return;
     }
 
-    setIsLinking(true);
+    setIsChecking(true);
     try {
       const result = await checkAndLinkAccounts();
       
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: `Your accounts have been linked successfully. ${result.linkedAccounts > 2 ? `${result.linkedAccounts} accounts were linked.` : ''}`,
-        });
-      } else if (result.message?.includes('No account linking needed')) {
-        toast({
-          title: 'Information',
-          description: 'No other accounts were found with your email address.',
-        });
+        if (result.accountsFound && result.accountsFound.length > 0) {
+          toast({
+            title: 'Accounts Found',
+            description: `Found ${result.accountsFound.length} other account(s) with your email address. Account linking is not yet implemented.`,
+          });
+        } else {
+          toast({
+            title: 'No Additional Accounts',
+            description: 'No other accounts were found with your email address.',
+          });
+        }
       } else {
         toast({
           title: 'Information',
@@ -42,27 +44,27 @@ export function AccountLinkingButton() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to link accounts. Please try again.',
+        description: error.message || 'Failed to check accounts. Please try again.',
         variant: 'destructive',
       });
     } finally {
-      setIsLinking(false);
+      setIsChecking(false);
     }
   };
 
   return (
     <Button 
       variant="outline" 
-      onClick={handleLinkAccounts}
-      disabled={isLinking}
+      onClick={handleCheckAccounts}
+      disabled={isChecking}
     >
-      {isLinking ? (
+      {isChecking ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Linking Accounts...
+          Checking Accounts...
         </>
       ) : (
-        'Link Accounts'
+        'Check for Linked Accounts'
       )}
     </Button>
   );

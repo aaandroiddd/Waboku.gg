@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { verifyAuthToken } from '@/lib/auth-utils';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
-interface ChangeEmailRequest {
-  newEmail: string;
-  password?: string; // Required for email/password users
+interface AddEmailPasswordRequest {
+  email: string;
+  password: string;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -24,17 +24,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const { newEmail, password } = req.body as ChangeEmailRequest;
+    const { email, password } = req.body as AddEmailPasswordRequest;
 
     // Validate input
-    if (!newEmail || !newEmail.includes('@')) {
+    if (!email || !email.includes('@')) {
       return res.status(400).json({ 
         success: false, 
         message: 'Please provide a valid email address' 
       });
     }
 
-    const { admin, db: adminDb } = getFirebaseAdmin();
+    if (!password || password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    const { admin } = getFirebaseAdmin();
     const { db } = getFirebaseServices();
 
     // Get current user from Firebase Auth
@@ -46,9 +53,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Check if the new email is already in use
+    // Check if user already has email/password provider
+    const hasEmailProvider = currentUser.providerData.some(provider => provider.providerId === 'password');
+    if (hasEmailProvider) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Your account already has email/password authentication' 
+      });
+    }
+
+    // Check if user is Google-only
+    const hasGoogleProvider = currentUser.providerData.some(provider => provider.providerId === 'google.com');
+    if (!hasGoogleProvider) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Account linking is only available for Google users' 
+      });
+    }
+
+    // Check if the new email is already in use by another account
     try {
-      const existingUser = await admin.auth().getUserByEmail(newEmail);
+      const existingUser = await admin.auth().getUserByEmail(email);
       if (existingUser && existingUser.uid !== authResult.uid) {
         return res.status(400).json({ 
           success: false, 
@@ -66,36 +91,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Check if user has email/password provider
-    const hasEmailProvider = currentUser.providerData.some(provider => provider.providerId === 'password');
-    const hasGoogleProvider = currentUser.providerData.some(provider => provider.providerId === 'google.com');
-    const isGoogleOnlyUser = hasGoogleProvider && !hasEmailProvider;
-
-    // Prevent Google-only users from changing email directly
-    if (isGoogleOnlyUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Google users cannot change their email directly. Please use account linking or contact support for migration assistance.',
-        code: 'GOOGLE_USER_EMAIL_CHANGE_BLOCKED'
-      });
-    }
-
-    // For email/password users, we need to verify their current password
-    if (hasEmailProvider && !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Password is required to change email for email/password accounts' 
-      });
-    }
-
-    // If user has email/password provider, verify their password
-    if (hasEmailProvider && password) {
-      // Note: We can't directly verify password with Admin SDK
-      // In a production environment, you should require re-authentication on the client side
-      // before calling this API endpoint
-      console.log('Email/password user changing email - password provided (verification should be done client-side)');
-    }
-
     // Get current user profile from Firestore
     const userProfileRef = doc(db, 'users', authResult.uid);
     const userProfileDoc = await getDoc(userProfileRef);
@@ -111,47 +106,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const oldEmail = currentUser.email;
 
     try {
-      // Update email in Firebase Auth
+      // Update the user's email and add email/password authentication
       await admin.auth().updateUser(authResult.uid, {
-        email: newEmail,
-        emailVerified: false // Reset email verification status
+        email: email,
+        password: password,
+        emailVerified: false // Reset email verification status for new email
       });
 
       // Update email in Firestore user profile
       const updatedProfile = {
         ...userProfile,
-        email: newEmail,
+        email: email,
         isEmailVerified: false,
         emailChangedAt: new Date().toISOString(),
         previousEmail: oldEmail,
+        authMethods: ['google.com', 'password'], // Track both auth methods
+        accountLinkedAt: new Date().toISOString(),
         lastUpdated: new Date().toISOString()
       };
 
       await setDoc(userProfileRef, updatedProfile, { merge: true });
 
-      // Check if there are any other user documents with the old email that need updating
-      const usersRef = collection(db, 'users');
-      const oldEmailQuery = query(usersRef, where('email', '==', oldEmail));
-      const oldEmailSnapshot = await getDocs(oldEmailQuery);
-
-      // Update any duplicate user documents (this handles edge cases)
-      for (const docSnapshot of oldEmailSnapshot.docs) {
-        if (docSnapshot.id !== authResult.uid) {
-          // This is a duplicate document - update it or remove it based on your business logic
-          console.log(`Found duplicate user document with old email: ${docSnapshot.id}`);
-          
-          // For now, we'll update the email in duplicate documents too
-          await setDoc(doc(db, 'users', docSnapshot.id), {
-            email: newEmail,
-            lastUpdated: new Date().toISOString()
-          }, { merge: true });
-        }
-      }
-
       // Send verification email to new address
       try {
-        await admin.auth().generateEmailVerificationLink(newEmail);
-        console.log('Email verification link generated for new email');
+        await admin.auth().generateEmailVerificationLink(email);
+        console.log('Email verification link generated for linked email');
       } catch (verificationError) {
         console.error('Failed to generate email verification link:', verificationError);
         // Don't fail the entire operation if verification email fails
@@ -159,24 +138,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({ 
         success: true, 
-        message: 'Email address updated successfully. Please check your new email for verification.',
+        message: 'Email/password authentication has been successfully added to your account. Please check your email for verification.',
         data: {
-          newEmail,
-          oldEmail,
+          newEmail: email,
+          oldEmail: oldEmail,
+          authMethods: ['google.com', 'password'],
           emailVerified: false
         }
       });
 
     } catch (updateError: any) {
-      console.error('Error updating email:', updateError);
+      console.error('Error adding email/password authentication:', updateError);
       
       // Handle specific Firebase Auth errors
-      let errorMessage = 'Failed to update email address';
+      let errorMessage = 'Failed to add email/password authentication';
       
       if (updateError.code === 'auth/email-already-exists') {
         errorMessage = 'This email address is already in use by another account';
       } else if (updateError.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address format';
+      } else if (updateError.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password';
       } else if (updateError.code === 'auth/user-not-found') {
         errorMessage = 'User account not found';
       }
@@ -188,7 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } catch (error: any) {
-    console.error('Error in change-email API:', error);
+    console.error('Error in add-email-password API:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Internal server error. Please try again later.' 
