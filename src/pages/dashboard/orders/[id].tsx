@@ -31,6 +31,7 @@ import { MessageDialog } from '@/components/MessageDialog';
 import { PickupQRCode } from '@/components/PickupQRCode';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { addDays } from 'date-fns';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -57,6 +58,9 @@ export default function OrderDetailsPage() {
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [showRefundManagementDialog, setShowRefundManagementDialog] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Mobile detection
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Check if we should show the review dialog based on URL query param
   useEffect(() => {
@@ -185,7 +189,67 @@ export default function OrderDetailsPage() {
   
   // Function to add tracking information
   const handleAddTracking = async () => {
-    if (!order || !id || !trackingNumber) return;
+    if (!order || !id) return;
+    
+    // For mobile users, use native HTML prompts
+    if (isMobile) {
+      const trackingNumberInput = window.prompt('Enter tracking number:');
+      if (!trackingNumberInput || trackingNumberInput.trim() === '') {
+        return; // User cancelled or entered empty value
+      }
+      
+      const carrierInput = window.prompt('Enter shipping carrier (optional - leave empty for auto-detection):', '') || '';
+      const notesInput = window.prompt('Enter additional notes (optional):', '') || '';
+      
+      try {
+        setIsUpdatingShipping(true);
+        const { db } = getFirebaseServices();
+        
+        const carrierValue = carrierInput.trim() || 'auto-detect';
+        
+        // Update the order with tracking information
+        await updateDoc(doc(db, 'orders', id as string), {
+          status: 'shipped',
+          trackingInfo: {
+            carrier: carrierValue,
+            trackingNumber: trackingNumberInput.trim(),
+            notes: notesInput.trim(),
+            addedAt: new Date(),
+            addedBy: user?.uid,
+            autoDetect: !carrierInput.trim()
+          },
+          trackingRequired: true,
+          updatedAt: new Date()
+        });
+        
+        // Update local state
+        setOrder({
+          ...order,
+          status: 'shipped',
+          trackingInfo: {
+            carrier: carrierValue,
+            trackingNumber: trackingNumberInput.trim(),
+            notes: notesInput.trim(),
+            addedAt: new Date(),
+            addedBy: user?.uid,
+            autoDetect: !carrierInput.trim()
+          },
+          trackingRequired: true,
+          updatedAt: new Date()
+        });
+        
+        toast.success('Tracking information added successfully');
+      } catch (error) {
+        console.error('Error adding tracking information:', error);
+        toast.error('Failed to add tracking information');
+      } finally {
+        setIsUpdatingShipping(false);
+      }
+      return;
+    }
+    
+    // For desktop users, use the existing dialog
+    if (!trackingNumber) return;
     
     try {
       setIsUpdatingShipping(true);
@@ -240,6 +304,21 @@ export default function OrderDetailsPage() {
   const handleMarkAsShipped = async () => {
     if (!order || !id) return;
     
+    // For mobile users, use native HTML confirm
+    if (isMobile) {
+      const confirmed = window.confirm(
+        'Complete Order Without Tracking?\n\n' +
+        'You are about to mark this order as completed without providing tracking information. ' +
+        'This means you will have no proof of delivery in case of disputes. ' +
+        'The order status will be changed to "Completed" immediately.\n\n' +
+        'Do you want to continue?'
+      );
+      
+      if (!confirmed) {
+        return; // User cancelled
+      }
+    }
+    
     try {
       setIsUpdatingShipping(true);
       const { db } = getFirebaseServices();
@@ -265,7 +344,9 @@ export default function OrderDetailsPage() {
       });
       
       toast.success('Order marked as completed');
-      setShowNoTrackingDialog(false);
+      if (!isMobile) {
+        setShowNoTrackingDialog(false);
+      }
     } catch (error) {
       console.error('Error marking order as completed:', error);
       toast.error('Failed to update order status');
@@ -686,7 +767,13 @@ export default function OrderDetailsPage() {
                     <Button 
                       variant="default" 
                       className="bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => setShowTrackingDialog(true)}
+                      onClick={() => {
+                        if (isMobile) {
+                          handleAddTracking();
+                        } else {
+                          setShowTrackingDialog(true);
+                        }
+                      }}
                     >
                       <Truck className="mr-2 h-4 w-4" />
                       Add Tracking Information
@@ -694,7 +781,13 @@ export default function OrderDetailsPage() {
                     <Button 
                       variant="outline" 
                       className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      onClick={() => setShowNoTrackingDialog(true)}
+                      onClick={() => {
+                        if (isMobile) {
+                          handleMarkAsShipped();
+                        } else {
+                          setShowNoTrackingDialog(true);
+                        }
+                      }}
                     >
                       <Package className="mr-2 h-4 w-4" />
                       Ship Without Tracking
@@ -1543,14 +1636,26 @@ export default function OrderDetailsPage() {
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button 
                   variant="outline" 
-                  onClick={() => setShowTrackingDialog(true)}
+                  onClick={() => {
+                    if (isMobile) {
+                      handleAddTracking();
+                    } else {
+                      setShowTrackingDialog(true);
+                    }
+                  }}
                   className="w-full sm:w-auto"
                 >
                   <Truck className="mr-2 h-4 w-4" /> Add Tracking
                 </Button>
                 <Button 
                   variant="secondary" 
-                  onClick={() => setShowNoTrackingDialog(true)}
+                  onClick={() => {
+                    if (isMobile) {
+                      handleMarkAsShipped();
+                    } else {
+                      setShowNoTrackingDialog(true);
+                    }
+                  }}
                   className="w-full sm:w-auto"
                 >
                   <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
