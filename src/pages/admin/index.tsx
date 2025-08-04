@@ -34,6 +34,7 @@ import { TTLFieldValidator } from '@/components/admin/TTLFieldValidator';
 import { ListingProcessDiagnostic } from '@/components/admin/ListingProcessDiagnostic';
 import AdminSecurityManager from '@/components/admin/AdminSecurityManager';
 import AuthDebugger from '@/components/admin/AuthDebugger';
+import CancelledSubscriptionDebugger from '@/components/admin/CancelledSubscriptionDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -54,6 +55,7 @@ const SECTIONS = [
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "admin-security", label: "Admin Security Manager" },
   { id: "auth-debugger", label: "Authentication Debugger" },
+  { id: "cancelled-subscription-debug", label: "Cancelled Subscription Debugger" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
   { id: "moderation", label: "Content Moderation" },
@@ -436,6 +438,19 @@ export default function AdminDashboard() {
                     Debug authentication issues and manage admin claims. Check user authentication status, verify admin secrets, and set custom claims for admin/moderator privileges.
                   </p>
                   <AuthDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Cancelled Subscription Debugger */}
+            <AccordionItem value="cancelled-subscription-debug" id="cancelled-subscription-debug" ref={el => (sectionRefs.current["cancelled-subscription-debug"] = el)}>
+              <AccordionTrigger>Cancelled Subscription Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug and fix cancelled premium subscriptions that should still have access until their end date. This tool identifies users who cancelled their subscription but should retain premium features until the billing period ends.
+                  </p>
+                  <CancelledSubscriptionDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
