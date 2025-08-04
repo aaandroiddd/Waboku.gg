@@ -938,15 +938,17 @@ const ListingsContent = () => {
       />
     
       {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-start gap-8">
-          <ProfileAvatar user={user} size="xl" />
-          <div className="flex-1 pt-2">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-start gap-4 sm:gap-8">
+          <div className="flex-shrink-0">
+            <ProfileAvatar user={user} size="lg" className="sm:w-16 sm:h-16 w-12 h-12" />
+          </div>
+          <div className="flex-1 min-w-0 pt-1 sm:pt-2">
             <div className="group cursor-pointer" onClick={() => router.push(getProfileUrl({ uid: user.uid, username: profile?.username }))}>
-              <h1 className="text-3xl font-bold tracking-tight hover:text-primary transition-colors">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight hover:text-primary transition-colors truncate">
                 Your Listings
               </h1>
-              <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px] mt-2">
+              <p className="text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors truncate mt-1 sm:mt-2">
                 Manage your active and archived listings
               </p>
             </div>
@@ -998,98 +1000,83 @@ const ListingsContent = () => {
 
       {/* Tabs Section */}
       <Tabs defaultValue="active" className="space-y-4">
-        <TabsList className="w-full flex flex-wrap">
-          <TabsTrigger value="active" className="flex-1 min-w-[150px]">Active Listings ({activeListings.length})</TabsTrigger>
-          <TabsTrigger value="previous" className="flex-1 min-w-[150px]">Archived Listings ({archivedListings.length})</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-2 h-auto p-1">
+          <TabsTrigger value="active" className="text-xs sm:text-sm py-2 px-2 sm:px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <span className="truncate">Active ({activeListings.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="previous" className="text-xs sm:text-sm py-2 px-2 sm:px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <span className="truncate">Archived ({archivedListings.length})</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
-          <div className="flex flex-col gap-4 mb-4">
-            {/* View Mode Controls and Filtering/Sorting Controls - All aligned in one row */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* View Mode Controls */}
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                className="h-9 w-[60px]"
-                onClick={() => setViewMode('grid')}
-              >
-                Grid
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                className="h-9 w-[60px]"
-                onClick={() => setViewMode('list')}
-              >
-                List
-              </Button>
-              
-              {/* Date/Price/Title Sorting */}
-              <select
-                className="border rounded-md px-2 py-1 bg-background text-foreground h-9 w-[80px]"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
-              >
-                <option value="date">Date</option>
-                <option value="price">Price</option>
-                <option value="title">Title</option>
-              </select>
-              
-              {/* Ascending/Descending Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-9"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
-              
-              {/* Game Categories Filter - On same line for desktop, below for mobile */}
-              <div className="hidden md:block md:w-[300px]">
-                <MobileSelect 
-                  value={gameFilter} 
-                  onValueChange={setGameFilter}
-                  options={[
-                    { value: "all", label: "All Games" },
-                    { value: "dbs", label: "Dragon Ball Super Card Game" },
-                    { value: "digimon", label: "Digimon" },
-                    { value: "lorcana", label: "Disney Lorcana" },
-                    { value: "flesh-and-blood", label: "Flesh and Blood" },
-                    { value: "mtg", label: "Magic: The Gathering" },
-                    { value: "onepiece", label: "One Piece Card Game" },
-                    { value: "pokemon", label: "Pokemon" },
-                    { value: "star-wars", label: "Star Wars: Unlimited" },
-                    { value: "union-arena", label: "Union Arena" },
-                    { value: "universus", label: "Universus" },
-                    { value: "vanguard", label: "Vanguard" },
-                    { value: "weiss", label: "Weiss Schwarz" },
-                    { value: "yugioh", label: "Yu-Gi-Oh!" },
-                    { value: "other", label: "Other" }
-                  ]}
-                  placeholder="All Games"
-                  className="h-9"
-                />
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4">
+            {/* Mobile-first controls layout */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
+              {/* View Mode and Sort Controls - Mobile: stacked, Desktop: inline */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* View Mode Controls */}
+                <div className="flex rounded-md border overflow-hidden">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-3 text-xs sm:text-sm rounded-none border-0"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    Grid
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-3 text-xs sm:text-sm rounded-none border-0 border-l"
+                    onClick={() => setViewMode('list')}
+                  >
+                    List
+                  </Button>
+                </div>
+                
+                {/* Sort Controls */}
+                <div className="flex items-center gap-1">
+                  <select
+                    className="border rounded-md px-2 py-1 bg-background text-foreground h-8 text-xs sm:text-sm min-w-[70px]"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+                  >
+                    <option value="date">Date</option>
+                    <option value="price">Price</option>
+                    <option value="title">Title</option>
+                  </select>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    title={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </Button>
+                </div>
               </div>
               
-              {/* Refresh button moved to the right on the same row */}
-              <div className="flex-1 flex justify-end">
+              {/* Refresh button - Mobile: full width, Desktop: auto */}
+              <div className="flex sm:flex-1 sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 w-9"
+                  className="h-8 px-3 text-xs sm:text-sm w-full sm:w-auto"
                   onClick={handleRefreshListings}
                   disabled={refreshLoading}
-                  title="Refresh listings"
                 >
-                  <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-2 ${refreshLoading ? 'animate-spin' : ''}`} />
+                  <span className="sm:hidden">Refresh</span>
+                  <span className="hidden sm:inline">Refresh Listings</span>
                 </Button>
               </div>
             </div>
             
-            {/* Game Categories Filter - Only visible on mobile */}
-            <div className="md:hidden w-full">
+            {/* Game Filter - Full width on all devices */}
+            <div className="w-full">
               <MobileSelect 
                 value={gameFilter} 
                 onValueChange={setGameFilter}
@@ -1111,17 +1098,18 @@ const ListingsContent = () => {
                   { value: "other", label: "Other" }
                 ]}
                 placeholder="All Games"
-                className="h-9 w-full"
+                className="h-8 w-full text-xs sm:text-sm"
               />
             </div>
             
-            {/* Search Bar - Full width on mobile */}
+            {/* Search Bar - Full width */}
             <div className="w-full">
               <ListingsSearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
                 onSearch={() => {}} // Empty function since we're handling search directly
                 placeholder="Search your listings..."
+                className="h-8 text-xs sm:text-sm"
               />
             </div>
           </div>
