@@ -347,6 +347,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           allow_promotion_codes: true,
           billing_address_collection: 'auto',
+          // Enable saving payment methods for future use
+          payment_method_collection: 'always',
+          payment_method_options: {
+            card: {
+              setup_future_usage: 'off_session',
+            },
+          },
           subscription_data: {
             metadata: {
               userId: userId,
