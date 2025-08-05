@@ -247,14 +247,30 @@ export default function EditWantedPostPage() {
         if (response.ok && result.success) {
           console.log('Post updated successfully via API:', result);
           
+          // Clear all wanted posts cache to ensure fresh data
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            try {
+              const keys = Object.keys(sessionStorage);
+              keys.forEach(key => {
+                if (key.startsWith('wantedPosts_')) {
+                  sessionStorage.removeItem(key);
+                  sessionStorage.removeItem(`${key}_timestamp`);
+                }
+              });
+              console.log('Cleared wanted posts cache after successful update');
+            } catch (e) {
+              console.error('Error clearing cache after update:', e);
+            }
+          }
+          
           // Show success message
           toast({
             title: "Post updated",
             description: "Your wanted post has been successfully updated.",
           });
           
-          // Redirect to the post
-          router.push(`/wanted/${id}`);
+          // Redirect to the dashboard wanted page to see the changes
+          router.push(`/dashboard/wanted`);
           return;
         } else {
           console.error('API returned error when updating post:', result.error);
@@ -267,14 +283,30 @@ export default function EditWantedPostPage() {
         // Fall back to direct update using the hook
         await updateWantedPost(id as string, postData);
         
+        // Clear all wanted posts cache to ensure fresh data
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            const keys = Object.keys(sessionStorage);
+            keys.forEach(key => {
+              if (key.startsWith('wantedPosts_')) {
+                sessionStorage.removeItem(key);
+                sessionStorage.removeItem(`${key}_timestamp`);
+              }
+            });
+            console.log('Cleared wanted posts cache after successful fallback update');
+          } catch (e) {
+            console.error('Error clearing cache after fallback update:', e);
+          }
+        }
+        
         // Show success message
         toast({
           title: "Post updated",
           description: "Your wanted post has been successfully updated.",
         });
         
-        // Redirect to the post
-        router.push(`/wanted/${id}`);
+        // Redirect to the dashboard wanted page to see the changes
+        router.push(`/dashboard/wanted`);
       }
     } catch (err) {
       console.error("Error updating wanted post:", err);
