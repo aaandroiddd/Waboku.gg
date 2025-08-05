@@ -37,6 +37,7 @@ import AuthDebugger from '@/components/admin/AuthDebugger';
 import CancelledSubscriptionDebugger from '@/components/admin/CancelledSubscriptionDebugger';
 import EmailVerificationManager from '@/components/admin/EmailVerificationManager';
 import { SubscriptionStatusDebugger } from '@/components/admin/SubscriptionStatusDebugger';
+import SubscriptionDataDiagnostic from '@/components/admin/SubscriptionDataDiagnostic';
 import {
   Accordion,
   AccordionItem,
@@ -59,6 +60,7 @@ const SECTIONS = [
   { id: "auth-debugger", label: "Authentication Debugger" },
   { id: "cancelled-subscription-debug", label: "Cancelled Subscription Debugger" },
   { id: "subscription-status-debug", label: "Subscription Status Debugger" },
+  { id: "subscription-data-diagnostic", label: "Subscription Data Diagnostic" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
   { id: "moderation", label: "Content Moderation" },
@@ -468,6 +470,19 @@ export default function AdminDashboard() {
                     Debug subscription status discrepancies between history and account status display. This tool compares data from multiple sources including the check-subscription API, Firestore, and Realtime Database to identify why cancelled subscriptions might not show as cancelled on the account status page.
                   </p>
                   <SubscriptionStatusDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Subscription Data Diagnostic */}
+            <AccordionItem value="subscription-data-diagnostic" id="subscription-data-diagnostic" ref={el => (sectionRefs.current["subscription-data-diagnostic"] = el)}>
+              <AccordionTrigger>Subscription Data Diagnostic</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Comprehensive diagnostic tool for subscription data inconsistencies, invalid dates, and cross-device caching issues. This tool analyzes data from Firestore, Realtime Database, and Stripe to identify and automatically fix common subscription problems including future dates, canceled status with null subscription IDs, and database synchronization issues.
+                  </p>
+                  <SubscriptionDataDiagnostic />
                 </div>
               </AccordionContent>
             </AccordionItem>
