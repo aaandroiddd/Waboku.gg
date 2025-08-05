@@ -89,7 +89,7 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8",
     "resend": "^4.0.0",
-    "styled-jsx": "5.1.6"
+    "styled-jsx": "5.1.1"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.6",
