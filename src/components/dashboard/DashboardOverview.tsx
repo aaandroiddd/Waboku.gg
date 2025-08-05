@@ -221,13 +221,7 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Header with Profile View */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-primary">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, <ProfileName user={user} />
-          </p>
-        </div>
+      <div className="flex items-center gap-4">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -247,6 +241,12 @@ export default function DashboardOverview() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, <ProfileName user={user} />
+          </p>
+        </div>
       </div>
 
       {/* Stats Grid */}
