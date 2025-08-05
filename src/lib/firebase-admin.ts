@@ -32,11 +32,11 @@ export function initializeFirebaseAdmin() {
   return getFirebaseAdmin();
 }
 
-// Export database directly for convenience
-export const database = getFirebaseAdmin().database;
+// Export Realtime Database directly for convenience
+export const adminDb = getFirebaseAdmin().database;
 
 // Export Firestore database directly for convenience
-export const adminDb = getFirebaseAdmin().db;
+export const adminFirestore = getFirebaseAdmin().db;
 
 /**
  * Verify Firebase ID token

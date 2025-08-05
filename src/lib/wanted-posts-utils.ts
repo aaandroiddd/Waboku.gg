@@ -1,4 +1,4 @@
-import { adminDb } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 /**
  * Generate a unique WANT ID in the format WANT + 6 digits
@@ -8,6 +8,9 @@ export async function generateUniqueWantedPostId(): Promise<string> {
   const maxAttempts = 100; // Prevent infinite loops
   let attempts = 0;
 
+  // Get the Realtime Database instance
+  const { database } = getFirebaseAdmin();
+
   while (attempts < maxAttempts) {
     // Generate a random 6-digit number (100000 to 999999)
     const randomNumber = Math.floor(Math.random() * 900000) + 100000;
@@ -15,7 +18,7 @@ export async function generateUniqueWantedPostId(): Promise<string> {
 
     try {
       // Check if this ID already exists in the database
-      const postRef = adminDb.ref(`wantedPosts/${wantId}`);
+      const postRef = database.ref(`wantedPosts/${wantId}`);
       const snapshot = await postRef.once('value');
 
       if (!snapshot.exists()) {
