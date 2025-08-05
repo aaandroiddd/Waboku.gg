@@ -347,8 +347,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           allow_promotion_codes: true,
           billing_address_collection: 'auto',
-          // Enable saving payment methods for future use
-          payment_method_collection: 'always',
+          // Note: payment_method_collection is not needed for subscription mode
+          // Stripe automatically saves payment methods for subscriptions
           subscription_data: {
             metadata: {
               userId: userId,
