@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { syncSubscriptionData, getSubscriptionData } from '@/lib/subscription-sync';
+import { subscriptionHistoryService } from '@/lib/subscription-history-service';
+import { subscriptionHistoryCache } from '@/lib/subscription-history-cache';
 import Stripe from 'stripe';
 
 // Initialize Stripe with more detailed configuration
@@ -149,6 +151,28 @@ export default async function handler(
         // This will update fields separately to comply with validation rules
         await syncSubscriptionData(userId, updatedSubscription);
         
+        // Add subscription canceled event to history
+        try {
+          await subscriptionHistoryService.addSubscriptionCanceled(
+            userId, 
+            subscriptionId,
+            endDate.toISOString()
+          );
+          console.log(`[Cancel Subscription ${requestId}] Added cancellation event to history`);
+        } catch (historyError) {
+          console.error(`[Cancel Subscription ${requestId}] Failed to add history event:`, historyError);
+          // Don't fail the request if history update fails
+        }
+        
+        // Invalidate subscription history cache so user sees updated history immediately
+        try {
+          subscriptionHistoryCache.invalidate(userId);
+          console.log(`[Cancel Subscription ${requestId}] Invalidated subscription history cache`);
+        } catch (cacheError) {
+          console.error(`[Cancel Subscription ${requestId}] Failed to invalidate cache:`, cacheError);
+          // Don't fail the request if cache invalidation fails
+        }
+        
         console.log(`[Cancel Subscription ${requestId}] Non-standard subscription canceled successfully:`, {
           userId,
           subscriptionId,
@@ -248,6 +272,28 @@ export default async function handler(
         });
       }
 
+      // Add subscription canceled event to history
+      try {
+        await subscriptionHistoryService.addSubscriptionCanceled(
+          userId, 
+          subscriptionId,
+          endDate
+        );
+        console.log(`[Cancel Subscription ${requestId}] Added cancellation event to history`);
+      } catch (historyError) {
+        console.error(`[Cancel Subscription ${requestId}] Failed to add history event:`, historyError);
+        // Don't fail the request if history update fails
+      }
+      
+      // Invalidate subscription history cache so user sees updated history immediately
+      try {
+        subscriptionHistoryCache.invalidate(userId);
+        console.log(`[Cancel Subscription ${requestId}] Invalidated subscription history cache`);
+      } catch (cacheError) {
+        console.error(`[Cancel Subscription ${requestId}] Failed to invalidate cache:`, cacheError);
+        // Don't fail the request if cache invalidation fails
+      }
+
       console.log(`[Cancel Subscription ${requestId}] Cancellation process completed successfully:`, {
         userId,
         subscriptionId,
@@ -294,6 +340,28 @@ export default async function handler(
           
           // Sync the updated data to both databases
           await syncSubscriptionData(userId, updatedSubscription);
+          
+          // Add subscription canceled event to history
+          try {
+            await subscriptionHistoryService.addSubscriptionCanceled(
+              userId, 
+              subscriptionId,
+              endDate.toISOString()
+            );
+            console.log(`[Cancel Subscription ${requestId}] Added cancellation event to history for missing Stripe subscription`);
+          } catch (historyError) {
+            console.error(`[Cancel Subscription ${requestId}] Failed to add history event:`, historyError);
+            // Don't fail the request if history update fails
+          }
+          
+          // Invalidate subscription history cache so user sees updated history immediately
+          try {
+            subscriptionHistoryCache.invalidate(userId);
+            console.log(`[Cancel Subscription ${requestId}] Invalidated subscription history cache`);
+          } catch (cacheError) {
+            console.error(`[Cancel Subscription ${requestId}] Failed to invalidate cache:`, cacheError);
+            // Don't fail the request if cache invalidation fails
+          }
           
           return res.status(200).json({
             success: true,
