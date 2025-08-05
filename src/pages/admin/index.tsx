@@ -17,6 +17,7 @@ import { MobileSelect } from "@/components/ui/mobile-select";
 import { Footer } from '@/components/Footer';
 import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
 import { WantedPostMigrationTool } from '@/components/admin/WantedPostMigrationTool';
+import WantedPostDuplicateCleanup from '@/components/admin/WantedPostDuplicateCleanup';
 import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
 import { ApiTestPanel } from '@/components/ApiTestPanel';
 import { NotificationDebugger } from '@/components/NotificationDebugger';
@@ -94,6 +95,7 @@ const SECTIONS = [
   { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
   { id: "wanted-posts-migration", label: "Wanted Posts ID Migration" },
+  { id: "wanted-posts-duplicate-cleanup", label: "Wanted Posts Duplicate Cleanup" },
   { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
 ];
 
@@ -1468,6 +1470,16 @@ export default function AdminDashboard() {
               <AccordionContent>
                 <div className="py-4">
                   <WantedPostMigrationTool />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Wanted Posts Duplicate Cleanup */}
+            <AccordionItem value="wanted-posts-duplicate-cleanup" id="wanted-posts-duplicate-cleanup" ref={el => (sectionRefs.current["wanted-posts-duplicate-cleanup"] = el)}>
+              <AccordionTrigger>Wanted Posts Duplicate Cleanup</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <WantedPostDuplicateCleanup />
                 </div>
               </AccordionContent>
             </AccordionItem>
