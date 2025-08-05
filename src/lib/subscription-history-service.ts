@@ -2,7 +2,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export interface SubscriptionEvent {
   id: string;
-  type: 'subscription_created' | 'subscription_updated' | 'subscription_canceled' | 'payment_succeeded' | 'payment_failed' | 'admin_update' | 'tier_changed';
+  type: 'subscription_created' | 'subscription_updated' | 'subscription_canceled' | 'subscription_continued' | 'payment_succeeded' | 'payment_failed' | 'admin_update' | 'tier_changed';
   date: string;
   description: string;
   details?: {
@@ -205,6 +205,20 @@ export class SubscriptionHistoryService {
       description: `Account tier changed from ${fromTier} to ${toTier}`,
       details: {
         tier: toTier
+      }
+    });
+  }
+
+  async addSubscriptionContinued(userId: string, subscriptionId: string, renewalDate?: string): Promise<void> {
+    await this.addEvent(userId, {
+      type: 'subscription_continued',
+      date: new Date().toISOString(),
+      description: 'Subscription continued - cancellation reversed',
+      details: {
+        status: 'active',
+        tier: 'premium',
+        subscriptionId,
+        renewalDate
       }
     });
   }

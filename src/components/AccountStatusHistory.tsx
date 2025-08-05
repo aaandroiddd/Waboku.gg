@@ -23,7 +23,7 @@ import {
 
 interface SubscriptionEvent {
   id: string;
-  type: 'subscription_created' | 'subscription_updated' | 'subscription_canceled' | 'payment_succeeded' | 'payment_failed' | 'admin_update' | 'tier_changed';
+  type: 'subscription_created' | 'subscription_updated' | 'subscription_canceled' | 'subscription_continued' | 'payment_succeeded' | 'payment_failed' | 'admin_update' | 'tier_changed';
   date: string;
   description: string;
   details?: {
@@ -230,6 +230,8 @@ export function AccountStatusHistory() {
         return <Clock className="h-5 w-5 text-blue-500" />;
       case 'subscription_canceled':
         return <XCircle className="h-5 w-5 text-amber-500" />;
+      case 'subscription_continued':
+        return <RefreshCw className="h-5 w-5 text-green-500" />;
       case 'payment_succeeded':
         return <CreditCard className="h-5 w-5 text-green-500" />;
       case 'payment_failed':
@@ -431,6 +433,13 @@ export function AccountStatusHistory() {
                                   <div>
                                     <span className="text-muted-foreground">End Date:</span>{' '}
                                     {formatDate(event.details.endDate)}
+                                  </div>
+                                )}
+                                
+                                {event.details.renewalDate && event.type === 'subscription_continued' && (
+                                  <div>
+                                    <span className="text-muted-foreground">Next Renewal:</span>{' '}
+                                    {formatDate(event.details.renewalDate)}
                                   </div>
                                 )}
                               </div>

@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { syncSubscriptionData, getSubscriptionData } from '@/lib/subscription-sync';
+import { subscriptionHistoryService } from '@/lib/subscription-history-service';
+import { subscriptionHistoryCache } from '@/lib/subscription-history-cache';
 import Stripe from 'stripe';
 
 // Initialize Stripe
@@ -78,6 +80,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Sync the updated data
       await syncSubscriptionData(userId, updatedSubscription);
       
+      // Add subscription continued event to history
+      try {
+        await subscriptionHistoryService.addSubscriptionContinued(
+          userId, 
+          stripeSubscriptionId,
+          updatedSubscription.renewalDate || updatedSubscription.endDate
+        );
+        console.log(`[Continue Subscription ${requestId}] Added continuation event to history`);
+      } catch (historyError) {
+        console.error(`[Continue Subscription ${requestId}] Failed to add history event:`, historyError);
+        // Don't fail the request if history update fails
+      }
+      
+      // Invalidate subscription history cache so user sees updated history immediately
+      try {
+        subscriptionHistoryCache.invalidate(userId);
+        console.log(`[Continue Subscription ${requestId}] Invalidated subscription history cache`);
+      } catch (cacheError) {
+        console.error(`[Continue Subscription ${requestId}] Failed to invalidate cache:`, cacheError);
+        // Don't fail the request if cache invalidation fails
+      }
+      
       return res.status(200).json({
         success: true,
         subscriptionId: stripeSubscriptionId,
@@ -126,6 +150,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // Sync the updated data
         await syncSubscriptionData(userId, updatedSubscription);
+
+        // Add subscription continued event to history
+        try {
+          await subscriptionHistoryService.addSubscriptionContinued(
+            userId, 
+            stripeSubscriptionId,
+            new Date(updatedStripeSubscription.current_period_end * 1000).toISOString()
+          );
+          console.log(`[Continue Subscription ${requestId}] Added continuation event to history`);
+        } catch (historyError) {
+          console.error(`[Continue Subscription ${requestId}] Failed to add history event:`, historyError);
+          // Don't fail the request if history update fails
+        }
+
+        // Invalidate subscription history cache so user sees updated history immediately
+        try {
+          subscriptionHistoryCache.invalidate(userId);
+          console.log(`[Continue Subscription ${requestId}] Invalidated subscription history cache`);
+        } catch (cacheError) {
+          console.error(`[Continue Subscription ${requestId}] Failed to invalidate cache:`, cacheError);
+          // Don't fail the request if cache invalidation fails
+        }
 
         console.log(`[Continue Subscription ${requestId}] Subscription continued successfully:`, {
           userId,
