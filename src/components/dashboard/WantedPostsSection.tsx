@@ -85,8 +85,32 @@ export function WantedPostsSection() {
     }
   }, [user, posts, error, retryCount]);
 
-  // Listen for page focus to refresh data when user returns from editing
+  // Listen for page focus and visibility changes to refresh data when user returns from editing
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Clear cache and refresh data when user returns to the page
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            // Clear wanted posts cache to force fresh data
+            const keys = Object.keys(sessionStorage);
+            keys.forEach(key => {
+              if (key.startsWith('wantedPosts_')) {
+                sessionStorage.removeItem(key);
+                sessionStorage.removeItem(`${key}_timestamp`);
+              }
+            });
+            console.log('Cleared cache due to visibility change');
+          } catch (e) {
+            console.error('Error clearing cache:', e);
+          }
+        }
+        
+        // Force refresh by updating the refresh key
+        setRefreshKey(prev => prev + 1);
+      }
+    };
+
     const handleFocus = () => {
       // Clear cache and refresh data when user returns to the page
       if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -99,6 +123,7 @@ export function WantedPostsSection() {
               sessionStorage.removeItem(`${key}_timestamp`);
             }
           });
+          console.log('Cleared cache due to focus');
         } catch (e) {
           console.error('Error clearing cache:', e);
         }
@@ -108,9 +133,44 @@ export function WantedPostsSection() {
       setRefreshKey(prev => prev + 1);
     };
 
+    // Listen for both focus and visibility change events
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
+
+  // Also refresh when navigating back to this page
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Clear cache when route changes to this page
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          const keys = Object.keys(sessionStorage);
+          keys.forEach(key => {
+            if (key.startsWith('wantedPosts_')) {
+              sessionStorage.removeItem(key);
+              sessionStorage.removeItem(`${key}_timestamp`);
+            }
+          });
+          console.log('Cleared cache due to route change');
+        } catch (e) {
+          console.error('Error clearing cache:', e);
+        }
+      }
+      
+      // Force refresh
+      setRefreshKey(prev => prev + 1);
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
 
   const handleCreateClick = () => {
     router.push("/wanted/create");
@@ -225,8 +285,17 @@ export function WantedPostsSection() {
                 <Card key={post.id} className="overflow-hidden">
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row justify-between gap-4">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-lg font-medium mb-1">{post.title}</h3>
+                        
+                        {/* Price text moved under title */}
+                        <div className="text-sm font-medium text-muted-foreground mb-2">
+                          {!post.isPriceNegotiable && post.priceRange
+                            ? `$${post.priceRange.min} - $${post.priceRange.max}` 
+                            : "Price Negotiable"
+                          }
+                        </div>
+                        
                         <p className="text-sm text-muted-foreground mb-3">{post.description}</p>
                         
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -256,27 +325,17 @@ export function WantedPostsSection() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-col justify-between gap-3 flex-shrink-0 min-w-[120px] sm:min-w-[160px]">
-                        <div className="text-sm font-medium text-right">
-                          <span className="block break-words">
-                            {!post.isPriceNegotiable && post.priceRange
-                              ? `$${post.priceRange.min} - $${post.priceRange.max}` 
-                              : "Price Negotiable"
-                            }
-                          </span>
-                        </div>
-                        <div className="mt-auto">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="flex items-center gap-1 w-full"
-                            onClick={() => router.push(`/wanted/${post.id}`)}
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            <span className="hidden sm:inline">View Post</span>
-                            <span className="sm:hidden">View</span>
-                          </Button>
-                        </div>
+                      <div className="flex flex-col justify-center gap-3 flex-shrink-0 min-w-[120px] sm:min-w-[160px]">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-1 w-full"
+                          onClick={() => router.push(`/wanted/${post.id}`)}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="hidden sm:inline">View Post</span>
+                          <span className="sm:hidden">View</span>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

@@ -247,12 +247,67 @@ export default function EditWantedPostPage() {
         if (response.ok && result.success) {
           console.log('Post updated successfully via API:', result);
           
-          // Clear all wanted posts cache to ensure fresh data
+          // Verify the update by fetching the post again
+          try {
+            const verifyResponse = await fetch(`/api/wanted/get-post?postId=${id}`);
+            const verifyResult = await verifyResponse.json();
+            
+            if (verifyResponse.ok && verifyResult.success) {
+              console.log('Update verified successfully:', verifyResult.post);
+              
+              // Clear all wanted posts cache to ensure fresh data
+              if (typeof window !== 'undefined' && window.sessionStorage) {
+                try {
+                  // Clear all cache keys that might contain wanted posts data
+                  const keys = Object.keys(sessionStorage);
+                  keys.forEach(key => {
+                    if (key.startsWith('wantedPosts_') || key.includes('wanted')) {
+                      sessionStorage.removeItem(key);
+                      sessionStorage.removeItem(`${key}_timestamp`);
+                    }
+                  });
+                  
+                  // Also clear any localStorage cache if it exists
+                  if (window.localStorage) {
+                    const localKeys = Object.keys(localStorage);
+                    localKeys.forEach(key => {
+                      if (key.startsWith('wantedPosts_') || key.includes('wanted')) {
+                        localStorage.removeItem(key);
+                      }
+                    });
+                  }
+                  
+                  console.log('Cleared all wanted posts cache after successful update verification');
+                } catch (e) {
+                  console.error('Error clearing cache after update:', e);
+                }
+              }
+              
+              // Show success message
+              toast({
+                title: "Post updated",
+                description: "Your wanted post has been successfully updated and verified.",
+              });
+              
+              // Add a small delay to ensure the cache is cleared and then redirect
+              setTimeout(() => {
+                router.push(`/dashboard/wanted`);
+              }, 200);
+              return;
+            } else {
+              console.warn('Update succeeded but verification failed:', verifyResult);
+              // Still proceed with success since the main update worked
+            }
+          } catch (verifyError) {
+            console.warn('Could not verify update, but proceeding since main update succeeded:', verifyError);
+          }
+          
+          // Clear cache even if verification failed
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               const keys = Object.keys(sessionStorage);
               keys.forEach(key => {
-                if (key.startsWith('wantedPosts_')) {
+                if (key.startsWith('wantedPosts_') || key.includes('wanted')) {
                   sessionStorage.removeItem(key);
                   sessionStorage.removeItem(`${key}_timestamp`);
                 }
@@ -269,8 +324,10 @@ export default function EditWantedPostPage() {
             description: "Your wanted post has been successfully updated.",
           });
           
-          // Redirect to the dashboard wanted page to see the changes
-          router.push(`/dashboard/wanted`);
+          // Add a small delay to ensure the cache is cleared and then redirect
+          setTimeout(() => {
+            router.push(`/dashboard/wanted`);
+          }, 200);
           return;
         } else {
           console.error('API returned error when updating post:', result.error);
