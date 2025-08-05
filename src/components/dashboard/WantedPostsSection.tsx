@@ -10,6 +10,7 @@ import { Calendar, MapPin, PlusCircle, Pencil, Trash2, ExternalLink, Eye } from 
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { generateWantedPostUrl, generateNumericShortId } from "@/lib/wanted-posts-slug";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -177,6 +178,7 @@ export function WantedPostsSection() {
   };
 
   const handleEditClick = (postId: string) => {
+    // For editing, we still use the direct post ID since the edit page expects the internal ID
     router.push(`/wanted/edit/${postId}`);
   };
 
@@ -330,7 +332,11 @@ export function WantedPostsSection() {
                           variant="outline" 
                           size="sm"
                           className="flex items-center gap-1 w-full"
-                          onClick={() => router.push(`/wanted/${post.id}`)}
+                          onClick={() => {
+                            // Generate the proper URL format for viewing the post
+                            const postUrl = generateWantedPostUrl(post.title, post.game, post.id);
+                            router.push(postUrl);
+                          }}
                         >
                           <ExternalLink className="h-3 w-3" />
                           <span className="hidden sm:inline">View Post</span>

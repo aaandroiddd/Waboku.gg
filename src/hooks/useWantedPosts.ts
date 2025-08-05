@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ref, push, set, get, query, orderByChild, equalTo, remove, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
+import { generateUniqueWantedPostId } from '@/lib/wanted-posts-utils';
 
 export type WantedPostCondition = 
   | 'any'
@@ -320,94 +321,60 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     }
 
     try {
-      await logToServer('Creating wanted post', {
+      await logToServer('Creating wanted post via API', {
         title: postData.title,
         game: postData.game,
         condition: postData.condition,
         location: postData.location
       }, 'info');
 
-      // Validate database is initialized
-      if (!database) {
-        const errorMsg = 'Create wanted post failed: Firebase database not initialized';
-        await logToServer(errorMsg, { databaseExists: !!database });
-        throw new Error('Database connection error. Please try again later.');
+      // Get auth token
+      const token = await user.getIdToken();
+      
+      // Use API endpoint to create the post with WANT ID
+      const response = await fetch('/api/wanted/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to create wanted post');
       }
 
-      // Log Firebase config status
-      await logToServer('Firebase config status', {
-        databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-        apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        projectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      }, 'info');
-
-      // Create a reference to the wanted posts collection
-      const postsRef = ref(database, 'wantedPosts');
-      await logToServer('Created posts reference', { path: 'wantedPosts' }, 'info');
-      
-      // Generate a new post ID
-      const newPostRef = push(postsRef);
-      if (!newPostRef || !newPostRef.key) {
-        const errorMsg = 'Create wanted post failed: Could not generate post ID';
-        await logToServer(errorMsg, { postRef: !!newPostRef });
-        throw new Error('Failed to generate post ID. Please try again.');
+      if (!result.success || !result.postId) {
+        throw new Error('Invalid response from create API');
       }
-      
-      const newPostId = newPostRef.key as string;
-      await logToServer('Generated new post ID', { postId: newPostId }, 'info');
-      
-      // Create timestamp
-      const timestamp = Date.now();
-      
-      // Create the new post object - always include all required fields with correct types
-      const newPost: any = {
+
+      const newPostId = result.postId;
+      console.log(`Created wanted post with WANT ID: ${newPostId}`);
+
+      // Create the new post object for local state
+      const newPost: WantedPost = {
+        id: newPostId,
         title: postData.title,
-        description: typeof postData.description === 'string' ? postData.description : '',
+        description: postData.description || '',
         game: postData.game,
         condition: postData.condition || 'any',
-        isPriceNegotiable: typeof postData.isPriceNegotiable === 'boolean' ? postData.isPriceNegotiable : true,
+        isPriceNegotiable: postData.isPriceNegotiable !== false,
         location: postData.location,
-        createdAt: timestamp,
+        createdAt: Date.now(),
         userId: user.uid,
-        userName: typeof user.displayName === 'string' && user.displayName.length > 0 ? user.displayName : 'Anonymous User',
+        userName: user.displayName || 'Anonymous User',
+        userAvatar: user.photoURL || undefined,
+        cardName: postData.cardName,
+        priceRange: postData.priceRange,
+        detailedDescription: postData.detailedDescription,
         viewCount: 0
       };
       
-      // Only add optional fields if they have values
-      if (postData.cardName && postData.cardName.trim()) {
-        newPost.cardName = postData.cardName.trim();
-      }
-      
-      if (postData.priceRange && typeof postData.priceRange === 'object') {
-        newPost.priceRange = postData.priceRange;
-      }
-      
-      if (postData.detailedDescription && postData.detailedDescription.trim()) {
-        newPost.detailedDescription = postData.detailedDescription.trim();
-      }
-      
-      if (user.photoURL) {
-        newPost.userAvatar = user.photoURL;
-      }
-      
-      // Save to Firebase
-      await logToServer('Attempting to save post to Firebase', { postId: newPostId }, 'info');
-      try {
-        await set(newPostRef, newPost);
-        await logToServer('Post saved successfully', { postId: newPostId }, 'info');
-      } catch (saveError) {
-        await logToServer('Error saving post to Firebase', { 
-          error: saveError instanceof Error ? saveError.message : 'Unknown error',
-          postId: newPostId
-        });
-        throw saveError;
-      }
-      
       // Update local state
-      setPosts(prevPosts => [{
-        ...newPost,
-        id: newPostId
-      } as WantedPost, ...prevPosts]);
+      setPosts(prevPosts => [newPost, ...prevPosts]);
       
       return newPostId;
     } catch (err) {
@@ -427,13 +394,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         await logToServer('Unknown error creating wanted post', { error: String(err) });
       }
       
-      // Check for Firebase permission errors
-      if (err instanceof Error && err.message.includes('permission_denied')) {
-        await logToServer('Firebase permission denied error', { message: err.message });
-        throw new Error('You do not have permission to create posts. Please check your account status.');
-      }
-      
-      throw new Error('Failed to create wanted post. Please try again.');
+      throw new Error(err instanceof Error ? err.message : 'Failed to create wanted post. Please try again.');
     }
   };
 

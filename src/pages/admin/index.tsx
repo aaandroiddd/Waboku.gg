@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { MobileSelect } from "@/components/ui/mobile-select";
 import { Footer } from '@/components/Footer';
 import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
+import { WantedPostMigrationTool } from '@/components/admin/WantedPostMigrationTool';
 import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
 import { ApiTestPanel } from '@/components/ApiTestPanel';
 import { NotificationDebugger } from '@/components/NotificationDebugger';
@@ -92,6 +93,7 @@ const SECTIONS = [
   { id: "user-migration", label: "User Account Migration" },
   { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
+  { id: "wanted-posts-migration", label: "Wanted Posts ID Migration" },
   { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
 ];
 
@@ -1456,6 +1458,16 @@ export default function AdminDashboard() {
               <AccordionContent>
                 <div className="py-4">
                   <WantedPostsDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Wanted Posts ID Migration */}
+            <AccordionItem value="wanted-posts-migration" id="wanted-posts-migration" ref={el => (sectionRefs.current["wanted-posts-migration"] = el)}>
+              <AccordionTrigger>Wanted Posts ID Migration</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <WantedPostMigrationTool />
                 </div>
               </AccordionContent>
             </AccordionItem>

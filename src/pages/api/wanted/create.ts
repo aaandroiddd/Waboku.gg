@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { generateNumericShortId } from '@/lib/wanted-posts-slug';
+import { generateUniqueWantedPostId } from '@/lib/wanted-posts-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -50,6 +51,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         throw new Error('Missing required fields: title, game, or location');
       }
       
+      // Generate unique WANT ID
+      const newPostId = await generateUniqueWantedPostId();
+      console.log(`Generated new WANT ID: ${newPostId}`);
+      
       // Create the new post object - only include fields that have values
       const newPost: any = {
         title: postData.title,
@@ -81,20 +86,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         newPost.userAvatar = user.photoURL;
       }
       
-      // Save to wantedPosts path (main path based on Firebase screenshot)
-      const postsRef = database.ref('wantedPosts');
-      const newPostRef = postsRef.push();
+      // Save to wantedPosts path using the new WANT ID
+      const postRef = database.ref(`wantedPosts/${newPostId}`);
+      await postRef.set(newPost);
       
-      if (!newPostRef || !newPostRef.key) {
-        throw new Error('Failed to generate post ID');
-      }
-      
-      const newPostId = newPostRef.key;
-      
-      // Save to Firebase using admin SDK
-      await newPostRef.set(newPost);
-      
-      console.log('Post saved successfully to wantedPosts');
+      console.log(`Post saved successfully to wantedPosts/${newPostId}`);
       
       // Create short ID mapping for the new URL structure
       try {
