@@ -28,7 +28,7 @@ export default function ReviewsDashboardPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredReviews, setFilteredReviews] = useState(sellerReviews);
+  const [filteredReviews, setFilteredReviews] = useState<any[]>([]);
   const [selectedReview, setSelectedReview] = useState<string | null>(null);
   const [showResponseDialog, setShowResponseDialog] = useState(false);
   
@@ -54,10 +54,15 @@ export default function ReviewsDashboardPage() {
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(review => 
-        review.comment.toLowerCase().includes(term) || 
-        (review.title && review.title.toLowerCase().includes(term))
-      );
+      filtered = filtered.filter(review => {
+        const matchesComment = review.comment?.toLowerCase().includes(term);
+        const matchesTitle = review.title?.toLowerCase().includes(term);
+        const matchesReviewerName = review.reviewerName?.toLowerCase().includes(term);
+        const matchesListingTitle = review.listingTitle?.toLowerCase().includes(term);
+        const matchesOrderId = review.orderId?.toLowerCase().includes(term);
+        
+        return matchesComment || matchesTitle || matchesReviewerName || matchesListingTitle || matchesOrderId;
+      });
     }
     
     // Sort reviews
@@ -121,7 +126,7 @@ export default function ReviewsDashboardPage() {
   };
   
   // Count reviews that need a response
-  const needsResponseCount = sellerReviews.filter(review => !review.sellerResponse).length;
+  const needsResponseCount = sellerReviews ? sellerReviews.filter(review => !review.sellerResponse).length : 0;
   
   return (
     <DashboardLayout>
@@ -208,31 +213,34 @@ export default function ReviewsDashboardPage() {
           <CardContent>
             <div className="space-y-4">
               {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Input
-                    placeholder="Search reviews..."
-                    className="pl-8"
+                    type="text"
+                    placeholder="Search reviews by comment, reviewer, or listing..."
                     value={searchTerm}
                     onChange={handleSearch}
+                    className="pl-10 h-10 w-full bg-background border-input"
                   />
                 </div>
                 
-                <MobileSelect
-                  value={sortBy}
-                  onValueChange={handleSortChange}
-                  placeholder="Sort by"
-                  className="w-full sm:w-[200px]"
-                  options={[
-                    { value: 'newest', label: 'Newest First' },
-                    { value: 'oldest', label: 'Oldest First' },
-                    { value: 'highest_rating', label: 'Highest Rating' },
-                    { value: 'lowest_rating', label: 'Lowest Rating' },
-                    { value: 'most_helpful', label: 'Most Helpful' },
-                    { value: 'needs_response', label: 'Needs Response' }
-                  ]}
-                />
+                <div className="flex flex-col sm:flex-row gap-2 sm:w-auto w-full">
+                  <MobileSelect
+                    value={sortBy}
+                    onValueChange={handleSortChange}
+                    placeholder="Sort by"
+                    className="w-full sm:w-[180px] h-10"
+                    options={[
+                      { value: 'newest', label: 'Newest First' },
+                      { value: 'oldest', label: 'Oldest First' },
+                      { value: 'highest_rating', label: 'Highest Rating' },
+                      { value: 'lowest_rating', label: 'Lowest Rating' },
+                      { value: 'most_helpful', label: 'Most Helpful' },
+                      { value: 'needs_response', label: 'Needs Response' }
+                    ]}
+                  />
+                </div>
               </div>
               
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
