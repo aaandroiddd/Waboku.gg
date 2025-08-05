@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { Star, ThumbsUp, MessageSquare } from 'lucide-react';
+import { Star, ThumbsUp, MessageSquare, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -11,9 +11,15 @@ import { UserNameLink } from '@/components/UserNameLink';
 import { useReviews } from '@/hooks/useReviews';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
+import Link from 'next/link';
 
 interface ReviewCardProps {
-  review: Review;
+  review: Review & {
+    listingTitle?: string;
+    listingSlug?: string;
+    listingShortId?: string;
+    listingIsActive?: boolean;
+  };
   showSellerResponse?: boolean;
   allowHelpful?: boolean;
 }
@@ -169,6 +175,32 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
             
             {review.title && (
               <h4 className="font-semibold mt-3">{review.title}</h4>
+            )}
+            
+            {/* Product Information */}
+            {review.listingTitle && (
+              <div className="mt-3 p-3 bg-muted/50 rounded-md border">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">Product Reviewed</p>
+                    <p className="text-sm font-medium text-foreground">{review.listingTitle}</p>
+                  </div>
+                  {review.listingIsActive && review.listingSlug && (
+                    <Link 
+                      href={`/listings/${review.listingSlug}`}
+                      className="ml-3 flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View Listing
+                    </Link>
+                  )}
+                  {!review.listingIsActive && (
+                    <span className="ml-3 text-xs text-muted-foreground">
+                      (No longer available)
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
             
             <p className="mt-2 text-sm whitespace-pre-line">{review.comment || 'No comment provided'}</p>

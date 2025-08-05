@@ -21,6 +21,11 @@ export interface Review {
   reportCount?: number;  // Number of users who reported this review
   createdAt: Date;
   updatedAt: Date;
+  // Enhanced listing information (populated by service layer)
+  listingTitle?: string;
+  listingSlug?: string;
+  listingShortId?: string;
+  listingIsActive?: boolean;
 }
 
 export interface ReviewStats {

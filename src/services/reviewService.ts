@@ -43,11 +43,84 @@ const convertTimestamps = (data) => {
 };
 
 /**
+ * Fetch listing information for a review
+ * @param {string} listingId - The listing ID
+ * @returns {Promise<Object|null>} Listing information or null if not found
+ */
+const fetchListingInfo = async (listingId) => {
+  try {
+    const { db } = getFirebaseServices();
+    if (!db || !listingId) return null;
+    
+    // Try to get from active listings first
+    const activeListingRef = doc(db, 'listings', listingId);
+    const activeListingDoc = await getDoc(activeListingRef);
+    
+    if (activeListingDoc.exists()) {
+      const data = activeListingDoc.data();
+      return {
+        title: data.title,
+        slug: data.slug,
+        shortId: data.shortId,
+        isActive: true
+      };
+    }
+    
+    // If not found in active listings, try archived listings
+    const archivedListingRef = doc(db, 'archivedListings', listingId);
+    const archivedListingDoc = await getDoc(archivedListingRef);
+    
+    if (archivedListingDoc.exists()) {
+      const data = archivedListingDoc.data();
+      return {
+        title: data.title,
+        slug: data.slug,
+        shortId: data.shortId,
+        isActive: false
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching listing info:', error);
+    return null;
+  }
+};
+
+/**
+ * Enhance reviews with listing information
+ * @param {Array} reviews - Array of review objects
+ * @returns {Promise<Array>} Array of reviews with listing information
+ */
+const enhanceReviewsWithListingInfo = async (reviews) => {
+  try {
+    const enhancedReviews = await Promise.all(
+      reviews.map(async (review) => {
+        const listingInfo = await fetchListingInfo(review.listingId);
+        return {
+          ...review,
+          listingTitle: listingInfo?.title || 'Unknown Product',
+          listingSlug: listingInfo?.slug,
+          listingShortId: listingInfo?.shortId,
+          listingIsActive: listingInfo?.isActive || false
+        };
+      })
+    );
+    
+    return enhancedReviews;
+  } catch (error) {
+    console.error('Error enhancing reviews with listing info:', error);
+    // Return original reviews if enhancement fails
+    return reviews;
+  }
+};
+
+/**
  * Fetch reviews received by a seller
  * @param {string} sellerId - The seller's user ID
  * @param {number} limitCount - Optional limit on number of reviews to fetch
  * @param {Object} filterOptions - Optional filter and sort options
- * @returns {Promise<Array>} Array of review objects
+ * @returns {Promise<Array>} Array of review objects with listing information
  */
 export const fetchReviewsForSeller = async (sellerId, limitCount = 50, filterOptions = {}) => {
   try {
@@ -121,7 +194,10 @@ export const fetchReviewsForSeller = async (sellerId, limitCount = 50, filterOpt
       });
     }
     
-    return reviews;
+    // Enhance reviews with listing information
+    const enhancedReviews = await enhanceReviewsWithListingInfo(reviews);
+    
+    return enhancedReviews;
   } catch (error) {
     console.error('Error fetching reviews for seller:', error);
     throw error;
@@ -133,7 +209,7 @@ export const fetchReviewsForSeller = async (sellerId, limitCount = 50, filterOpt
  * @param {string} buyerId - The buyer/reviewer's user ID
  * @param {number} limitCount - Optional limit on number of reviews to fetch
  * @param {Object} filterOptions - Optional filter and sort options
- * @returns {Promise<Array>} Array of review objects
+ * @returns {Promise<Array>} Array of review objects with listing information
  */
 export const fetchReviewsByBuyer = async (buyerId, limitCount = 50, filterOptions = {}) => {
   try {
@@ -206,7 +282,10 @@ export const fetchReviewsByBuyer = async (buyerId, limitCount = 50, filterOption
       });
     }
     
-    return reviews;
+    // Enhance reviews with listing information
+    const enhancedReviews = await enhanceReviewsWithListingInfo(reviews);
+    
+    return enhancedReviews;
   } catch (error) {
     console.error('Error fetching reviews by buyer:', error);
     throw error;
