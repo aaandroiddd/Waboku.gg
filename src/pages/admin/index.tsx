@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { MobileSelect } from "@/components/ui/mobile-select";
 import { Footer } from '@/components/Footer';
 import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
+import { WantedPostsDebugger as AdminWantedPostsDebugger } from '@/components/admin/WantedPostsDebugger';
 import { WantedPostMigrationTool } from '@/components/admin/WantedPostMigrationTool';
 import WantedPostDuplicateCleanup from '@/components/admin/WantedPostDuplicateCleanup';
 import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
@@ -1458,8 +1459,11 @@ export default function AdminDashboard() {
             <AccordionItem value="wanted-posts" id="wanted-posts" ref={el => (sectionRefs.current["wanted-posts"] = el)}>
               <AccordionTrigger>Wanted Posts Debugging Tools</AccordionTrigger>
               <AccordionContent>
-                <div className="py-4">
-                  <WantedPostsDebugger />
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Comprehensive debugging tool for wanted posts data sources and caching. This tool checks all database paths, identifies cached data, and provides cleanup options to resolve display issues where posts persist after deletion.
+                  </p>
+                  <AdminWantedPostsDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
