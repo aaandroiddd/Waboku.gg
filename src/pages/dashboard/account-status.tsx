@@ -14,6 +14,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/card';
 import { AccountTierDebugger } from '@/components/dashboard/AccountTierDebugger';
 import { AccountStatusHistory } from '@/components/AccountStatusHistory';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
+import { ProfileName } from '@/components/ProfileName';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -407,6 +409,36 @@ export default function AccountStatus() {
             </div>
           </div>
         </div>
+
+        {/* Currently Logged In User Section */}
+        <Card className="p-6 mb-8 bg-muted/50">
+          <div className="flex items-center gap-4">
+            <ProfileAvatar user={user} size="lg" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-foreground">
+                <ProfileName user={user} fallback="User" />
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {user?.email}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  {user?.emailVerified ? 'Email Verified' : 'Email Not Verified'}
+                </Badge>
+                {user?.providerData?.[0]?.providerId === 'google.com' && (
+                  <Badge variant="outline" className="text-xs">
+                    Google Account
+                  </Badge>
+                )}
+                {user?.providerData?.[0]?.providerId === 'password' && (
+                  <Badge variant="outline" className="text-xs">
+                    Email/Password Account
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
 
         <Card className="p-6 mb-8 border-2 border-primary">
           <h2 className="text-xl font-semibold mb-4">Subscription Details</h2>
