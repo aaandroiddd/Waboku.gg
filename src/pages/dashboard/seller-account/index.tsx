@@ -11,6 +11,7 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import Head from 'next/head';
+import PayoutDashboard from '@/components/PayoutDashboard';
 
 // Simple loading state component
 const LoadingState = () => (
@@ -158,31 +159,38 @@ const SellerAccountPage = () => {
           {isLoading ? (
             <LoadingState />
           ) : (
-            <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
-              <div>
-                <SellerAccountGuide 
-                  accountStatus={accountStatus}
-                  isLoading={isAnyLoading}
-                  onCreateAccount={handleCreateAccount}
-                  onUpdateAccount={handleUpdateAccount}
-                  onRefreshStatus={refreshStatus}
-                />
-              </div>
-              <div>
-                <Tabs defaultValue="benefits" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="benefits">Benefits</TabsTrigger>
-                    <TabsTrigger value="faq">FAQ</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="benefits" className="mt-6">
+            <Tabs defaultValue="setup" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="setup">Account Setup</TabsTrigger>
+                <TabsTrigger value="payouts">Payouts & Earnings</TabsTrigger>
+                <TabsTrigger value="info">Info & FAQ</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="setup" className="mt-6">
+                <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
+                  <div>
+                    <SellerAccountGuide 
+                      accountStatus={accountStatus}
+                      isLoading={isAnyLoading}
+                      onCreateAccount={handleCreateAccount}
+                      onUpdateAccount={handleUpdateAccount}
+                      onRefreshStatus={refreshStatus}
+                    />
+                  </div>
+                  <div>
                     <SellerAccountBenefits />
-                  </TabsContent>
-                  <TabsContent value="faq" className="mt-6">
-                    <SellerAccountFAQ />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="payouts" className="mt-6">
+                <PayoutDashboard />
+              </TabsContent>
+              
+              <TabsContent value="info" className="mt-6">
+                <SellerAccountFAQ />
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </DashboardLayout>
