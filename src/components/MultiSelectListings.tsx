@@ -582,24 +582,7 @@ export function MultiSelectListings({
 
               <CardContent className={isSelectMode ? 'pl-12' : ''}>
                 <div className="space-y-3">
-                  {/* Image Section for Grid View */}
-                  <div className="relative h-48 w-full bg-muted rounded-lg overflow-hidden">
-                    {listing.imageUrls?.[0] ? (
-                      <img
-                        src={listing.imageUrls[0]}
-                        alt={listing.title}
-                        className="object-cover w-full h-full"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/images/rect.png';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-muted-foreground text-sm">No image</span>
-                      </div>
-                    )}
-                  </div>
+
                   
                   <div className="flex justify-between items-center">
                     <Badge className={getConditionColor(listing.condition)}>
