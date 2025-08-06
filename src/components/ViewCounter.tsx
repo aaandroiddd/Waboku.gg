@@ -20,8 +20,7 @@ export const ViewCounter: React.FC<ViewCounterProps> = ({ viewCount = 0, classNa
   return (
     <div className={`flex items-center gap-1 ${className}`}>
       <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 h-6 text-xs">
-        <Eye className="h-3 w-3" />
-        <span>{viewCount}</span>
+        <span>{viewCount} views</span>
         <HelpTooltip content="Number of views this listing has received" />
       </Badge>
     </div>

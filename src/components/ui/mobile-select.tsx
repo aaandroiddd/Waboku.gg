@@ -73,7 +73,8 @@ export function MobileSelect({
           backgroundPosition: 'right 12px center',
           backgroundSize: '16px',
           paddingRight: '40px',
-          minWidth: 0,
+          minWidth: '120px',
+          width: '100%',
           touchAction: 'manipulation',
           marginBottom: 0
         }}

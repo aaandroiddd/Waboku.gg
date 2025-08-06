@@ -89,14 +89,24 @@ export const ListingList = ({
                     {listing.imageUrls && listing.imageUrls.length > 0 ? (
                       <Image
                         src={listing.imageUrls[typeof listing.coverImageIndex === 'number' ? 
-                          Math.min(listing.coverImageIndex, listing.imageUrls.length - 1) : 0]}
+                          Math.min(listing.coverImageIndex, listing.coverImageIndex >= 0 ? listing.coverImageIndex : 0, listing.imageUrls.length - 1) : 0]}
                         alt={listing.title}
                         fill
                         className="object-cover rounded-md"
+                        sizes="(max-width: 640px) 96px, 80px"
+                        priority={false}
+                        quality={75}
+                        loading="lazy"
+                        unoptimized={listing.imageUrls[0]?.includes('/api/images/')}
+                        onError={(e) => {
+                          console.error(`Image load error for listing ${listing.id}`);
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/images/rect.png';
+                        }}
                       />
                     ) : (
-                      <div className="w-full h-full bg-gray-200 rounded-md flex items-center justify-center">
-                        <span className="text-gray-400">No image</span>
+                      <div className="w-full h-full bg-muted rounded-md flex items-center justify-center">
+                        <span className="text-muted-foreground text-xs">No image</span>
                       </div>
                     )}
                   </div>

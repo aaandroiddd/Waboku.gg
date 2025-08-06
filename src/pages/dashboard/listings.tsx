@@ -1086,6 +1086,7 @@ const ListingsContent = () => {
                   { value: "digimon", label: "Digimon" },
                   { value: "lorcana", label: "Disney Lorcana" },
                   { value: "flesh-and-blood", label: "Flesh and Blood" },
+                  { value: "gundam", label: "Gundam" },
                   { value: "mtg", label: "Magic: The Gathering" },
                   { value: "onepiece", label: "One Piece Card Game" },
                   { value: "pokemon", label: "Pokemon" },
@@ -1098,7 +1099,7 @@ const ListingsContent = () => {
                   { value: "other", label: "Other" }
                 ]}
                 placeholder="All Games"
-                className="h-8 w-full text-xs sm:text-sm"
+                className="h-8 w-full text-xs sm:text-sm min-w-0"
               />
             </div>
             
