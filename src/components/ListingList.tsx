@@ -83,21 +83,15 @@ export const ListingList = ({
               className="p-3 sm:p-4 transition-colors duration-200 hover:bg-accent/50"
             >
               <Link href={getListingUrl(listing)}>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Image Section */}
-                  <div className="relative h-24 sm:h-20 sm:w-20 flex-shrink-0">
+                <div className="flex gap-4">
+                  {/* Image Section - Similar to SearchListingList */}
+                  <div className="relative h-24 sm:h-32 w-24 sm:w-32 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
                     {listing.imageUrls && listing.imageUrls.length > 0 ? (
-                      <Image
+                      <img
                         src={listing.imageUrls[typeof listing.coverImageIndex === 'number' ? 
                           Math.min(listing.coverImageIndex, listing.coverImageIndex >= 0 ? listing.coverImageIndex : 0, listing.imageUrls.length - 1) : 0]}
                         alt={listing.title}
-                        fill
-                        className="object-cover rounded-md"
-                        sizes="(max-width: 640px) 96px, 80px"
-                        priority={false}
-                        quality={75}
-                        loading="lazy"
-                        unoptimized={listing.imageUrls[0]?.includes('/api/images/')}
+                        className="object-cover w-full h-full"
                         onError={(e) => {
                           console.error(`Image load error for listing ${listing.id}`);
                           const target = e.target as HTMLImageElement;
@@ -105,25 +99,27 @@ export const ListingList = ({
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full bg-muted rounded-md flex items-center justify-center">
+                      <div className="w-full h-full flex items-center justify-center">
                         <span className="text-muted-foreground text-xs">No image</span>
                       </div>
                     )}
                   </div>
                   
                   {/* Content Section */}
-                  <div className="flex flex-col sm:flex-row flex-grow gap-3 sm:gap-4 items-start sm:items-center">
-                    <div className="flex-grow space-y-1">
-                      <h3 className="font-semibold text-base sm:text-lg line-clamp-1">{listing.title}</h3>
-                      <div className="flex items-center justify-between">
-                        <p className="text-base sm:text-lg font-bold">{formatPrice(listing.price)}</p>
-                        <ViewCounter viewCount={listing.viewCount || 0} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2 w-full">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <h3 className="font-semibold text-base sm:text-lg line-clamp-2">{listing.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <p className="text-base sm:text-lg font-bold flex-shrink-0">{formatPrice(listing.price)}</p>
+                          <ViewCounter viewCount={listing.viewCount || 0} />
+                        </div>
                       </div>
                     </div>
                     
                     {/* Actions Section */}
                     <div 
-                      className="flex flex-wrap gap-2 w-full sm:w-auto" 
+                      className="flex flex-wrap gap-2 mt-3" 
                       onClick={(e) => e.preventDefault()}
                     >
                       <Button

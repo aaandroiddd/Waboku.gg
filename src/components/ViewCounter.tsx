@@ -12,17 +12,15 @@ interface ViewCounterProps {
 export const ViewCounter: React.FC<ViewCounterProps> = ({ viewCount = 0, className = '' }) => {
   const { accountTier } = useAccount();
   
-  // Only premium users can see view counts
-  if (accountTier !== 'premium') {
-    return null;
-  }
-  
+  // Show view count as text for all users
   return (
     <div className={`flex items-center gap-1 ${className}`}>
-      <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 h-6 text-xs">
-        <span>{viewCount} views</span>
+      <span className="text-xs text-muted-foreground">
+        {viewCount} view{viewCount !== 1 ? 's' : ''}
+      </span>
+      {accountTier === 'premium' && (
         <HelpTooltip content="Number of views this listing has received" />
-      </Badge>
+      )}
     </div>
   );
 };

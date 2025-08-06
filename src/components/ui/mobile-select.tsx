@@ -73,10 +73,13 @@ export function MobileSelect({
           backgroundPosition: 'right 12px center',
           backgroundSize: '16px',
           paddingRight: '40px',
-          minWidth: '120px',
+          minWidth: '140px',
           width: '100%',
           touchAction: 'manipulation',
-          marginBottom: 0
+          marginBottom: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
         }}
       >
         {placeholder && (

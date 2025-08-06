@@ -1099,7 +1099,7 @@ const ListingsContent = () => {
                   { value: "other", label: "Other" }
                 ]}
                 placeholder="All Games"
-                className="h-8 w-full text-xs sm:text-sm min-w-0"
+                className="h-8 w-full text-xs sm:text-sm"
               />
             </div>
             
