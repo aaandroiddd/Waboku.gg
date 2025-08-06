@@ -385,41 +385,41 @@ export function MultiSelectListings({
                   <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     {/* Left side - Main info */}
                     <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-base truncate">{listing.title}</h3>
-                      <Badge className={getConditionColor(listing.condition)}>
-                        {listing.condition}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <span>{listing.game}</span>
-                      <span>•</span>
-                      <span>Listed on {formatDate(listing.createdAt, true)}</span>
-                      {type === 'archived' && listing.archivedAt && (
-                        <>
-                          <span>•</span>
-                          <span className="text-amber-600 font-medium">
-                            Archived on {formatDate(listing.archivedAt, true)}
-                          </span>
-                        </>
-                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-base truncate">{listing.title}</h3>
+                        <Badge className={getConditionColor(listing.condition)}>
+                          {listing.condition}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <span>{listing.game}</span>
+                        <span>•</span>
+                        <span>Listed on {formatDate(listing.createdAt, true)}</span>
+                        {type === 'archived' && listing.archivedAt && (
+                          <>
+                            <span>•</span>
+                            <span className="text-amber-600 font-medium">
+                              Archived on {formatDate(listing.archivedAt, true)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Timer */}
+                      <div className="mb-2">
+                        <ListingTimer
+                          createdAt={listing.createdAt}
+                          archivedAt={type === 'archived' ? listing.archivedAt || listing.createdAt : undefined}
+                          accountTier={accountTier as 'free' | 'premium'}
+                          status={type === 'archived' ? 'archived' : listing.status}
+                          listingId={listing.id}
+                        />
+                      </div>
                     </div>
 
-                    {/* Timer */}
-                    <div className="mb-2">
-                      <ListingTimer
-                        createdAt={listing.createdAt}
-                        archivedAt={type === 'archived' ? listing.archivedAt || listing.createdAt : undefined}
-                        accountTier={accountTier as 'free' | 'premium'}
-                        status={type === 'archived' ? 'archived' : listing.status}
-                        listingId={listing.id}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Right side - Price and actions */}
-                  <div className="flex flex-col sm:items-end gap-3">
+                    {/* Right side - Price and actions */}
+                    <div className="flex flex-col sm:items-end gap-3">
                     <div className="flex items-center justify-between sm:justify-end gap-4">
                       <span className="font-bold text-lg">${formatPrice(listing.price)}</span>
                       
@@ -529,6 +529,7 @@ export function MultiSelectListings({
                         </Button>
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
