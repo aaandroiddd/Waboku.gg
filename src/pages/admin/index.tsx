@@ -41,6 +41,7 @@ import CancelledSubscriptionDebugger from '@/components/admin/CancelledSubscript
 import EmailVerificationManager from '@/components/admin/EmailVerificationManager';
 import { SubscriptionStatusDebugger } from '@/components/admin/SubscriptionStatusDebugger';
 import SubscriptionDataDiagnostic from '@/components/admin/SubscriptionDataDiagnostic';
+import StripeConnectEligibilityManager from '@/components/admin/StripeConnectEligibilityManager';
 import {
   Accordion,
   AccordionItem,
@@ -62,6 +63,7 @@ const SECTIONS = [
   { id: "admin-security", label: "Admin Security Manager" },
   { id: "auth-debugger", label: "Authentication Debugger" },
   { id: "cancelled-subscription-debug", label: "Cancelled Subscription Debugger" },
+  { id: "stripe-connect-eligibility", label: "Stripe Connect Eligibility Manager" },
   { id: "subscription-status-debug", label: "Subscription Status Debugger" },
   { id: "subscription-data-diagnostic", label: "Subscription Data Diagnostic" },
   { id: "api-endpoints", label: "API Endpoints" },
@@ -475,6 +477,19 @@ export default function AdminDashboard() {
                     Debug subscription status discrepancies between history and account status display. This tool compares data from multiple sources including the check-subscription API, Firestore, and Realtime Database to identify why cancelled subscriptions might not show as cancelled on the account status page.
                   </p>
                   <SubscriptionStatusDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Stripe Connect Eligibility Manager */}
+            <AccordionItem value="stripe-connect-eligibility" id="stripe-connect-eligibility" ref={el => (sectionRefs.current["stripe-connect-eligibility"] = el)}>
+              <AccordionTrigger>Stripe Connect Eligibility Manager</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage user access to Stripe Connect seller account setup. For security and compliance, all users require manual approval before they can create seller accounts. Search for users by ID or email and approve or revoke their access to Stripe Connect features.
+                  </p>
+                  <StripeConnectEligibilityManager adminKey={adminSecret} />
                 </div>
               </AccordionContent>
             </AccordionItem>
