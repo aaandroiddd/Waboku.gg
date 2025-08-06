@@ -21,6 +21,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { get, ref } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { extractWantedPostIdFromSlug, getGameDisplayName } from "@/lib/wanted-posts-slug";
+import { getSellerReviewStats } from "@/services/reviewService";
+import { ReviewStats } from "@/types/review";
 
 export default function WantedPostDetailPage() {
   const router = useRouter();
@@ -37,6 +39,8 @@ export default function WantedPostDetailPage() {
   const [posterData, setPosterData] = useState<any>(null);
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const [postId, setPostId] = useState<string | null>(null);
+  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   // Check if we were redirected from post creation
   useEffect(() => {
@@ -257,7 +261,7 @@ export default function WantedPostDetailPage() {
                       name: postData.userName || "Anonymous User",
                       avatar: postData.userAvatar || undefined,
                       joinedDate: userData.createdAt || Date.now() - 86400000 * 30,
-                      rating: userData.rating || 4.5,
+                      rating: userData.rating || 0,
                       totalRatings: userData.totalRatings || 0
                     });
                   } else {
@@ -267,7 +271,7 @@ export default function WantedPostDetailPage() {
                       name: postData.userName || "Anonymous User",
                       avatar: postData.userAvatar || undefined,
                       joinedDate: Date.now() - 86400000 * 30,
-                      rating: 4.5,
+                      rating: 0,
                       totalRatings: 0
                     });
                   }
@@ -280,7 +284,7 @@ export default function WantedPostDetailPage() {
                   name: postData.userName || "Anonymous User",
                   avatar: postData.userAvatar || undefined,
                   joinedDate: Date.now() - 86400000 * 30,
-                  rating: 4.5,
+                  rating: 0,
                   totalRatings: 0
                 });
               }
@@ -303,7 +307,7 @@ export default function WantedPostDetailPage() {
               name: postData.userName || "Anonymous User",
               avatar: postData.userAvatar || undefined,
               joinedDate: Date.now() - 86400000 * 30,
-              rating: 4.5,
+              rating: 0,
               totalRatings: 0
             });
           } else {
@@ -332,6 +336,38 @@ export default function WantedPostDetailPage() {
       loadWantedPost();
     }
   }, [router.isReady, postId, getWantedPost, toast, fetchAttempted]);
+
+  // Fetch review statistics for the poster
+  useEffect(() => {
+    const fetchReviewStats = async () => {
+      if (!posterData?.id || posterData.id === "unknown") return;
+      
+      setLoadingReviews(true);
+      
+      try {
+        console.log("Fetching review stats for user:", posterData.id);
+        const stats = await getSellerReviewStats(posterData.id);
+        console.log("Review stats fetched:", stats);
+        
+        if (stats) {
+          setReviewStats(stats);
+          // Update poster data with actual review statistics
+          setPosterData(prev => ({
+            ...prev,
+            rating: stats.averageRating || 0,
+            totalRatings: stats.totalReviews || 0
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching review stats:", error);
+        // Keep the existing poster data if review fetch fails
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviewStats();
+  }, [posterData?.id]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -669,33 +705,48 @@ export default function WantedPostDetailPage() {
                       </div>
                       
                       <div className="mb-6">
-                        <div className="flex items-center gap-1 mb-1">
-                          <div className="font-medium">{posterData.rating || 0}</div>
-                          <div className="text-sm text-muted-foreground">
-                            ({posterData.totalRatings || 0} ratings)
+                        {loadingReviews ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-4 w-24" />
                           </div>
-                        </div>
-                        
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <svg
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < Math.floor(posterData.rating || 0)
-                                  ? "text-yellow-400"
-                                  : i < (posterData.rating || 0)
-                                  ? "text-yellow-200"
-                                  : "text-gray-300"
-                              }`}
-                              aria-hidden="true"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="currentColor"
-                              viewBox="0 0 22 20"
-                            >
-                              <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
-                            </svg>
-                          ))}
-                        </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1 mb-1">
+                              <div className="font-medium">
+                                {posterData.totalRatings > 0 ? Number(posterData.rating).toFixed(1) : 'No reviews'}
+                              </div>
+                              {posterData.totalRatings > 0 && (
+                                <div className="text-sm text-muted-foreground">
+                                  ({posterData.totalRatings} {posterData.totalRatings === 1 ? 'review' : 'reviews'})
+                                </div>
+                              )}
+                            </div>
+                            
+                            {posterData.totalRatings > 0 && (
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (
+                                  <svg
+                                    key={i}
+                                    className={`w-4 h-4 ${
+                                      i < Math.floor(posterData.rating || 0)
+                                        ? "text-yellow-400"
+                                        : i < (posterData.rating || 0)
+                                        ? "text-yellow-200"
+                                        : "text-gray-300"
+                                    }`}
+                                    aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="currentColor"
+                                    viewBox="0 0 22 20"
+                                  >
+                                    <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                                  </svg>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -718,13 +769,25 @@ export default function WantedPostDetailPage() {
                     </>
                   )}
                   
-                  <Button 
-                    className="w-full flex items-center gap-2"
-                    onClick={handleContactClick}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Contact Poster
-                  </Button>
+                  <div className="space-y-2">
+                    {posterData?.id && posterData.id !== "unknown" && (
+                      <Button 
+                        variant="outline"
+                        className="w-full flex items-center gap-2"
+                        onClick={() => router.push(`/profile/${posterData.name || posterData.id}`)}
+                      >
+                        View Profile
+                      </Button>
+                    )}
+                    
+                    <Button 
+                      className="w-full flex items-center gap-2"
+                      onClick={handleContactClick}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Contact Poster
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
