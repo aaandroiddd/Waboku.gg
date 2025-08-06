@@ -28,6 +28,7 @@ interface MultiSelectListingsProps {
   type: 'active' | 'archived';
   accountTier: string;
   viewMode?: 'grid' | 'list';
+  archivedCount?: number; // Number of archived listings (for active tab empty state)
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onMessage: (id: string) => void;
@@ -44,6 +45,7 @@ export function MultiSelectListings({
   type,
   accountTier,
   viewMode = 'grid',
+  archivedCount = 0,
   onEdit,
   onDelete,
   onMessage,
@@ -182,6 +184,19 @@ export function MultiSelectListings({
             : "Archived listings are items you've removed from active sale. They're no longer visible to buyers but can be restored if needed."
           }
         </p>
+        
+        {/* Show archived listings info when on active tab and there are archived listings */}
+        {type === 'active' && archivedCount > 0 && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+              <strong>You have {archivedCount} archived listing{archivedCount !== 1 ? 's' : ''}.</strong>
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Check your "Archived" tab to restore listings before they are automatically deleted after 7 days.
+            </p>
+          </div>
+        )}
+        
         {type === 'active' && (
           <p className="text-sm text-muted-foreground">
             To create a new listing, click the "Create Listing" button in the sidebar.

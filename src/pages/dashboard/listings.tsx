@@ -1125,6 +1125,7 @@ const ListingsContent = () => {
               type="active"
               accountTier={accountTier || 'free'}
               viewMode={viewMode}
+              archivedCount={archivedListings.length}
               onEdit={handleEditListing}
               onDelete={handleDeleteListing}
               onMessage={handleMessage}
