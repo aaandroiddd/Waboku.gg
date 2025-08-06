@@ -97,19 +97,65 @@ export function Chat({
   // Initialize typing status hook
   const { setTypingStatus } = useTypingStatus(chatId || '');
 
+  // Use the new deleted user handler for consistent username display
+  const [receiverDisplayInfo, setReceiverDisplayInfo] = useState({
+    displayName: initialReceiverName || 'Loading...',
+    isDeleted: false,
+    canLinkToProfile: false
+  });
+
   // Helper function to get consistent username across all components
   const getConsistentUsername = () => {
-    return (initialReceiverName && 
-            initialReceiverName !== 'Loading...' && 
-            initialReceiverName !== 'Unknown User' && 
-            !initialReceiverName.startsWith('User ')) 
-           ? initialReceiverName
-           : receiverProfile?.displayName ||
-             receiverProfile?.username ||
-             (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-             displayName ||
-             'Unknown User';
+    return receiverDisplayInfo.displayName;
   };
+
+  // Get proper display information for the receiver
+  useEffect(() => {
+    const getReceiverInfo = async () => {
+      if (!receiverId || receiverId === 'system_moderation') {
+        setReceiverDisplayInfo({
+          displayName: initialReceiverName || 'System',
+          isDeleted: false,
+          canLinkToProfile: false
+        });
+        return;
+      }
+
+      try {
+        const { getUserDisplayInfo } = await import('@/lib/deleted-user-handler');
+        const info = await getUserDisplayInfo(
+          receiverId, 
+          initialReceiverName, 
+          receiverProfile
+        );
+        
+        setReceiverDisplayInfo(info);
+        setDisplayName(info.displayName);
+      } catch (error) {
+        console.error('Error getting receiver display info:', error);
+        // Fallback to existing logic
+        const fallbackName = (initialReceiverName && 
+                             initialReceiverName !== 'Loading...' && 
+                             initialReceiverName !== 'Unknown User' && 
+                             !initialReceiverName.startsWith('User ')) 
+                            ? initialReceiverName
+                            : receiverProfile?.displayName ||
+                              receiverProfile?.username ||
+                              (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                              displayName ||
+                              'Unknown User';
+        
+        setReceiverDisplayInfo({
+          displayName: fallbackName,
+          isDeleted: fallbackName === 'Unknown User' || fallbackName.startsWith('User '),
+          canLinkToProfile: !!(fallbackName && fallbackName !== 'Unknown User' && !fallbackName.startsWith('User '))
+        });
+        setDisplayName(fallbackName);
+      }
+    };
+
+    getReceiverInfo();
+  }, [receiverId, initialReceiverName, receiverProfile]);
 
   const handleBlockUser = async () => {
     if (!user || !receiverId) return;
@@ -1269,11 +1315,13 @@ export function Chat({
                                       displayName ||
                                       'Unknown User';
                     
-                    // Check if this is a fallback username (indicates non-existent user)
-                    if (username === 'Unknown User' || username.startsWith('User ')) {
+                    // Check if this user's profile is available
+                    if (!receiverDisplayInfo.canLinkToProfile || receiverDisplayInfo.isDeleted) {
                       toast({
                         title: "Profile not available",
-                        description: "This user's profile is no longer available.",
+                        description: receiverDisplayInfo.isDeleted 
+                          ? "This user account has been deleted and their profile is no longer available."
+                          : "This user's profile is not available.",
                         variant: "destructive"
                       });
                       return;
@@ -1281,7 +1329,7 @@ export function Chat({
                     
                     // Use the actual username directly in the URL path (no slug conversion needed)
                     // The profile page will handle username resolution to userId
-                    router.push(`/profile/${encodeURIComponent(username)}`);
+                    router.push(`/profile/${encodeURIComponent(receiverDisplayInfo.displayName)}`);
                   }}
                   title="View profile"
                   disabled={!initialReceiverName || 

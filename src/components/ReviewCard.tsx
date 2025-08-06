@@ -31,28 +31,60 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
   const [isMarkingHelpful, setIsMarkingHelpful] = useState<boolean>(false);
   const [hasMarkedHelpful, setHasMarkedHelpful] = useState<boolean>(false);
   
-  // Use stored username/avatar if available (for deleted users), otherwise fetch from user data
+  // Use the new deleted user handler system
   const { userData, loading: isLoadingUser } = useUserData(review.reviewerId);
-  
-  // Determine if this is a deleted user - we have stored username but no current user data
-  // and we're not still loading (give it time to load)
-  const isDeletedUser = !!(review.reviewerUsername && !userData && !isLoadingUser);
-  
-  // For deleted users, show "Deleted User" instead of the stored username to be more clear
-  // For active users, prefer the current username over stored one (in case they changed it)
-  // For users without stored data, use fetched data or fallback
-  let reviewerName: string;
-  if (isDeletedUser) {
-    reviewerName = 'Deleted User';
-  } else if (userData?.username) {
-    reviewerName = userData.username;
-  } else if (review.reviewerUsername) {
-    reviewerName = review.reviewerUsername;
-  } else {
-    reviewerName = 'Anonymous User';
-  }
-  
-  const reviewerAvatar = review.reviewerAvatarUrl || userData?.avatarUrl || null;
+  const [reviewerDisplayInfo, setReviewerDisplayInfo] = useState({
+    displayName: review.reviewerUsername || 'Loading...',
+    isDeleted: false,
+    canLinkToProfile: false,
+    avatarUrl: review.reviewerAvatarUrl || null
+  });
+
+  // Get proper display information for the reviewer
+  useEffect(() => {
+    const getReviewerInfo = async () => {
+      if (!review.reviewerId) {
+        setReviewerDisplayInfo({
+          displayName: 'Anonymous User',
+          isDeleted: true,
+          canLinkToProfile: false,
+          avatarUrl: null
+        });
+        return;
+      }
+
+      try {
+        const { getUserDisplayInfo } = await import('@/lib/deleted-user-handler');
+        const info = await getUserDisplayInfo(
+          review.reviewerId, 
+          review.reviewerUsername, 
+          userData
+        );
+        
+        setReviewerDisplayInfo({
+          ...info,
+          avatarUrl: info.avatarUrl || review.reviewerAvatarUrl || userData?.avatarUrl || null
+        });
+      } catch (error) {
+        console.error('Error getting reviewer display info:', error);
+        // Fallback to stored data
+        setReviewerDisplayInfo({
+          displayName: review.reviewerUsername || 'Anonymous User',
+          isDeleted: false,
+          canLinkToProfile: !!(review.reviewerUsername && !review.reviewerUsername.startsWith('User ')),
+          avatarUrl: review.reviewerAvatarUrl || userData?.avatarUrl || null
+        });
+      }
+    };
+
+    if (!isLoadingUser) {
+      getReviewerInfo();
+    }
+  }, [review.reviewerId, review.reviewerUsername, review.reviewerAvatarUrl, userData, isLoadingUser]);
+
+  const reviewerName = reviewerDisplayInfo.displayName;
+  const reviewerAvatar = reviewerDisplayInfo.avatarUrl;
+  const isDeletedUser = reviewerDisplayInfo.isDeleted;
   
   // Check if the current user has already marked this review as helpful
   useEffect(() => {

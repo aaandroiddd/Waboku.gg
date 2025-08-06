@@ -402,6 +402,20 @@ export const submitReview = async (reviewData) => {
     
     const userId = auth.currentUser.uid;
     
+    // Store username for historical reference
+    try {
+      const username = auth.currentUser.displayName || 
+                      (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : null);
+      
+      if (username && !username.startsWith('User ')) {
+        const { storeUsernameForHistory } = await import('@/lib/deleted-user-handler');
+        await storeUsernameForHistory(userId, username);
+      }
+    } catch (historyError) {
+      console.warn('Failed to store username for history:', historyError);
+      // Don't fail the review submission for this
+    }
+    
     // Prepare the data for the API endpoint
     const apiData = {
       orderId: reviewData.orderId,
