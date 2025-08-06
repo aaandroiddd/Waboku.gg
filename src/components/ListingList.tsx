@@ -84,12 +84,11 @@ export const ListingList = ({
             >
               <Link href={getListingUrl(listing)}>
                 <div className="flex gap-4">
-                  {/* Image Section - Similar to SearchListingList */}
+                  {/* Image Section - Simplified like SearchListingList */}
                   <div className="relative h-24 sm:h-32 w-24 sm:w-32 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
-                    {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                    {listing.imageUrls?.[0] ? (
                       <img
-                        src={listing.imageUrls[typeof listing.coverImageIndex === 'number' ? 
-                          Math.min(listing.coverImageIndex, listing.coverImageIndex >= 0 ? listing.coverImageIndex : 0, listing.imageUrls.length - 1) : 0]}
+                        src={listing.imageUrls[0]}
                         alt={listing.title}
                         className="object-cover w-full h-full"
                         onError={(e) => {
