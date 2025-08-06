@@ -1,82 +1,140 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
+import { isMfaEnabled } from '@/lib/mfa-utils';
 
-export function useSellerAccountEligibility() {
+interface EligibilityRequirement {
+  id: string;
+  label: string;
+  description: string;
+  met: boolean;
+  loading: boolean;
+}
+
+interface SellerAccountEligibility {
+  isEligible: boolean;
+  requirements: EligibilityRequirement[];
+  loading: boolean;
+  error: string | null;
+}
+
+export function useSellerAccountEligibility(): SellerAccountEligibility {
   const { user } = useAuth();
-  const [isEligible, setIsEligible] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [hasActiveListings, setHasActiveListings] = useState<boolean>(false);
+  const [eligibility, setEligibility] = useState<SellerAccountEligibility>({
+    isEligible: false,
+    requirements: [
+      {
+        id: 'email_verified',
+        label: 'Email Verification',
+        description: 'Your email address must be verified',
+        met: false,
+        loading: true,
+      },
+      {
+        id: 'mfa_enabled',
+        label: 'Two-Factor Authentication',
+        description: 'Two-factor authentication must be enabled on your account',
+        met: false,
+        loading: true,
+      },
+      {
+        id: 'account_age',
+        label: 'Account Age',
+        description: 'Your account must be at least 1 week old',
+        met: false,
+        loading: true,
+      },
+    ],
+    loading: true,
+    error: null,
+  });
 
   useEffect(() => {
     if (!user) {
-      setIsLoading(false);
-      setIsEligible(false);
+      setEligibility(prev => ({
+        ...prev,
+        loading: false,
+        error: 'User not authenticated',
+      }));
       return;
     }
 
     const checkEligibility = async () => {
       try {
-        setIsLoading(true);
-        const { app } = getFirebaseServices();
-        const firestore = getFirestore(app);
+        const requirements = [...eligibility.requirements];
         
-        // Check if user has the seller role or has explicitly opted in
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        const userData = userDoc.data();
-        
-        // First check if user has any active listings based on user metadata
-        let hasListings = userData?.listingCount > 0 || userData?.hasActiveListings === true;
-        
-        // If no listings found in user metadata, directly check the listings collection
-        if (!hasListings) {
-          // Query the listings collection for any listings by this user
-          const listingsQuery = query(
-            collection(firestore, 'listings'),
-            where('userId', '==', user.uid),
-            limit(1)
-          );
+        // Check email verification
+        const emailVerified = user.emailVerified;
+        requirements[0] = {
+          ...requirements[0],
+          met: emailVerified,
+          loading: false,
+        };
+
+        // Check MFA status using Firebase Auth and Firestore
+        let mfaEnabled = false;
+        try {
+          // First check if MFA is enabled in Firebase Auth
+          mfaEnabled = isMfaEnabled(user);
           
-          const listingsSnapshot = await getDocs(listingsQuery);
-          hasListings = !listingsSnapshot.empty;
-          
-          // If we found listings but the user metadata doesn't reflect it,
-          // update the user metadata for future checks
-          if (hasListings && userData && !userData.hasActiveListings) {
-            try {
-              await doc(firestore, 'users', user.uid).update({
-                hasActiveListings: true,
-                listingCount: listingsSnapshot.size
-              });
-              console.log('Updated user metadata with listing information');
-            } catch (updateError) {
-              console.error('Error updating user listing metadata:', updateError);
+          // If not enabled in Auth, check Firestore as fallback
+          if (!mfaEnabled) {
+            const { db } = await getFirebaseServices();
+            if (db) {
+              const userDoc = await getDoc(doc(db, 'users', user.uid));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                mfaEnabled = userData.mfaEnabled === true;
+              }
             }
           }
+        } catch (error) {
+          console.error('Error checking MFA status:', error);
         }
         
-        setHasActiveListings(hasListings);
+        requirements[1] = {
+          ...requirements[1],
+          met: mfaEnabled,
+          loading: false,
+        };
+
+        // Check account age (1 week = 7 days)
+        const accountCreationTime = user.metadata.creationTime;
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         
-        // User is eligible if they have the seller role, have opted in, or have active listings
-        const eligible = 
-          userData?.roles?.includes('seller') === true || 
-          userData?.sellerAccountEnabled === true ||
-          hasListings;
+        const accountAge = accountCreationTime ? new Date(accountCreationTime) : new Date();
+        const accountOldEnough = accountAge <= oneWeekAgo;
         
-        setIsEligible(eligible);
+        requirements[2] = {
+          ...requirements[2],
+          met: accountOldEnough,
+          loading: false,
+        };
+
+        // Determine overall eligibility
+        const allRequirementsMet = requirements.every(req => req.met);
+
+        setEligibility({
+          isEligible: allRequirementsMet,
+          requirements,
+          loading: false,
+          error: null,
+        });
+
       } catch (error) {
-        console.error('Error checking seller eligibility:', error);
-        // Default to not eligible if there's an error
-        setIsEligible(false);
-      } finally {
-        setIsLoading(false);
+        console.error('Error checking seller account eligibility:', error);
+        setEligibility(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Failed to check eligibility requirements',
+        }));
       }
     };
 
     checkEligibility();
   }, [user]);
 
-  return { isEligible, isLoading, hasActiveListings };
+  return eligibility;
 }

@@ -2,9 +2,11 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, AlertCircle, ArrowRight, ExternalLink, RefreshCw, Lock, MessageCircle } from 'lucide-react';
-import { useStripeConnectEligibility } from '@/hooks/useStripeConnectEligibility';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, AlertCircle, ArrowRight, ExternalLink, RefreshCw, Lock, MessageCircle, XCircle, Clock, AlertTriangle, Shield, Mail, Calendar } from 'lucide-react';
+import { useSellerAccountEligibility } from '@/hooks/useSellerAccountEligibility';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 interface SellerAccountGuideProps {
   accountStatus: {
@@ -26,67 +28,32 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
   onRefreshStatus,
 }) => {
   const router = useRouter();
-  const { isEligible, isLoading: eligibilityLoading, approvedBy, approvedAt } = useStripeConnectEligibility();
-  
-  // If user is not eligible for Stripe Connect, show restricted access message
-  if (!eligibilityLoading && !isEligible) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Lock className="h-6 w-6 text-amber-500" />
-            Seller Account Access
-          </CardTitle>
-          <CardDescription>
-            Stripe Connect setup requires approval from our support team
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-            <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200">
-              <div className="space-y-3">
-                <p className="font-medium">Access Restricted</p>
-                <p>
-                  For security and compliance reasons, Stripe Connect seller account setup requires manual approval from our support team.
-                </p>
-                <p>
-                  To request access to seller features, please contact our support team with the following information:
-                </p>
-                <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
-                  <li>Your intended use case for selling on our platform</li>
-                  <li>Types of items you plan to list</li>
-                  <li>Your experience with online marketplaces</li>
-                  <li>Any relevant business information</li>
-                </ul>
-                <p className="text-sm">
-                  Our team will review your request and enable seller account access if approved.
-                </p>
-              </div>
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-        <CardFooter>
-          <Button 
-            onClick={() => router.push('/support')}
-            className="w-full"
-          >
-            <MessageCircle className="mr-2 h-4 w-4" />
-            Contact Support for Access
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
+  const { isEligible, requirements, loading: eligibilityLoading, error } = useSellerAccountEligibility();
+
+  const getRequirementIcon = (requirementId: string) => {
+    switch (requirementId) {
+      case 'email_verified':
+        return Mail;
+      case 'mfa_enabled':
+        return Shield;
+      case 'account_age':
+        return Calendar;
+      default:
+        return CheckCircle;
+    }
+  };
   
   // Show loading state while checking eligibility
   if (eligibilityLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Seller Account Status</CardTitle>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <Clock className="h-6 w-6 animate-spin" />
+            Checking Eligibility...
+          </CardTitle>
           <CardDescription>
-            Checking account eligibility...
+            Please wait while we verify your account status...
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,7 +64,132 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
       </Card>
     );
   }
+
+  // Show error state
+  if (error) {
+    return (
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2 text-destructive">
+            <XCircle className="h-6 w-6" />
+            Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-4">
+            Unable to check your eligibility status: {error}
+          </p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   
+  // If user is not eligible for Stripe Connect, show requirements
+  if (!isEligible) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <AlertTriangle className="h-6 w-6 text-amber-500" />
+            Seller Account Setup Requirements
+          </CardTitle>
+          <CardDescription>
+            Complete these requirements to enable seller account setup
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 mb-6">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
+              <div className="space-y-3">
+                <p className="font-medium">Security Requirements</p>
+                <p>
+                  To ensure the security and integrity of our marketplace, you must meet the following 
+                  requirements before setting up your seller account:
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
+          
+          <div className="space-y-4">
+            {requirements.map((requirement) => {
+              const IconComponent = getRequirementIcon(requirement.id);
+              return (
+                <div 
+                  key={requirement.id}
+                  className={`flex items-start gap-3 p-4 rounded-lg border ${
+                    requirement.met 
+                      ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+                      : 'bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700'
+                  }`}
+                >
+                  <div className="flex-shrink-0 mt-0.5">
+                    {requirement.loading ? (
+                      <Clock className="h-5 w-5 animate-spin text-gray-400" />
+                    ) : requirement.met ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <IconComponent className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                        {requirement.label}
+                      </h4>
+                      <Badge 
+                        variant={requirement.met ? "default" : "secondary"}
+                        className={requirement.met ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
+                      >
+                        {requirement.met ? "Complete" : "Required"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {requirement.description}
+                    </p>
+                    {!requirement.met && requirement.id === 'email_verified' && (
+                      <Link href="/auth/verify-email">
+                        <Button size="sm" variant="outline">
+                          Verify Email
+                        </Button>
+                      </Link>
+                    )}
+                    {!requirement.met && requirement.id === 'mfa_enabled' && (
+                      <Link href="/dashboard/settings">
+                        <Button size="sm" variant="outline">
+                          Enable 2FA
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800 mt-6">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+              Why these requirements?
+            </h4>
+            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+              <p>• <strong>Email verification</strong> ensures we can contact you about important account matters</p>
+              <p>• <strong>Two-factor authentication</strong> protects your account and earnings from unauthorized access</p>
+              <p>• <strong>Account age requirement</strong> helps prevent fraudulent accounts and builds trust</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // If user is eligible, show the normal Stripe Connect setup
   return (
     <Card>
       <CardHeader>
@@ -108,20 +200,35 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Approval Status */}
-          {isEligible && approvedBy && (
-            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                <div className="space-y-1">
-                  <p className="font-medium">Seller Account Approved</p>
-                  <p className="text-sm">
-                    Approved by support team{approvedAt && ` on ${approvedAt.toLocaleDateString()}`}
-                  </p>
+          {/* Eligibility Status */}
+          <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="text-green-800 dark:text-green-200">
+              <div className="space-y-3">
+                <p className="font-medium">Ready to Set Up Seller Account</p>
+                <p className="text-sm">
+                  All security requirements have been met. You can now proceed with Stripe Connect setup.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
+                  {requirements.map((requirement) => {
+                    const IconComponent = getRequirementIcon(requirement.id);
+                    return (
+                      <div 
+                        key={requirement.id}
+                        className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded border border-green-200 dark:border-green-800"
+                      >
+                        <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+                        <IconComponent className="h-3 w-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                        <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {requirement.label}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              </AlertDescription>
-            </Alert>
-          )}
+              </div>
+            </AlertDescription>
+          </Alert>
           
           <div className="flex items-start gap-3">
             {accountStatus.isConnected ? (
