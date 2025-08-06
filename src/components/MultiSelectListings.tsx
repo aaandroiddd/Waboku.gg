@@ -361,9 +361,30 @@ export function MultiSelectListings({
               />
 
               <CardContent className={`p-4 ${isSelectMode ? 'pl-12' : ''}`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Left side - Main info */}
-                  <div className="flex-1 min-w-0">
+                <div className="flex gap-4">
+                  {/* Image Section */}
+                  <div className="relative h-24 sm:h-32 w-24 sm:w-32 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
+                    {listing.imageUrls?.[0] ? (
+                      <img
+                        src={listing.imageUrls[0]}
+                        alt={listing.title}
+                        className="object-cover w-full h-full"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/images/rect.png';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-muted-foreground text-xs">No image</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Content Section */}
+                  <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Left side - Main info */}
+                    <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                       <h3 className="font-semibold text-base truncate">{listing.title}</h3>
                       <Badge className={getConditionColor(listing.condition)}>
@@ -559,7 +580,26 @@ export function MultiSelectListings({
               </CardHeader>
 
               <CardContent className={isSelectMode ? 'pl-12' : ''}>
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  {/* Image Section for Grid View */}
+                  <div className="relative h-48 w-full bg-muted rounded-lg overflow-hidden">
+                    {listing.imageUrls?.[0] ? (
+                      <img
+                        src={listing.imageUrls[0]}
+                        alt={listing.title}
+                        className="object-cover w-full h-full"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/images/rect.png';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-muted-foreground text-sm">No image</span>
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="flex justify-between items-center">
                     <Badge className={getConditionColor(listing.condition)}>
                       {listing.condition}
