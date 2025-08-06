@@ -343,7 +343,15 @@ export default function ListingPage() {
           if (shortId && /^\d{7}$/.test(shortId)) {
             // Try to resolve the 7-digit ID to a full Firebase document ID
             try {
-              const response = await fetch(`/api/listings/resolve-short-id?shortId=${shortId}`);
+              // Add timeout to prevent hanging requests
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+              
+              const response = await fetch(`/api/listings/resolve-short-id?shortId=${shortId}`, {
+                signal: controller.signal
+              });
+              
+              clearTimeout(timeoutId);
               
               if (response.ok) {
                 const data = await response.json();
@@ -353,8 +361,13 @@ export default function ListingPage() {
                 }
               }
               
-              console.log('Failed to resolve short ID:', shortId);
-            } catch (error) {
+              console.log('Failed to resolve short ID:', shortId, response.status);
+            } catch (error: any) {
+              if (error.name === 'AbortError') {
+                console.error('Short ID resolution timed out:', shortId);
+                setError('Request timed out. Please try refreshing the page.');
+                return;
+              }
               console.error('Error resolving short ID:', error);
             }
           }

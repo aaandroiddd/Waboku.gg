@@ -3,6 +3,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 // Import Firebase admin directly
 let firebaseAdminInstance: any = null;
 
+// In-memory cache for short ID mappings
+const shortIdCache = new Map<string, { fullId: string; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 async function getFirebaseAdminInstance() {
   if (firebaseAdminInstance) {
     return firebaseAdminInstance;
@@ -49,6 +53,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid short ID format' });
   }
 
+  // Check in-memory cache first
+  const cached = shortIdCache.get(shortId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return res.status(200).json({ 
+      success: true, 
+      fullId: cached.fullId,
+      shortId,
+      cached: true
+    });
+  }
+
   try {
     const { db } = await getFirebaseAdminInstance();
     if (!db) {
@@ -60,49 +75,86 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const mappingDoc = await db.collection('shortIdMappings').doc(shortId).get();
       if (mappingDoc.exists) {
         const data = mappingDoc.data();
-        // Verify the listing still exists
-        const listingDoc = await db.collection('listings').doc(data.fullId).get();
+        
+        // Cache the result
+        shortIdCache.set(shortId, { fullId: data.fullId, timestamp: Date.now() });
+        
+        // Quick existence check without fetching full document
+        const listingRef = db.collection('listings').doc(data.fullId);
+        const listingDoc = await listingRef.get();
+        
         if (listingDoc.exists) {
           return res.status(200).json({ 
             success: true, 
             fullId: data.fullId,
             shortId 
           });
+        } else {
+          // Clean up invalid mapping
+          try {
+            await db.collection('shortIdMappings').doc(shortId).delete();
+            shortIdCache.delete(shortId);
+          } catch (cleanupError) {
+            console.error('Failed to clean up invalid mapping:', cleanupError);
+          }
         }
       }
     } catch (mappingError) {
       console.log('No mapping found, falling back to scan');
     }
 
-    // Fallback: scan through active listings (limited to prevent timeout)
-    const activeListingsQuery = await db.collection('listings')
-      .where('status', '==', 'active')
-      .limit(1000) // Limit to prevent timeout
-      .get();
-    
-    for (const listingDoc of activeListingsQuery.docs) {
-      const docId = listingDoc.id;
-      const generatedShortId = generateNumericShortId(docId);
-      
-      if (generatedShortId === shortId) {
-        // Found the matching listing, create the mapping for future use
-        try {
-          await db.collection('shortIdMappings').doc(shortId).set({
-            fullId: docId,
-            createdAt: new Date(),
-            listingTitle: listingDoc.data().title || 'Unknown'
-          });
-        } catch (mappingCreateError) {
-          console.error('Failed to create mapping:', mappingCreateError);
-          // Continue anyway
-        }
+    // Optimized fallback: Use batch processing and limit queries
+    const batchSize = 500;
+    let lastDoc: any = null;
+    let found = false;
+    let attempts = 0;
+    const maxAttempts = 4; // Limit to 2000 documents max
 
-        return res.status(200).json({ 
-          success: true, 
-          fullId: docId,
-          shortId 
-        });
+    while (!found && attempts < maxAttempts) {
+      let query = db.collection('listings')
+        .where('status', '==', 'active')
+        .limit(batchSize);
+      
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
       }
+
+      const snapshot = await query.get();
+      
+      if (snapshot.empty) {
+        break;
+      }
+
+      for (const listingDoc of snapshot.docs) {
+        const docId = listingDoc.id;
+        const generatedShortId = generateNumericShortId(docId);
+        
+        if (generatedShortId === shortId) {
+          // Found the matching listing, create the mapping for future use
+          try {
+            await db.collection('shortIdMappings').doc(shortId).set({
+              fullId: docId,
+              createdAt: new Date(),
+              listingTitle: listingDoc.data().title || 'Unknown'
+            });
+            
+            // Cache the result
+            shortIdCache.set(shortId, { fullId: docId, timestamp: Date.now() });
+          } catch (mappingCreateError) {
+            console.error('Failed to create mapping:', mappingCreateError);
+            // Continue anyway
+          }
+
+          return res.status(200).json({ 
+            success: true, 
+            fullId: docId,
+            shortId 
+          });
+        }
+      }
+
+      lastDoc = snapshot.docs[snapshot.docs.length - 1];
+      attempts++;
     }
 
     // If we get here, no matching listing was found

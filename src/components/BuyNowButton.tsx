@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
-import { loadStripe } from '@stripe/stripe-js';
 import BuyNowTutorial from './BuyNowTutorial';
 import CheckoutTutorial from './CheckoutTutorial';
 
@@ -18,8 +17,17 @@ interface BuyNowButtonProps {
   children?: React.ReactNode;
 }
 
-// Initialize Stripe outside of the component
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+// Lazy load Stripe only when needed
+let stripePromise: Promise<any> | null = null;
+
+const getStripe = () => {
+  if (!stripePromise) {
+    stripePromise = import('@stripe/stripe-js').then(({ loadStripe }) =>
+      loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+    );
+  }
+  return stripePromise;
+};
 
 export function BuyNowButton({
   listingId,
@@ -91,8 +99,8 @@ export function BuyNowButton({
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
+      // Lazy load and redirect to Stripe Checkout
+      const stripe = await getStripe();
       if (stripe) {
         const { error } = await stripe.redirectToCheckout({
           sessionId: data.sessionId,
