@@ -12,7 +12,9 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "flex w-full items-center justify-start border-b border-border text-muted-foreground",
+      "inline-flex w-full items-center justify-start border-b border-border text-muted-foreground",
+      // Allow grid classes to override flex when explicitly provided
+      className?.includes('grid') ? '' : 'flex',
       className
     )}
     {...props}
