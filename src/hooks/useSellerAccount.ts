@@ -125,9 +125,9 @@ export const useSellerAccount = () => {
     refreshSellerStatus,
     // Also return the original account status interface for compatibility
     accountStatus: {
-      isConnected: sellerStatus?.status === 'active' || sellerStatus?.accountId,
-      isEnabled: sellerStatus?.status === 'active' && sellerStatus?.chargesEnabled && sellerStatus?.payoutsEnabled,
-      needsMoreInfo: sellerStatus?.status === 'pending' || (sellerStatus?.accountId && sellerStatus?.status !== 'active')
+      isConnected: Boolean(sellerStatus?.accountId),
+      isEnabled: sellerStatus?.status === 'active' || (sellerStatus?.chargesEnabled && sellerStatus?.payoutsEnabled),
+      needsMoreInfo: sellerStatus?.accountId && sellerStatus?.status !== 'active' && !sellerStatus?.detailsSubmitted
     },
     isLoading: loading,
     createAccount: async () => {

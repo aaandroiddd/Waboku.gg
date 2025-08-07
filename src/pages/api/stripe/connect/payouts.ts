@@ -48,13 +48,39 @@ export default async function handler(
       return res.status(400).json({ error: 'No Stripe Connect account found' });
     }
 
-    // Check if the account is active
-    if (userData.stripeConnectStatus !== 'active') {
+    // Check if the account is active - be more flexible with status checking
+    const isAccountActive = userData.stripeConnectStatus === 'active' || 
+                           (userData.stripeConnectPayoutsEnabled === true && userData.stripeConnectChargesEnabled === true);
+    
+    if (!isAccountActive) {
+      console.log('Account status check failed:', {
+        stripeConnectStatus: userData.stripeConnectStatus,
+        stripeConnectPayoutsEnabled: userData.stripeConnectPayoutsEnabled,
+        stripeConnectChargesEnabled: userData.stripeConnectChargesEnabled
+      });
       return res.status(400).json({ error: 'Stripe Connect account is not active' });
     }
 
-    // Get account details
+    // Get account details and verify it's actually active
     const account = await stripe.accounts.retrieve(userData.stripeConnectAccountId);
+    
+    // Double-check account status with Stripe
+    if (!account.payouts_enabled || !account.charges_enabled) {
+      console.log('Stripe account not fully enabled:', {
+        accountId: userData.stripeConnectAccountId,
+        payouts_enabled: account.payouts_enabled,
+        charges_enabled: account.charges_enabled,
+        details_submitted: account.details_submitted
+      });
+      return res.status(400).json({ 
+        error: 'Stripe Connect account is not fully activated. Please complete your account setup.',
+        details: {
+          payouts_enabled: account.payouts_enabled,
+          charges_enabled: account.charges_enabled,
+          details_submitted: account.details_submitted
+        }
+      });
+    }
 
     // Get balance information
     const balance = await stripe.balance.retrieve({
