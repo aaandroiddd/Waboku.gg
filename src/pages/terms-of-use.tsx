@@ -20,7 +20,8 @@ export default function TermsOfUsePage() {
 
             <div className="bg-muted p-4 rounded-lg mb-8">
               <p className="font-semibold mb-2">Important Notice</p>
-              <p>By creating an account, accessing, or using our Services, you agree to be bound by these Terms. If you do not agree to these Terms, you may not use our Services. Please read these Terms carefully before using our Platform.</p>
+              <p className="mb-3">By creating an account, accessing, or using our Services, you agree to be bound by these Terms. If you do not agree to these Terms, you may not use our Services. Please read these Terms carefully before using our Platform.</p>
+              <p className="text-sm"><strong>Sellers:</strong> If you list items for sale on our Platform, you also agree to comply with our <a href="/marketplace-seller-policies" className="text-primary hover:underline">Marketplace Seller Policies</a>, which establish additional requirements and standards for selling activities.</p>
             </div>
 
             <Separator className="my-8" />
