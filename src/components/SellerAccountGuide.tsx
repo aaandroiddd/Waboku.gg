@@ -105,19 +105,19 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Alert className="border-green-200 bg-green-100/50 dark:border-green-800 dark:bg-green-900/30">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-semibold text-base mb-2">Account Connected & Verified</p>
-                    <p className="text-sm leading-relaxed">
-                      Congratulations! Your Stripe Connect account has been successfully linked and verified. 
-                      You can now receive secure payments directly to your bank account when customers purchase your listings.
-                    </p>
-                  </div>
+            <div role="alert" className="relative w-full rounded-lg border text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7 bg-primary/10 border-primary p-8">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                  <CheckCircle className="h-10 w-10 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Account Connected & Verified</h2>
+                  <p className="text-lg mb-4 leading-relaxed">
+                    Congratulations! Your Stripe Connect account has been successfully linked and verified. 
+                    You can now receive secure payments directly to your bank account when customers purchase your listings.
+                  </p>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-3 mb-4">
                     <p className="font-medium text-sm">What this means for you:</p>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start gap-2">
@@ -160,8 +160,8 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                     </div>
                   </div>
                 </div>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
