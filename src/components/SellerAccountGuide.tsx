@@ -233,20 +233,22 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200">
-                <div className="space-y-3">
-                  <p className="font-medium">Setup Required</p>
-                  <p className="text-sm">
+            <div role="alert" className="relative w-full rounded-lg border text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7 bg-primary/10 border-primary p-8">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock className="h-10 w-10 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Setup Required</h2>
+                  <p className="text-lg">
                     Your Stripe Connect account has been created but requires additional information to complete setup.
                   </p>
                 </div>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-sm">Connected</p>
@@ -254,7 +256,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <Clock className="h-5 w-5 text-amber-500 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-sm">Verification</p>
@@ -264,7 +266,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <AlertCircle className="h-5 w-5 text-gray-500 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-sm">Payments</p>
