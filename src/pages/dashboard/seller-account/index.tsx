@@ -160,10 +160,10 @@ const SellerAccountPage = () => {
             <LoadingState />
           ) : (
             <Tabs defaultValue="setup" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-auto">
-                <TabsTrigger value="setup" className="text-sm sm:text-base px-3 sm:px-6">Account Setup</TabsTrigger>
-                <TabsTrigger value="payouts" className="text-sm sm:text-base px-3 sm:px-6">Payouts & Earnings</TabsTrigger>
-                <TabsTrigger value="info" className="text-sm sm:text-base px-3 sm:px-6">Info & FAQ</TabsTrigger>
+              <TabsList className="flex flex-col sm:grid sm:grid-cols-3 w-full h-auto gap-1 sm:gap-0">
+                <TabsTrigger value="setup" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Account Setup</TabsTrigger>
+                <TabsTrigger value="payouts" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Payouts & Earnings</TabsTrigger>
+                <TabsTrigger value="info" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Info & FAQ</TabsTrigger>
               </TabsList>
               
               <TabsContent value="setup" className="mt-6">
