@@ -491,16 +491,16 @@ export default function MarketplaceSellerPoliciesPage() {
                 <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
                   <li>• 95%+ on-time shipping rate</li>
                   <li>• 4.5+ average rating</li>
-                  <li>• <5% dispute rate</li>
+                  <li>• &lt;5% dispute rate</li>
                 </ul>
               </div>
               
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Below Standards</h4>
                 <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-                  <li>• <85% on-time shipping rate</li>
-                  <li>• <4.0 average rating</li>
-                  <li>• >10% dispute rate</li>
+                  <li>• &lt;85% on-time shipping rate</li>
+                  <li>• &lt;4.0 average rating</li>
+                  <li>• &gt;10% dispute rate</li>
                 </ul>
               </div>
             </div>
