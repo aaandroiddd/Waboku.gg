@@ -304,15 +304,28 @@ export default function OrderDetailsPage() {
   const handleMarkAsShipped = async () => {
     if (!order || !id) return;
     
+    // Check if tracking is required for high-value orders
+    if (order.amount >= 99.99) {
+      toast.error('Tracking is required for orders over $99.99. Please add tracking information instead.');
+      return;
+    }
+    
     // For mobile users, use native HTML confirm
     if (isMobile) {
-      const confirmed = window.confirm(
-        'Complete Order Without Tracking?\n\n' +
-        'You are about to mark this order as completed without providing tracking information. ' +
-        'This means you will have no proof of delivery in case of disputes. ' +
-        'The order status will be changed to "Completed" immediately.\n\n' +
-        'Do you want to continue?'
-      );
+      let confirmMessage = 'Complete Order Without Tracking?\n\n';
+      
+      if (order.amount >= 49.99) {
+        confirmMessage += 'WARNING: For orders over $49.99, you are responsible for any shipping issues without tracking. ' +
+          'You will have no proof of delivery in case of disputes or lost packages.\n\n';
+      } else {
+        confirmMessage += 'You are about to mark this order as completed without providing tracking information. ' +
+          'This means you will have no proof of delivery in case of disputes.\n\n';
+      }
+      
+      confirmMessage += 'The order status will be changed to "Completed" immediately.\n\n' +
+        'Do you want to continue?';
+      
+      const confirmed = window.confirm(confirmMessage);
       
       if (!confirmed) {
         return; // User cancelled
@@ -763,6 +776,38 @@ export default function OrderDetailsPage() {
                   <p className="text-blue-700 dark:text-blue-300 mb-4">
                     The buyer has provided shipping information and this order is ready to be shipped. Please add tracking information or mark as shipped to continue.
                   </p>
+                  
+                  {/* Tracking requirement warnings based on order value */}
+                  {order.amount >= 99.99 && (
+                    <div className="mb-4 p-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium">Tracking Required</p>
+                          <p className="mt-1 text-sm">
+                            Orders over $99.99 require tracking information to protect both buyer and seller. 
+                            Shipping without tracking is not available for high-value orders.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {order.amount >= 49.99 && order.amount < 99.99 && (
+                    <div className="mb-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium">Tracking Highly Recommended</p>
+                          <p className="mt-1 text-sm">
+                            For orders over $49.99, you are responsible for any shipping issues if you choose to ship without tracking. 
+                            We strongly recommend using tracking to protect yourself from disputes and lost packages.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       variant="default" 
@@ -788,9 +833,10 @@ export default function OrderDetailsPage() {
                           setShowNoTrackingDialog(true);
                         }
                       }}
+                      disabled={order.amount >= 99.99}
                     >
                       <Package className="mr-2 h-4 w-4" />
-                      Ship Without Tracking
+                      {order.amount >= 99.99 ? 'Tracking Required' : 'Ship Without Tracking'}
                     </Button>
                   </div>
                 </div>
@@ -1793,10 +1839,26 @@ export default function OrderDetailsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Complete Order Without Tracking?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You are about to mark this order as completed without providing tracking information. 
-              This means you will have no proof of delivery in case of disputes.
-              The order status will be changed to "Completed" immediately.
+            <AlertDialogDescription className="space-y-3">
+              {order && order.amount >= 49.99 && (
+                <div className="p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Warning: High-Value Order</p>
+                      <p className="mt-1 text-sm">
+                        For orders over $49.99, you are responsible for any shipping issues without tracking. 
+                        You will have no proof of delivery in case of disputes or lost packages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <p>
+                You are about to mark this order as completed without providing tracking information. 
+                {order && order.amount < 49.99 && 'This means you will have no proof of delivery in case of disputes.'}
+                The order status will be changed to "Completed" immediately.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1804,10 +1866,10 @@ export default function OrderDetailsPage() {
             <AlertDialogAction 
               onClick={handleMarkAsShipped}
               disabled={isUpdatingShipping}
-              className="bg-yellow-600 hover:bg-yellow-700"
+              className={order && order.amount >= 49.99 ? "bg-red-600 hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}
             >
               {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Complete Order
+              {order && order.amount >= 49.99 ? 'Accept Risk & Complete Order' : 'Complete Order'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

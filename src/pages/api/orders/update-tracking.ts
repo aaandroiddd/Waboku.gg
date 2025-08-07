@@ -31,10 +31,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const userId = decodedToken.uid;
-    const { orderId, carrier, trackingNumber, notes } = req.body;
+    const { orderId, carrier, trackingNumber, notes, skipTracking } = req.body;
 
-    if (!orderId || !trackingNumber) {
+    if (!orderId) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // If skipTracking is true, we're marking as shipped without tracking
+    if (skipTracking) {
+      // We'll handle this case below
+    } else if (!trackingNumber) {
+      return res.status(400).json({ error: 'Tracking number is required' });
     }
     
     // If carrier is not provided or is 'auto-detect', we'll try to detect it
@@ -53,6 +60,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check if the user is the seller
     if (orderData.sellerId !== userId) {
       return res.status(403).json({ error: 'Only the seller can update tracking information' });
+    }
+
+    // Check tracking requirements based on order value
+    if (skipTracking) {
+      // Check if tracking is required for high-value orders
+      if (orderData.amount >= 99.99) {
+        return res.status(400).json({ 
+          error: 'Tracking is required for orders over $99.99. Please provide tracking information instead.' 
+        });
+      }
+      
+      // For orders without tracking, mark as completed immediately
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'completed',
+        noTrackingConfirmed: true,
+        trackingRequired: false,
+        deliveryConfirmed: true,
+        updatedAt: new Date()
+      });
+
+      console.log(`Order ${orderId} marked as completed without tracking`);
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Order marked as completed without tracking',
+        warning: orderData.amount >= 49.99 ? 'You are responsible for any shipping issues without tracking for orders over $49.99' : undefined
+      });
     }
 
     // Try to get initial tracking information
