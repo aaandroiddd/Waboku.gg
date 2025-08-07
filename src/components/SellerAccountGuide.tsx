@@ -105,30 +105,59 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+            <Alert className="border-green-200 bg-green-100/50 dark:border-green-800 dark:bg-green-900/30">
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertDescription className="text-green-800 dark:text-green-200">
-                <div className="space-y-3">
-                  <p className="font-medium">Account Connected & Verified</p>
-                  <p className="text-sm">
-                    Your Stripe Connect account is fully set up and ready to receive payments for your listings.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
-                    {requirements.map((requirement) => {
-                      const IconComponent = getRequirementIcon(requirement.id);
-                      return (
-                        <div 
-                          key={requirement.id}
-                          className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded border border-green-200 dark:border-green-800"
-                        >
-                          <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
-                          <IconComponent className="h-3 w-3 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                          <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
-                            {requirement.label}
-                          </span>
-                        </div>
-                      );
-                    })}
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-semibold text-base mb-2">Account Connected & Verified</p>
+                    <p className="text-sm leading-relaxed">
+                      Congratulations! Your Stripe Connect account has been successfully linked and verified. 
+                      You can now receive secure payments directly to your bank account when customers purchase your listings.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <p className="font-medium text-sm">What this means for you:</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <span>Your identity has been verified by Stripe's secure verification process</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <span>Payments will be automatically transferred to your connected bank account</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <span>You're protected by Stripe's advanced fraud detection and dispute management</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <span>Buyers can pay securely using credit cards, debit cards, and other payment methods</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-sm mb-2">Security requirements completed:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      {requirements.map((requirement) => {
+                        const IconComponent = getRequirementIcon(requirement.id);
+                        return (
+                          <div 
+                            key={requirement.id}
+                            className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/50 rounded border border-green-300 dark:border-green-700"
+                          >
+                            <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
+                            <IconComponent className="h-3 w-3 text-green-700 dark:text-green-300 flex-shrink-0" />
+                            <span className="text-xs font-medium text-green-900 dark:text-green-100 truncate">
+                              {requirement.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </AlertDescription>
