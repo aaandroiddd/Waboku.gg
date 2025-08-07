@@ -167,20 +167,13 @@ const SellerAccountPage = () => {
               </TabsList>
               
               <TabsContent value="setup" className="mt-6">
-                <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
-                  <div>
-                    <SellerAccountGuide 
-                      accountStatus={accountStatus}
-                      isLoading={isAnyLoading}
-                      onCreateAccount={handleCreateAccount}
-                      onUpdateAccount={handleUpdateAccount}
-                      onRefreshStatus={refreshStatus}
-                    />
-                  </div>
-                  <div>
-                    <SellerAccountBenefits />
-                  </div>
-                </div>
+                <SellerAccountGuide 
+                  accountStatus={accountStatus}
+                  isLoading={isAnyLoading}
+                  onCreateAccount={handleCreateAccount}
+                  onUpdateAccount={handleUpdateAccount}
+                  onRefreshStatus={refreshStatus}
+                />
               </TabsContent>
               
               <TabsContent value="payouts" className="mt-6">
@@ -188,7 +181,10 @@ const SellerAccountPage = () => {
               </TabsContent>
               
               <TabsContent value="info" className="mt-6">
-                <SellerAccountFAQ />
+                <div className="space-y-8">
+                  <SellerAccountBenefits />
+                  <SellerAccountFAQ />
+                </div>
               </TabsContent>
             </Tabs>
           )}
