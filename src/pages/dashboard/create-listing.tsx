@@ -32,6 +32,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { MultiImageUpload } from "@/components/MultiImageUpload";
+import { useSellerLevel } from "@/hooks/useSellerLevel";
+import { SellerLevelBadge, SellerLevelProgress } from "@/components/SellerLevelBadge";
 import * as XLSX from 'xlsx';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -188,11 +190,13 @@ const CreateListingPage = () => {
   const { createListing, checkActiveListingCount } = useListings();
   const { profile } = useProfile(user?.uid);
   const { accountTier, features } = useAccount();
+  const { sellerLevelData, isLoading: sellerLevelLoading, checkListingLimits, getTotalActiveListingValue } = useSellerLevel();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [stripeConnectStatus, setStripeConnectStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeListingCount, setActiveListingCount] = useState<number | null>(null);
+  const [totalActiveValue, setTotalActiveValue] = useState<number>(0);
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Bulk listing states
@@ -263,6 +267,15 @@ const CreateListingPage = () => {
         newErrors.price = "Price is required";
       } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
         newErrors.price = "Please enter a valid price";
+      } else {
+        // Validate seller level limits
+        const price = parseFloat(formData.price);
+        if (sellerLevelData && checkListingLimits) {
+          const limitCheck = checkListingLimits(price, totalActiveValue);
+          if (!limitCheck.allowed) {
+            newErrors.price = limitCheck.reason;
+          }
+        }
       }
     }
 
@@ -403,22 +416,28 @@ const CreateListingPage = () => {
     checkStripeConnectStatus();
   }, [user]);
 
-  // Check active listing count for free users
+  // Check active listing count and total value
   useEffect(() => {
-    if (!user || accountTier !== 'free') return;
+    if (!user) return;
 
-    const fetchActiveListingCount = async () => {
+    const fetchListingData = async () => {
       try {
         const count = await checkActiveListingCount();
         setActiveListingCount(count);
+        
+        if (sellerLevelData) {
+          const totalValue = await getTotalActiveListingValue(user.uid);
+          setTotalActiveValue(totalValue);
+        }
       } catch (error) {
-        console.error('Error checking active listing count:', error);
+        console.error('Error checking listing data:', error);
         setActiveListingCount(0);
+        setTotalActiveValue(0);
       }
     };
 
-    fetchActiveListingCount();
-  }, [user, accountTier, checkActiveListingCount]);
+    fetchListingData();
+  }, [user, checkActiveListingCount, getTotalActiveListingValue, sellerLevelData]);
 
   // Initialize location from profile
   useEffect(() => {
@@ -872,6 +891,49 @@ const CreateListingPage = () => {
               </Button>
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Show seller level information */}
+        {sellerLevelData && !sellerLevelLoading && (
+          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold">Your Seller Level</h3>
+                    <SellerLevelBadge
+                      level={sellerLevelData.level}
+                      salesCount={sellerLevelData.completedSales}
+                      rating={sellerLevelData.rating}
+                      reviewCount={sellerLevelData.reviewCount}
+                      accountAge={sellerLevelData.accountAge}
+                      compact={true}
+                    />
+                  </div>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>
+                      <strong>Listing Limits:</strong> ${totalActiveValue.toLocaleString()} / ${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()} total value
+                    </p>
+                    <p>
+                      <strong>Max per item:</strong> ${sellerLevelData.currentLimits.maxIndividualItemValue.toLocaleString()}
+                    </p>
+                    {sellerLevelData.currentLimits.maxActiveListings && (
+                      <p>
+                        <strong>Active listings:</strong> {activeListingCount || 0} / {sellerLevelData.currentLimits.maxActiveListings}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {sellerLevelData.canAdvance && (
+                  <div className="text-center">
+                    <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                      🎉 Ready to Level Up!
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Show listing limit information for free users */}
