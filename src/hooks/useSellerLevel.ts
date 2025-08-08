@@ -118,12 +118,17 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
         currentLimits: config.limits
       };
 
-      // Save/update seller level data in Firestore
-      await setDoc(doc(db, 'sellerLevels', uid), {
-        ...levelData,
-        lastLevelCheck: new Date(),
-        updatedAt: new Date()
-      }, { merge: true });
+      // Try to save/update seller level data in Firestore, but don't fail if it doesn't work
+      try {
+        await setDoc(doc(db, 'sellerLevels', uid), {
+          ...levelData,
+          lastLevelCheck: new Date(),
+          updatedAt: new Date()
+        }, { merge: true });
+      } catch (writeError) {
+        console.warn('Could not save seller level data to Firestore:', writeError);
+        // Continue without failing - we can still show the calculated data
+      }
 
       setSellerLevelData(levelData);
       return levelData;

@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import Head from 'next/head';
 import PayoutDashboard from '@/components/PayoutDashboard';
+import SellerLevelDashboard from '@/components/SellerLevelDashboard';
 
 // Simple loading state component
 const LoadingState = () => (
@@ -160,9 +161,10 @@ const SellerAccountPage = () => {
             <LoadingState />
           ) : (
             <Tabs defaultValue="setup" className="w-full">
-              <TabsList className="flex flex-col sm:grid sm:grid-cols-3 w-full h-auto gap-1 sm:gap-0">
+              <TabsList className="flex flex-col sm:grid sm:grid-cols-4 w-full h-auto gap-1 sm:gap-0">
                 <TabsTrigger value="setup" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Account Setup</TabsTrigger>
                 <TabsTrigger value="payouts" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Payouts & Earnings</TabsTrigger>
+                <TabsTrigger value="seller-level" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Seller Level</TabsTrigger>
                 <TabsTrigger value="info" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Info & FAQ</TabsTrigger>
               </TabsList>
               
@@ -178,6 +180,10 @@ const SellerAccountPage = () => {
               
               <TabsContent value="payouts" className="mt-6">
                 <PayoutDashboard />
+              </TabsContent>
+              
+              <TabsContent value="seller-level" className="mt-6">
+                <SellerLevelDashboard />
               </TabsContent>
               
               <TabsContent value="info" className="mt-6">
