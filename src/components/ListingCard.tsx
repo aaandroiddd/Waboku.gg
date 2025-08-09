@@ -586,21 +586,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     {listing.condition}
                   </Badge>
                 </MobileAnimationWrapper>
-                <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
-                  <StringErrorBoundary fallback={<span className="text-xs text-muted-foreground">Seller</span>}>
-                    {sellerLevelData && (
-                      <SellerLevelBadge
-                        level={sellerLevelData.level}
-                        salesCount={sellerLevelData.completedSales}
-                        rating={sellerLevelData.rating}
-                        reviewCount={sellerLevelData.reviewCount}
-                        accountAge={sellerLevelData.accountAge}
-                        compact={true}
-                        className="text-xs"
-                      />
-                    )}
-                  </StringErrorBoundary>
-                </MobileAnimationWrapper>
+
                 {listing.isGraded && (
                   <MobileMotionSpan 
                     className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full shadow-sm font-medium"

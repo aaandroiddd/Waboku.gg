@@ -59,7 +59,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxIndividualItemValue: 200
     },
     badge: {
-      icon: '1️⃣',
+      icon: '',
       color: 'text-green-600',
       bgColor: 'bg-green-100 dark:bg-green-900/20'
     }
@@ -79,7 +79,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxIndividualItemValue: 400
     },
     badge: {
-      icon: '2️⃣',
+      icon: '',
       color: 'text-blue-600',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20'
     }
@@ -102,7 +102,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxActiveListings: 50
     },
     badge: {
-      icon: '3️⃣',
+      icon: '',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
     }

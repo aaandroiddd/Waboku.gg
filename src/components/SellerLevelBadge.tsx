@@ -42,7 +42,6 @@ export function SellerLevelBadge({
             className
           )}
         >
-          <span className="mr-1">{config.badge.icon}</span>
           <span className="truncate">{config.name}</span>
         </Badge>
       </BadgeTooltip>
@@ -63,7 +62,6 @@ export function SellerLevelBadge({
             "border-current/20 inline-flex items-center text-xs font-medium"
           )}
         >
-          <span className="mr-1">{config.badge.icon}</span>
           <span className="truncate">{config.name}</span>
         </Badge>
       </BadgeTooltip>
@@ -145,7 +143,6 @@ export function SellerLevelProgress({
     return (
       <div className={cn("p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800", className)}>
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">{currentConfig.badge.icon}</span>
           <div>
             <h3 className="font-semibold text-purple-700 dark:text-purple-400">
               {currentConfig.name}
@@ -217,7 +214,6 @@ export function SellerLevelProgress({
   return (
     <div className={cn("p-4 bg-muted/50 rounded-lg border", className)}>
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">{nextConfig.badge.icon}</span>
         <div>
           <h3 className="font-semibold">
             Progress to {nextConfig.name}
