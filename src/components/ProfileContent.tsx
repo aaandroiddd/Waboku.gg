@@ -18,7 +18,6 @@ import { MessageDialog } from '@/components/MessageDialog';
 import { SellerLevelBadge } from '@/components/SellerLevelBadge';
 import { UserReviewsTabs } from '@/components/UserReviewsTabs';
 import { useSellerLevel } from '@/hooks/useSellerLevel';
-=======
 
 export const LoadingProfile = () => (
   <div className="container mx-auto p-6">
