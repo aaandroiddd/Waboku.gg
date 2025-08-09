@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
+import { sellerLevelCache } from '@/lib/seller-level-cache';
 import { 
   SellerLevel, 
   SellerLevelData, 
@@ -85,10 +86,20 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
     }
   }, []);
 
-  const fetchSellerLevel = useCallback(async (uid: string) => {
+  const fetchSellerLevel = useCallback(async (uid: string, forceRefresh = false) => {
     try {
       setIsLoading(true);
       setError(null);
+
+      // Check cache first unless force refresh is requested
+      if (!forceRefresh) {
+        const cachedData = sellerLevelCache.get(uid);
+        if (cachedData) {
+          setSellerLevelData(cachedData);
+          setIsLoading(false);
+          return cachedData;
+        }
+      }
 
       const { db } = await getFirebaseServices();
       if (!db) throw new Error('Database not initialized');
@@ -118,6 +129,9 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
         currentLimits: config.limits
       };
 
+      // Cache the data
+      sellerLevelCache.set(uid, levelData);
+
       // Try to save/update seller level data in Firestore, but don't fail if it doesn't work
       try {
         await setDoc(doc(db, 'sellerLevels', uid), {
@@ -141,10 +155,16 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
     }
   }, [calculateSellerStats]);
 
-  const refreshSellerLevel = useCallback(async () => {
+  const refreshSellerLevel = useCallback(async (forceRefresh = true) => {
     if (!targetUserId) return null;
-    return await fetchSellerLevel(targetUserId);
+    return await fetchSellerLevel(targetUserId, forceRefresh);
   }, [targetUserId, fetchSellerLevel]);
+
+  const invalidateCache = useCallback(() => {
+    if (targetUserId) {
+      sellerLevelCache.delete(targetUserId);
+    }
+  }, [targetUserId]);
 
   const checkListingLimits = useCallback((price: number, totalActiveValue?: number) => {
     if (!sellerLevelData) return { allowed: false, reason: 'Seller level not loaded' };
@@ -203,7 +223,15 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
       return;
     }
 
-    fetchSellerLevel(targetUserId);
+    // Check if we have cached data first to avoid unnecessary loading state
+    const cachedData = sellerLevelCache.get(targetUserId);
+    if (cachedData) {
+      setSellerLevelData(cachedData);
+      setIsLoading(false);
+      setError(null);
+    } else {
+      fetchSellerLevel(targetUserId);
+    }
   }, [targetUserId, fetchSellerLevel]);
 
   return {
@@ -211,6 +239,7 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
     isLoading,
     error,
     refreshSellerLevel,
+    invalidateCache,
     checkListingLimits,
     getTotalActiveListingValue,
     config: sellerLevelData ? SELLER_LEVEL_CONFIG[sellerLevelData.level] : null

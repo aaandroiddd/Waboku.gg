@@ -46,7 +46,7 @@ export interface SellerLevelConfig {
 export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
   1: {
     level: 1,
-    name: 'Level 1',
+    name: 'Level 1 Seller',
     description: 'New sellers building their reputation',
     requirements: {
       minCompletedSales: 0,
@@ -66,7 +66,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
   },
   2: {
     level: 2,
-    name: 'Level 2',
+    name: 'Level 2 Seller',
     description: 'Experienced sellers with proven track record',
     requirements: {
       minCompletedSales: 2,
@@ -86,7 +86,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
   },
   3: {
     level: 3,
-    name: 'Level 3',
+    name: 'Level 3 Seller',
     description: 'Top-tier sellers with excellent reputation',
     requirements: {
       minCompletedSales: 10,
