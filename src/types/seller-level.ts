@@ -1,4 +1,4 @@
-export type SellerLevel = 1 | 2 | 3;
+export type SellerLevel = 1 | 2 | 3 | 4 | 5;
 
 export interface SellerLevelRequirements {
   minCompletedSales: number;
@@ -98,13 +98,56 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
     },
     limits: {
       maxTotalListingValue: 5000,
-      maxIndividualItemValue: 1000,
-      maxActiveListings: 50
+      maxIndividualItemValue: 1000
     },
     badge: {
       icon: '',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
+    }
+  },
+  4: {
+    level: 4,
+    name: 'Level 4 Seller',
+    description: 'High-end sellers with established reputation or proven track record from other platforms',
+    requirements: {
+      minCompletedSales: 100,
+      maxChargebackRate: 1,
+      minRating: 4.5,
+      minReviewCount: 50,
+      minAccountAge: 180,
+      maxUnresolvedDisputes: 0
+    },
+    limits: {
+      maxTotalListingValue: 10000,
+      maxIndividualItemValue: 2000
+    },
+    badge: {
+      icon: '',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100 dark:bg-orange-900/20'
+    }
+  },
+  5: {
+    level: 5,
+    name: 'Level 5 Seller',
+    description: 'Reserved for storefronts and businesses with exceptional performance',
+    requirements: {
+      minCompletedSales: 300,
+      maxChargebackRate: 0.5,
+      minRating: 4.7,
+      minReviewCount: 150,
+      minAccountAge: 365,
+      maxUnresolvedDisputes: 0
+    },
+    limits: {
+      maxTotalListingValue: 100000,
+      maxIndividualItemValue: 10000
+    },
+    badge: {
+      icon: '',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-100 dark:bg-amber-900/20'
     }
   }
 };
@@ -125,7 +168,23 @@ export const LEVEL_ADVANCEMENT_REQUIREMENTS: Record<SellerLevel, SellerLevelRequ
     minAccountAge: 60,
     maxUnresolvedDisputes: 0
   },
-  3: null // Max level
+  3: {
+    minCompletedSales: 100,
+    maxChargebackRate: 1,
+    minRating: 4.5,
+    minReviewCount: 50,
+    minAccountAge: 180,
+    maxUnresolvedDisputes: 0
+  },
+  4: {
+    minCompletedSales: 300,
+    maxChargebackRate: 0.5,
+    minRating: 4.7,
+    minReviewCount: 150,
+    minAccountAge: 365,
+    maxUnresolvedDisputes: 0
+  },
+  5: null // Max level
 };
 
 export interface SellerBadgeInfo {
@@ -146,7 +205,8 @@ export function calculateSellerLevel(data: {
   accountAge: number;
   unresolvedDisputes: number;
 }): SellerLevel {
-  // Start from highest level and work down
+  // Note: Levels 4 and 5 require manual approval, so automatic calculation only goes up to level 3
+  // Start from level 3 and work down
   for (let level = 3; level >= 1; level--) {
     const config = SELLER_LEVEL_CONFIG[level as SellerLevel];
     const requirements = config.requirements;
@@ -175,7 +235,10 @@ export function canAdvanceToNextLevel(currentLevel: SellerLevel, data: {
   accountAge: number;
   unresolvedDisputes: number;
 }): boolean {
-  if (currentLevel >= 3) return false; // Already at max level
+  if (currentLevel >= 5) return false; // Already at max level
+  
+  // Levels 4 and 5 require manual approval via support ticket
+  if (currentLevel >= 3) return false;
   
   const nextLevel = (currentLevel + 1) as SellerLevel;
   const requirements = SELLER_LEVEL_CONFIG[nextLevel].requirements;
@@ -219,4 +282,58 @@ export function getTenureBadge(accountAge: number): { text: string; icon: string
   }
   
   return null;
+}
+
+// Check if user meets requirements for level 4 (requires manual approval)
+export function meetsLevel4Requirements(data: {
+  completedSales: number;
+  chargebackRate: number;
+  rating: number | null;
+  reviewCount: number;
+  accountAge: number;
+  unresolvedDisputes: number;
+}): boolean {
+  const requirements = SELLER_LEVEL_CONFIG[4].requirements;
+  
+  return (
+    data.completedSales >= requirements.minCompletedSales &&
+    data.chargebackRate <= requirements.maxChargebackRate &&
+    data.accountAge >= requirements.minAccountAge &&
+    data.unresolvedDisputes <= requirements.maxUnresolvedDisputes &&
+    (requirements.minRating === undefined || (data.rating !== null && data.rating >= requirements.minRating)) &&
+    (requirements.minReviewCount === undefined || data.reviewCount >= requirements.minReviewCount)
+  );
+}
+
+// Check if user meets requirements for level 5 (requires manual approval)
+export function meetsLevel5Requirements(data: {
+  completedSales: number;
+  chargebackRate: number;
+  rating: number | null;
+  reviewCount: number;
+  accountAge: number;
+  unresolvedDisputes: number;
+}): boolean {
+  const requirements = SELLER_LEVEL_CONFIG[5].requirements;
+  
+  return (
+    data.completedSales >= requirements.minCompletedSales &&
+    data.chargebackRate <= requirements.maxChargebackRate &&
+    data.accountAge >= requirements.minAccountAge &&
+    data.unresolvedDisputes <= requirements.maxUnresolvedDisputes &&
+    (requirements.minRating === undefined || (data.rating !== null && data.rating >= requirements.minRating)) &&
+    (requirements.minReviewCount === undefined || data.reviewCount >= requirements.minReviewCount)
+  );
+}
+
+// Get special requirements text for higher levels
+export function getSpecialRequirementsText(level: SellerLevel): string | null {
+  switch (level) {
+    case 4:
+      return 'Requires Stripe Connect Standard Account, business verification documentation, and enhanced identity verification. Established sellers or those with proven track records from other platforms can submit a support ticket to request level advancement.';
+    case 5:
+      return 'Reserved for storefronts and businesses. Requires Stripe Connect Standard Account and must submit a support ticket for manual approval.';
+    default:
+      return null;
+  }
 }

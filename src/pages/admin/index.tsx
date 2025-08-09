@@ -42,6 +42,7 @@ import EmailVerificationManager from '@/components/admin/EmailVerificationManage
 import { SubscriptionStatusDebugger } from '@/components/admin/SubscriptionStatusDebugger';
 import SubscriptionDataDiagnostic from '@/components/admin/SubscriptionDataDiagnostic';
 import StripeConnectEligibilityManager from '@/components/admin/StripeConnectEligibilityManager';
+import { SellerLevelManager } from '@/components/admin/SellerLevelManager';
 import {
   Accordion,
   AccordionItem,
@@ -63,6 +64,7 @@ const SECTIONS = [
   { id: "admin-security", label: "Admin Security Manager" },
   { id: "auth-debugger", label: "Authentication Debugger" },
   { id: "cancelled-subscription-debug", label: "Cancelled Subscription Debugger" },
+  { id: "seller-level-manager", label: "Seller Level Manager" },
   { id: "stripe-connect-eligibility", label: "Stripe Connect Eligibility Manager" },
   { id: "subscription-status-debug", label: "Subscription Status Debugger" },
   { id: "subscription-data-diagnostic", label: "Subscription Data Diagnostic" },
@@ -464,6 +466,19 @@ export default function AdminDashboard() {
                     Debug and fix cancelled premium subscriptions that should still have access until their end date. This tool identifies users who cancelled their subscription but should retain premium features until the billing period ends.
                   </p>
                   <CancelledSubscriptionDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Seller Level Manager */}
+            <AccordionItem value="seller-level-manager" id="seller-level-manager" ref={el => (sectionRefs.current["seller-level-manager"] = el)}>
+              <AccordionTrigger>Seller Level Manager</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manually manage seller levels for users. Search for users by username or email and update their seller level. Levels 4 and 5 require manual approval and have special requirements including Stripe Connect Standard accounts and business verification.
+                  </p>
+                  <SellerLevelManager />
                 </div>
               </AccordionContent>
             </AccordionItem>

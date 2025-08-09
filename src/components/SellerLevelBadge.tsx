@@ -1,7 +1,15 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BadgeTooltip } from '@/components/BadgeTooltip';
-import { SELLER_LEVEL_CONFIG, SellerLevel, SellerBadgeInfo, getTenureBadge } from '@/types/seller-level';
+import { 
+  SELLER_LEVEL_CONFIG, 
+  SellerLevel, 
+  SellerBadgeInfo, 
+  getTenureBadge,
+  meetsLevel4Requirements,
+  meetsLevel5Requirements,
+  getSpecialRequirementsText
+} from '@/types/seller-level';
 import { cn } from '@/lib/utils';
 
 interface SellerLevelBadgeProps {
@@ -138,16 +146,25 @@ export function SellerLevelProgress({
   className
 }: SellerLevelProgressProps) {
   const currentConfig = SELLER_LEVEL_CONFIG[currentLevel];
+  const sellerData = {
+    completedSales,
+    chargebackRate,
+    rating,
+    reviewCount,
+    accountAge,
+    unresolvedDisputes
+  };
   
-  if (currentLevel >= 3) {
+  // Handle max level (Level 5)
+  if (currentLevel >= 5) {
     return (
-      <div className={cn("p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800", className)}>
+      <div className={cn("p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800", className)}>
         <div className="flex items-center gap-2 mb-2">
           <div>
-            <h3 className="font-semibold text-purple-700 dark:text-purple-400">
+            <h3 className="font-semibold text-amber-700 dark:text-amber-400">
               {currentConfig.name}
             </h3>
-            <p className="text-sm text-purple-600 dark:text-purple-500">
+            <p className="text-sm text-amber-600 dark:text-amber-500">
               Maximum seller level achieved!
             </p>
           </div>
@@ -159,6 +176,187 @@ export function SellerLevelProgress({
     );
   }
 
+  // Handle Level 3 - show eligibility for Level 4
+  if (currentLevel === 3) {
+    const meetsLevel4Reqs = meetsLevel4Requirements(sellerData);
+    const level4Config = SELLER_LEVEL_CONFIG[4];
+    const level4Requirements = level4Config.requirements;
+    const specialRequirements = getSpecialRequirementsText(4);
+
+    const requirements = [
+      {
+        label: 'Completed Sales',
+        current: completedSales,
+        required: level4Requirements.minCompletedSales,
+        met: completedSales >= level4Requirements.minCompletedSales
+      },
+      {
+        label: 'Account Age',
+        current: `${accountAge} days`,
+        required: `${level4Requirements.minAccountAge} days`,
+        met: accountAge >= level4Requirements.minAccountAge
+      },
+      {
+        label: 'Chargeback Rate',
+        current: `${chargebackRate.toFixed(1)}%`,
+        required: `≤${level4Requirements.maxChargebackRate}%`,
+        met: chargebackRate <= level4Requirements.maxChargebackRate
+      },
+      {
+        label: 'Average Rating',
+        current: rating ? `${rating.toFixed(1)}★` : 'No ratings',
+        required: `≥${level4Requirements.minRating}★`,
+        met: rating !== null && rating >= level4Requirements.minRating!
+      },
+      {
+        label: 'Review Count',
+        current: reviewCount,
+        required: `≥${level4Requirements.minReviewCount}`,
+        met: reviewCount >= level4Requirements.minReviewCount!
+      }
+    ];
+
+    return (
+      <div className={cn("p-4 bg-muted/50 rounded-lg border", className)}>
+        <div className="flex items-center gap-2 mb-3">
+          <div>
+            <h3 className="font-semibold">
+              Eligibility for {level4Config.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {level4Config.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-3">
+          {requirements.map((req, index) => (
+            <div key={index} className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{req.label}:</span>
+              <div className="flex items-center gap-2">
+                <span className={req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+                  {req.current} / {req.required}
+                </span>
+                {req.met ? (
+                  <span className="text-green-600 dark:text-green-400">✓</span>
+                ) : (
+                  <span className="text-muted-foreground">○</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {specialRequirements && (
+          <div className="mb-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+            <p className="text-sm text-orange-700 dark:text-orange-400">
+              <strong>Special Requirements:</strong> {specialRequirements}
+            </p>
+          </div>
+        )}
+
+        {meetsLevel4Reqs && (
+          <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+            <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+              🎉 You meet the requirements for {level4Config.name}! Submit a support ticket to request level advancement.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Handle Level 4 - show eligibility for Level 5
+  if (currentLevel === 4) {
+    const meetsLevel5Reqs = meetsLevel5Requirements(sellerData);
+    const level5Config = SELLER_LEVEL_CONFIG[5];
+    const level5Requirements = level5Config.requirements;
+    const specialRequirements = getSpecialRequirementsText(5);
+
+    const requirements = [
+      {
+        label: 'Completed Sales',
+        current: completedSales,
+        required: level5Requirements.minCompletedSales,
+        met: completedSales >= level5Requirements.minCompletedSales
+      },
+      {
+        label: 'Account Age',
+        current: `${accountAge} days`,
+        required: `${level5Requirements.minAccountAge} days`,
+        met: accountAge >= level5Requirements.minAccountAge
+      },
+      {
+        label: 'Chargeback Rate',
+        current: `${chargebackRate.toFixed(1)}%`,
+        required: `≤${level5Requirements.maxChargebackRate}%`,
+        met: chargebackRate <= level5Requirements.maxChargebackRate
+      },
+      {
+        label: 'Average Rating',
+        current: rating ? `${rating.toFixed(1)}★` : 'No ratings',
+        required: `≥${level5Requirements.minRating}★`,
+        met: rating !== null && rating >= level5Requirements.minRating!
+      },
+      {
+        label: 'Review Count',
+        current: reviewCount,
+        required: `≥${level5Requirements.minReviewCount}`,
+        met: reviewCount >= level5Requirements.minReviewCount!
+      }
+    ];
+
+    return (
+      <div className={cn("p-4 bg-muted/50 rounded-lg border", className)}>
+        <div className="flex items-center gap-2 mb-3">
+          <div>
+            <h3 className="font-semibold">
+              Eligibility for {level5Config.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {level5Config.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-3">
+          {requirements.map((req, index) => (
+            <div key={index} className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{req.label}:</span>
+              <div className="flex items-center gap-2">
+                <span className={req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+                  {req.current} / {req.required}
+                </span>
+                {req.met ? (
+                  <span className="text-green-600 dark:text-green-400">✓</span>
+                ) : (
+                  <span className="text-muted-foreground">○</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {specialRequirements && (
+          <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              <strong>Special Requirements:</strong> {specialRequirements}
+            </p>
+          </div>
+        )}
+
+        {meetsLevel5Reqs && (
+          <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+            <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+              🎉 You meet the requirements for {level5Config.name}! Submit a support ticket to request level advancement.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Handle Levels 1 and 2 - normal progression
   if (!nextLevelRequirements) return null;
 
   const nextLevel = (currentLevel + 1) as SellerLevel;
