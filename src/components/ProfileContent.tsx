@@ -15,8 +15,10 @@ import { SellerBadge } from '@/components/SellerBadge';
 import { AdminBadge } from '@/components/AdminBadge';
 import { ModeratorBadge } from '@/components/ModeratorBadge';
 import { MessageDialog } from '@/components/MessageDialog';
-import { StripeSellerBadge } from '@/components/StripeSellerBadge';
+import { SellerLevelBadge } from '@/components/SellerLevelBadge';
 import { UserReviewsTabs } from '@/components/UserReviewsTabs';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
+=======
 
 export const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -75,6 +77,7 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
   const { user, checkVerificationStatus } = useAuth();
   const router = useRouter();
   const { profile, isLoading, error, isOffline } = useProfile(userId);
+  const { sellerLevelData } = useSellerLevel(userId);
   const [mounted, setMounted] = useState(false);
   const [totalSales, setTotalSales] = useState<number | null>(null);
   const [loadingSales, setLoadingSales] = useState(false);
@@ -278,7 +281,16 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 mb-2">
                       <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                         <SellerBadge userId={userId} />
-                        <StripeSellerBadge userId={userId} />
+                        {sellerLevelData && (
+                          <SellerLevelBadge
+                            level={sellerLevelData.level}
+                            salesCount={sellerLevelData.completedSales}
+                            rating={sellerLevelData.rating}
+                            reviewCount={sellerLevelData.reviewCount}
+                            accountAge={sellerLevelData.accountAge}
+                            compact={true}
+                          />
+                        )}
                         <ModeratorBadge userId={userId} />
                         {profile.isAdmin && <AdminBadge />}
                       </div>

@@ -43,7 +43,7 @@ export function SellerLevelBadge({
           )}
         >
           <span className="mr-1">{config.badge.icon}</span>
-          <span className="truncate">Level {level}</span>
+          <span className="truncate">{config.name}</span>
         </Badge>
       </BadgeTooltip>
     );

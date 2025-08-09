@@ -9,8 +9,9 @@ import { DistanceIndicator } from './DistanceIndicator';
 import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
 import { UserNameLink } from './UserNameLink';
-import { StripeSellerBadge } from './StripeSellerBadge';
+import { SellerLevelBadge } from './SellerLevelBadge';
 import { memo, useEffect, useState } from 'react';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
 import { useLocation } from '@/hooks/useLocation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
@@ -169,6 +170,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
   const { user } = useAuth();
   const { trackSearchClick } = useSearchAnalytics();
+  const { sellerLevelData } = useSellerLevel(listing.userId);
 
   // Log listing details in development mode
   useEffect(() => {
@@ -586,7 +588,17 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 </MobileAnimationWrapper>
                 <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
                   <StringErrorBoundary fallback={<span className="text-xs text-muted-foreground">Seller</span>}>
-                    <StripeSellerBadge userId={listing.userId} className="text-xs" />
+                    {sellerLevelData && (
+                      <SellerLevelBadge
+                        level={sellerLevelData.level}
+                        salesCount={sellerLevelData.completedSales}
+                        rating={sellerLevelData.rating}
+                        reviewCount={sellerLevelData.reviewCount}
+                        accountAge={sellerLevelData.accountAge}
+                        compact={true}
+                        className="text-xs"
+                      />
+                    )}
                   </StringErrorBoundary>
                 </MobileAnimationWrapper>
                 {listing.isGraded && (

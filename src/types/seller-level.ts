@@ -46,7 +46,7 @@ export interface SellerLevelConfig {
 export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
   1: {
     level: 1,
-    name: 'Starter Seller',
+    name: 'Level 1',
     description: 'New sellers building their reputation',
     requirements: {
       minCompletedSales: 0,
@@ -59,14 +59,14 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxIndividualItemValue: 200
     },
     badge: {
-      icon: '🌱',
+      icon: '1️⃣',
       color: 'text-green-600',
       bgColor: 'bg-green-100 dark:bg-green-900/20'
     }
   },
   2: {
     level: 2,
-    name: 'Trusted Seller',
+    name: 'Level 2',
     description: 'Experienced sellers with proven track record',
     requirements: {
       minCompletedSales: 2,
@@ -79,14 +79,14 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxIndividualItemValue: 400
     },
     badge: {
-      icon: '⭐',
+      icon: '2️⃣',
       color: 'text-blue-600',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20'
     }
   },
   3: {
     level: 3,
-    name: 'Elite Seller',
+    name: 'Level 3',
     description: 'Top-tier sellers with excellent reputation',
     requirements: {
       minCompletedSales: 10,
@@ -102,7 +102,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxActiveListings: 50
     },
     badge: {
-      icon: '👑',
+      icon: '3️⃣',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
     }

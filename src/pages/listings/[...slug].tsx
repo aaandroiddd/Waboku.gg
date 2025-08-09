@@ -23,7 +23,8 @@ import { batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
 import { loadStripe } from '@stripe/stripe-js';
 import { BuyNowButton } from '@/components/BuyNowButton';
 import { UserNameLink } from '@/components/UserNameLink';
-import { StripeSellerBadge } from '@/components/StripeSellerBadge';
+import { SellerLevelBadge } from '@/components/SellerLevelBadge';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
 import { useRouter } from 'next/router';
 import { formatPrice } from '@/lib/price';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -86,6 +87,9 @@ export default function ListingPage() {
   
   // Import the useMediaQuery hook at the top to avoid initialization issues
   const isMobile = useMediaQuery('(max-width: 768px)');
+  
+  // Get seller level data
+  const { sellerLevelData } = useSellerLevel(listing?.userId || '');
 
   useEffect(() => {
     if (listing?.coverImageIndex !== undefined) {
@@ -1384,7 +1388,16 @@ export default function ListingPage() {
                       <User className="h-4 w-4" />
                       <UserNameLink userId={listing.userId} initialUsername={listing.username} />
                     </Button>
-                    <StripeSellerBadge userId={listing.userId} />
+                    {sellerLevelData && (
+                      <SellerLevelBadge
+                        level={sellerLevelData.level}
+                        salesCount={sellerLevelData.completedSales}
+                        rating={sellerLevelData.rating}
+                        reviewCount={sellerLevelData.reviewCount}
+                        accountAge={sellerLevelData.accountAge}
+                        compact={true}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <MapPin className="h-4 w-4 mr-1" />
