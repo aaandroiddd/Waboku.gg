@@ -11,7 +11,6 @@ export interface SellerLevelRequirements {
 
 export interface SellerLevelLimits {
   maxTotalListingValue: number; // in dollars
-  maxIndividualItemValue: number; // in dollars
   maxActiveListings?: number;
 }
 
@@ -55,8 +54,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 1000,
-      maxIndividualItemValue: 200
+      maxTotalListingValue: 1000
     },
     badge: {
       icon: '',
@@ -75,8 +73,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 2000,
-      maxIndividualItemValue: 400
+      maxTotalListingValue: 2000
     },
     badge: {
       icon: '',
@@ -97,8 +94,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 5000,
-      maxIndividualItemValue: 1000
+      maxTotalListingValue: 5000
     },
     badge: {
       icon: '',
@@ -119,8 +115,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 10000,
-      maxIndividualItemValue: 2000
+      maxTotalListingValue: 10000
     },
     badge: {
       icon: '',
@@ -141,8 +136,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 100000,
-      maxIndividualItemValue: 10000
+      maxTotalListingValue: 100000
     },
     badge: {
       icon: '',

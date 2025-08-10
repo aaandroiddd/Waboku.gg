@@ -147,14 +147,10 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                          <span>Max item value: <strong>${levelConfig.limits.maxIndividualItemValue.toLocaleString()}</strong></span>
-                        </div>
+                      <div className="grid grid-cols-1 gap-3 text-sm">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-blue-600" />
-                          <span>Total listings: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
+                          <span>Total listings limit: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -314,14 +310,10 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                          <span>Max item value: <strong>${levelConfig.limits.maxIndividualItemValue.toLocaleString()}</strong></span>
-                        </div>
+                      <div className="grid grid-cols-1 gap-3 text-sm">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-blue-600" />
-                          <span>Total listings: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
+                          <span>Total listings limit: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -555,14 +547,10 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <span>Max item value: <strong>${levelConfig.limits.maxIndividualItemValue.toLocaleString()}</strong></span>
-                </div>
+              <div className="grid grid-cols-1 gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-blue-600" />
-                  <span>Total listings: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
+                  <span>Total listings limit: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
                 </div>
               </div>
               

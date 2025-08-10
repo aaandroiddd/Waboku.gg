@@ -89,14 +89,10 @@ const SellerLevelDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()}</div>
               <div className="text-sm text-muted-foreground">Total Listing Limit</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">${sellerLevelData.currentLimits.maxIndividualItemValue.toLocaleString()}</div>
-              <div className="text-sm text-muted-foreground">Max Per Item</div>
             </div>
             {sellerLevelData.currentLimits.maxActiveListings && (
               <div className="text-center">
@@ -232,9 +228,6 @@ const SellerLevelDashboard = () => {
                       <div className="text-sm font-medium">
                         ${config.limits.maxTotalListingValue.toLocaleString()} total
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        ${config.limits.maxIndividualItemValue.toLocaleString()} per item
-                      </div>
                       {config.limits.maxActiveListings && (
                         <div className="text-sm text-muted-foreground">
                           {config.limits.maxActiveListings} active max
@@ -307,9 +300,6 @@ const SellerLevelDashboard = () => {
                           <div className="text-sm font-medium">
                             ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            ${SELLER_LEVEL_CONFIG[4].limits.maxIndividualItemValue.toLocaleString()} per item
-                          </div>
                         </div>
                         <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                       </div>
@@ -373,9 +363,6 @@ const SellerLevelDashboard = () => {
                         <div className="text-right space-y-1">
                           <div className="text-sm font-medium">
                             ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            ${SELLER_LEVEL_CONFIG[5].limits.maxIndividualItemValue.toLocaleString()} per item
                           </div>
                         </div>
                         <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
