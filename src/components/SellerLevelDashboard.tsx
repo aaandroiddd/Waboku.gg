@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSellerLevel } from '@/hooks/useSellerLevel';
@@ -6,10 +6,13 @@ import { SellerLevelBadge, SellerLevelProgress } from '@/components/SellerLevelB
 import { SELLER_LEVEL_CONFIG, SellerLevel } from '@/types/seller-level';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, TrendingUp, Shield, Star, Calendar, Award } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Info, TrendingUp, Shield, Star, Calendar, Award, ChevronDown, Crown } from 'lucide-react';
 
 const SellerLevelDashboard = () => {
   const { sellerLevelData, isLoading, error } = useSellerLevel();
+  const [isLevel4Open, setIsLevel4Open] = useState(false);
+  const [isLevel5Open, setIsLevel5Open] = useState(false);
 
   if (isLoading) {
     return (
@@ -187,11 +190,11 @@ const SellerLevelDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {([1, 2, 3, 4, 5] as SellerLevel[]).map((level) => {
+            {/* Levels 1, 2, 3 - Regular display */}
+            {([1, 2, 3] as SellerLevel[]).map((level) => {
               const config = SELLER_LEVEL_CONFIG[level];
               const isCurrentLevel = level === sellerLevelData.level;
               const isUnlocked = level <= sellerLevelData.level;
-              const isHighTier = level >= 4;
               
               return (
                 <div
@@ -201,15 +204,13 @@ const SellerLevelDashboard = () => {
                       ? 'border-primary bg-primary/5' 
                       : isUnlocked 
                         ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
-                        : isHighTier
-                          ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
-                          : 'border-muted bg-muted/30'
+                        : 'border-muted bg-muted/30'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`text-2xl ${isUnlocked ? '' : 'grayscale opacity-50'}`}>
-                        {config.badge.icon || (isHighTier ? '👑' : '🏷️')}
+                        {config.badge.icon || '🏷️'}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -220,11 +221,6 @@ const SellerLevelDashboard = () => {
                           {isUnlocked && !isCurrentLevel && (
                             <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400">
                               Unlocked
-                            </Badge>
-                          )}
-                          {isHighTier && !isUnlocked && (
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-                              Manual Approval Required
                             </Badge>
                           )}
                         </div>
@@ -263,23 +259,143 @@ const SellerLevelDashboard = () => {
                           )}
                           <li>No unresolved disputes</li>
                         </ul>
-                        
-                        {isHighTier && (
-                          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
-                            <p className="text-xs text-amber-700 dark:text-amber-400">
-                              <strong>Special Requirements:</strong> {level === 4 
-                                ? 'Requires Stripe Connect Standard Account, business verification, enhanced identity verification, and support ticket approval.'
-                                : 'Reserved for storefronts and businesses. Requires Stripe Connect Standard Account and support ticket approval.'
-                              }
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
                 </div>
               );
             })}
+
+            {/* Level 4 - Collapsible */}
+            <div className="relative w-full rounded-lg border text-sm bg-primary/10 border-primary p-4">
+              <Collapsible open={isLevel4Open} onOpenChange={setIsLevel4Open}>
+                <CollapsibleTrigger asChild>
+                  <div className="cursor-pointer hover:bg-primary/5 transition-colors rounded p-2 -m-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Crown className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-lg font-semibold">{SELLER_LEVEL_CONFIG[4].name}</h4>
+                            {sellerLevelData.level === 4 && (
+                              <Badge variant="default">Current</Badge>
+                            )}
+                            {sellerLevelData.level >= 4 && sellerLevelData.level !== 4 && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                                Unlocked
+                              </Badge>
+                            )}
+                            {sellerLevelData.level < 4 && (
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                                Manual Approval Required
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground">{SELLER_LEVEL_CONFIG[4].description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right space-y-1">
+                          <div className="text-sm font-medium">
+                            ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            ${SELLER_LEVEL_CONFIG[4].limits.maxIndividualItemValue.toLocaleString()} per item
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-4 pt-4 border-t border-primary/20">
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Requirements:</strong>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5">
+                        <li>{SELLER_LEVEL_CONFIG[4].requirements.minCompletedSales} completed sales</li>
+                        <li>≤{SELLER_LEVEL_CONFIG[4].requirements.maxChargebackRate}% chargeback rate</li>
+                        <li>{SELLER_LEVEL_CONFIG[4].requirements.minAccountAge} days account age</li>
+                        <li>≥{SELLER_LEVEL_CONFIG[4].requirements.minRating}★ average rating</li>
+                        <li>≥{SELLER_LEVEL_CONFIG[4].requirements.minReviewCount} reviews</li>
+                        <li>No unresolved disputes</li>
+                      </ul>
+                      
+                      <div className="mt-3 p-3 bg-primary/5 rounded border border-primary/20">
+                        <p className="text-xs text-primary">
+                          <strong>Special Requirements:</strong> Requires Stripe Connect Standard Account, business verification, enhanced identity verification, and support ticket approval. Established sellers or those with proven track records from other platforms can submit a support ticket to request level advancement.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
+            {/* Level 5 - Collapsible */}
+            <div className="relative w-full rounded-lg border text-sm bg-primary/10 border-primary p-4">
+              <Collapsible open={isLevel5Open} onOpenChange={setIsLevel5Open}>
+                <CollapsibleTrigger asChild>
+                  <div className="cursor-pointer hover:bg-primary/5 transition-colors rounded p-2 -m-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Crown className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-lg font-semibold">{SELLER_LEVEL_CONFIG[5].name}</h4>
+                            {sellerLevelData.level === 5 && (
+                              <Badge variant="default">Current</Badge>
+                            )}
+                            {sellerLevelData.level < 5 && (
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                                Manual Approval Required
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground">{SELLER_LEVEL_CONFIG[5].description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right space-y-1">
+                          <div className="text-sm font-medium">
+                            ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            ${SELLER_LEVEL_CONFIG[5].limits.maxIndividualItemValue.toLocaleString()} per item
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-4 pt-4 border-t border-primary/20">
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Requirements:</strong>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5">
+                        <li>{SELLER_LEVEL_CONFIG[5].requirements.minCompletedSales} completed sales</li>
+                        <li>≤{SELLER_LEVEL_CONFIG[5].requirements.maxChargebackRate}% chargeback rate</li>
+                        <li>{SELLER_LEVEL_CONFIG[5].requirements.minAccountAge} days account age</li>
+                        <li>≥{SELLER_LEVEL_CONFIG[5].requirements.minRating}★ average rating</li>
+                        <li>≥{SELLER_LEVEL_CONFIG[5].requirements.minReviewCount} reviews</li>
+                        <li>No unresolved disputes</li>
+                      </ul>
+                      
+                      <div className="mt-3 p-3 bg-primary/5 rounded border border-primary/20">
+                        <p className="text-xs text-primary">
+                          <strong>Special Requirements:</strong> Reserved for storefronts and businesses. Requires Stripe Connect Standard Account and support ticket approval for manual advancement.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           </div>
         </CardContent>
       </Card>
