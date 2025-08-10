@@ -270,13 +270,13 @@ const SellerLevelDashboard = () => {
               <Collapsible open={isLevel4Open} onOpenChange={setIsLevel4Open}>
                 <CollapsibleTrigger asChild>
                   <div className="cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded p-2 -m-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
                         <div className={`text-2xl ${sellerLevelData.level >= 4 ? '' : 'grayscale opacity-50'}`}>
                           {SELLER_LEVEL_CONFIG[4].badge.icon || '👑'}
                         </div>
-                        <div className="flex-1 text-center">
-                          <div className="flex items-center justify-center gap-2 mb-1">
+                        <div>
+                          <div className="flex items-center gap-2">
                             <h4 className="font-semibold">{SELLER_LEVEL_CONFIG[4].name}</h4>
                             {sellerLevelData.level === 4 && (
                               <Badge variant="default">Current</Badge>
@@ -287,23 +287,22 @@ const SellerLevelDashboard = () => {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center gap-2">
                             <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[4].description}</p>
-                            {sellerLevelData.level < 4 && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs">
-                                Manual Approval Required
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="mt-2">
-                            <div className="text-lg font-bold text-primary">
-                              ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Total Listing Limit</div>
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs">
+                              Manual Approval Required
+                            </Badge>
                           </div>
                         </div>
                       </div>
-                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                      
+                      <div className="text-right space-y-1">
+                        <div className="text-sm font-medium">
+                          ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total
+                        </div>
+                      </div>
+                      
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180 ml-2" />
                     </div>
                   </div>
                 </CollapsibleTrigger>
@@ -351,35 +350,34 @@ const SellerLevelDashboard = () => {
               <Collapsible open={isLevel5Open} onOpenChange={setIsLevel5Open}>
                 <CollapsibleTrigger asChild>
                   <div className="cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded p-2 -m-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
                         <div className={`text-2xl ${sellerLevelData.level >= 5 ? '' : 'grayscale opacity-50'}`}>
                           {SELLER_LEVEL_CONFIG[5].badge.icon || '🏆'}
                         </div>
-                        <div className="flex-1 text-center">
-                          <div className="flex items-center justify-center gap-2 mb-1">
+                        <div>
+                          <div className="flex items-center gap-2">
                             <h4 className="font-semibold">{SELLER_LEVEL_CONFIG[5].name}</h4>
                             {sellerLevelData.level === 5 && (
                               <Badge variant="default">Current</Badge>
                             )}
                           </div>
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center gap-2">
                             <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[5].description}</p>
-                            {sellerLevelData.level < 5 && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs">
-                                Manual Approval Required
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="mt-2">
-                            <div className="text-lg font-bold text-primary">
-                              ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Total Listing Limit</div>
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs">
+                              Manual Approval Required
+                            </Badge>
                           </div>
                         </div>
                       </div>
-                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                      
+                      <div className="text-right space-y-1">
+                        <div className="text-sm font-medium">
+                          ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total
+                        </div>
+                      </div>
+                      
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180 ml-2" />
                     </div>
                   </div>
                 </CollapsibleTrigger>
