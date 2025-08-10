@@ -260,7 +260,7 @@ const SellerLevelDashboard = () => {
             })}
 
             {/* Level 4 - Collapsible */}
-            <div className={`relative w-full rounded-lg border text-sm p-4 transition-all ${
+            <div className={`relative w-full rounded-lg border text-sm p-3 transition-all ${
               sellerLevelData.level === 4 
                 ? 'border-primary bg-primary/5' 
                 : sellerLevelData.level > 4
@@ -271,12 +271,12 @@ const SellerLevelDashboard = () => {
                 <CollapsibleTrigger asChild>
                   <div className="cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded p-2 -m-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1">
                         <div className={`text-2xl ${sellerLevelData.level >= 4 ? '' : 'grayscale opacity-50'}`}>
                           {SELLER_LEVEL_CONFIG[4].badge.icon || '👑'}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="flex-1 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
                             <h4 className="font-semibold">{SELLER_LEVEL_CONFIG[4].name}</h4>
                             {sellerLevelData.level === 4 && (
                               <Badge variant="default">Current</Badge>
@@ -286,23 +286,24 @@ const SellerLevelDashboard = () => {
                                 Unlocked
                               </Badge>
                             )}
+                          </div>
+                          <div className="flex items-center justify-center gap-2">
+                            <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[4].description}</p>
                             {sellerLevelData.level < 4 && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs">
                                 Manual Approval Required
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[4].description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right space-y-1">
-                          <div className="text-sm font-medium">
-                            ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total
+                          <div className="mt-2">
+                            <div className="text-lg font-bold text-primary">
+                              ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Total Listing Limit</div>
                           </div>
                         </div>
-                        <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                       </div>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                     </div>
                   </div>
                 </CollapsibleTrigger>
@@ -324,6 +325,17 @@ const SellerLevelDashboard = () => {
                           <strong>Special Requirements:</strong> Requires Stripe Connect Standard Account, business verification, enhanced identity verification, and support ticket approval. Established sellers or those with proven track records from other platforms can submit a support ticket to request level advancement.
                         </p>
                       </div>
+
+                      {sellerLevelData.level < 4 && (
+                        <div className="mt-3 pt-3 border-t border-current/10">
+                          <button 
+                            onClick={() => window.open('/support', '_blank')}
+                            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+                          >
+                            Contact Support for Level 4 Upgrade Request
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CollapsibleContent>
@@ -331,7 +343,7 @@ const SellerLevelDashboard = () => {
             </div>
 
             {/* Level 5 - Collapsible */}
-            <div className={`relative w-full rounded-lg border text-sm p-4 transition-all ${
+            <div className={`relative w-full rounded-lg border text-sm p-3 transition-all ${
               sellerLevelData.level === 5 
                 ? 'border-primary bg-primary/5' 
                 : 'border-muted bg-muted/30'
@@ -340,33 +352,34 @@ const SellerLevelDashboard = () => {
                 <CollapsibleTrigger asChild>
                   <div className="cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded p-2 -m-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1">
                         <div className={`text-2xl ${sellerLevelData.level >= 5 ? '' : 'grayscale opacity-50'}`}>
                           {SELLER_LEVEL_CONFIG[5].badge.icon || '🏆'}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="flex-1 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
                             <h4 className="font-semibold">{SELLER_LEVEL_CONFIG[5].name}</h4>
                             {sellerLevelData.level === 5 && (
                               <Badge variant="default">Current</Badge>
                             )}
+                          </div>
+                          <div className="flex items-center justify-center gap-2">
+                            <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[5].description}</p>
                             {sellerLevelData.level < 5 && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs">
                                 Manual Approval Required
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[5].description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right space-y-1">
-                          <div className="text-sm font-medium">
-                            ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total
+                          <div className="mt-2">
+                            <div className="text-lg font-bold text-primary">
+                              ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Total Listing Limit</div>
                           </div>
                         </div>
-                        <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                       </div>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                     </div>
                   </div>
                 </CollapsibleTrigger>
@@ -388,6 +401,17 @@ const SellerLevelDashboard = () => {
                           <strong>Special Requirements:</strong> Reserved for storefronts and businesses. Requires Stripe Connect Standard Account and support ticket approval for manual advancement.
                         </p>
                       </div>
+
+                      {sellerLevelData.level < 5 && (
+                        <div className="mt-3 pt-3 border-t border-current/10">
+                          <button 
+                            onClick={() => window.open('/support', '_blank')}
+                            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+                          >
+                            Contact Support for Level 5 Upgrade Request
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CollapsibleContent>
