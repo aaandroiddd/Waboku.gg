@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useUnread } from '@/contexts/UnreadContext';
 import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogOut, ChevronDown } from 'lucide-react';
@@ -34,6 +35,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   
   // Use the simplified premium status hook as the single source of truth
   const { isPremium, tier, isLoading: isPremiumLoading, source } = useSimplifiedPremiumStatus();
+  
+  // Get seller level data
+  const { sellerLevelData, isLoading: sellerLevelLoading } = useSellerLevel();
 
   // Theme handling function
   const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
@@ -227,15 +231,6 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       ),
     },
     {
-      name: 'Payouts',
-      href: '/dashboard/seller-account/payouts',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v20m5-5-5 5-5-5" />
-        </svg>
-      ),
-    },
-    {
       name: 'Sales Analytics',
       href: '/dashboard/sales-analytics',
       icon: (
@@ -353,7 +348,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             {isEmailVerified() && (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -372,6 +367,26 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                       </svg>
                       Verified
                     </div>
+                    {sellerLevelData && !sellerLevelLoading && (
+                      <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-primary bg-primary/10 hover:bg-primary/20 border-primary/20">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-1"
+                        >
+                          <path d="M3 3v18h18" />
+                          <path d="m19 9-5 5-4-4-3 3" />
+                        </svg>
+                        Level {sellerLevelData.level} Seller
+                      </div>
+                    )}
                   </div>
                   
                   {/* Theme toggle removed from desktop */}
