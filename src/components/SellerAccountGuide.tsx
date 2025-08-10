@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, AlertCircle, ArrowRight, ExternalLink, RefreshCw, Lock, MessageCircle, XCircle, Clock, AlertTriangle, Shield, Mail, Calendar } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowRight, ExternalLink, RefreshCw, Lock, MessageCircle, XCircle, Clock, AlertTriangle, Shield, Mail, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 import { useSellerAccountEligibility } from '@/hooks/useSellerAccountEligibility';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
+import { SellerLevelBadge } from '@/components/SellerLevelBadge';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 
@@ -29,6 +31,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
 }) => {
   const router = useRouter();
   const { isEligible, requirements, loading: eligibilityLoading, error } = useSellerAccountEligibility();
+  const { sellerLevelData, isLoading: levelLoading, config: levelConfig } = useSellerLevel();
 
   const getRequirementIcon = (requirementId: string) => {
     switch (requirementId) {
@@ -110,12 +113,52 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                 <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
                   <CheckCircle className="h-10 w-10 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">Account Connected & Verified</h2>
                   <p className="text-lg mb-4 leading-relaxed">
                     Congratulations! Your Stripe Connect account has been successfully linked and verified. 
                     You can now receive secure payments directly to your bank account when customers purchase your listings.
                   </p>
+                  
+                  {/* Seller Level Information */}
+                  {sellerLevelData && levelConfig && !levelLoading && (
+                    <div className="mb-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-base">Your Seller Level</h3>
+                        <Link href="/dashboard/seller-account?tab=seller-level">
+                          <Button variant="ghost" size="sm">
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                        <SellerLevelBadge
+                          level={sellerLevelData.level}
+                          salesCount={sellerLevelData.completedSales}
+                          rating={sellerLevelData.rating}
+                          reviewCount={sellerLevelData.reviewCount}
+                          accountAge={sellerLevelData.accountAge}
+                          compact={true}
+                        />
+                        <div className="text-sm text-muted-foreground">
+                          {sellerLevelData.completedSales} sales • {sellerLevelData.rating ? `${sellerLevelData.rating.toFixed(1)}★` : 'No ratings'}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                          <span>Max item value: <strong>${levelConfig.limits.maxIndividualItemValue.toLocaleString()}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-blue-600" />
+                          <span>Total listings: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="space-y-3 mb-4">
                     <p className="font-medium text-sm">What this means for you:</p>
@@ -238,11 +281,51 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                 <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
                   <Clock className="h-10 w-10 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">Setup Required</h2>
-                  <p className="text-lg">
+                  <p className="text-lg mb-4">
                     Your Stripe Connect account has been created but requires additional information to complete setup.
                   </p>
+                  
+                  {/* Seller Level Information */}
+                  {sellerLevelData && levelConfig && !levelLoading && (
+                    <div className="mb-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-base">Your Current Seller Level</h3>
+                        <Link href="/dashboard/seller-account?tab=seller-level">
+                          <Button variant="ghost" size="sm">
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                        <SellerLevelBadge
+                          level={sellerLevelData.level}
+                          salesCount={sellerLevelData.completedSales}
+                          rating={sellerLevelData.rating}
+                          reviewCount={sellerLevelData.reviewCount}
+                          accountAge={sellerLevelData.accountAge}
+                          compact={true}
+                        />
+                        <div className="text-sm text-muted-foreground">
+                          {sellerLevelData.completedSales} sales • {sellerLevelData.rating ? `${sellerLevelData.rating.toFixed(1)}★` : 'No ratings'}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                          <span>Max item value: <strong>${levelConfig.limits.maxIndividualItemValue.toLocaleString()}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-blue-600" />
+                          <span>Total listings: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -444,6 +527,52 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
               </div>
             </AlertDescription>
           </Alert>
+
+          {/* Seller Level Information */}
+          {sellerLevelData && levelConfig && !levelLoading && (
+            <div className="p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-base">Your Current Seller Level</h3>
+                <Link href="/dashboard/seller-account?tab=seller-level">
+                  <Button variant="ghost" size="sm">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    View Details
+                  </Button>
+                </Link>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                <SellerLevelBadge
+                  level={sellerLevelData.level}
+                  salesCount={sellerLevelData.completedSales}
+                  rating={sellerLevelData.rating}
+                  reviewCount={sellerLevelData.reviewCount}
+                  accountAge={sellerLevelData.accountAge}
+                  compact={true}
+                />
+                <div className="text-sm text-muted-foreground">
+                  {sellerLevelData.completedSales} sales • {sellerLevelData.rating ? `${sellerLevelData.rating.toFixed(1)}★` : 'No ratings'}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <span>Max item value: <strong>${levelConfig.limits.maxIndividualItemValue.toLocaleString()}</strong></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <span>Total listings: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
+                </div>
+              </div>
+              
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Note:</strong> Once you set up your Stripe Connect account, you'll be able to create listings up to your seller level limits and receive payments directly to your bank account.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">

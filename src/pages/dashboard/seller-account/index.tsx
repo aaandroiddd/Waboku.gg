@@ -5,9 +5,10 @@ import SellerAccountGuide from '@/components/SellerAccountGuide';
 import SellerAccountBenefits from '@/components/SellerAccountBenefits';
 import SellerAccountFAQ from '@/components/SellerAccountFAQ';
 import { useSellerAccount } from '@/hooks/useSellerAccount';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import Head from 'next/head';
@@ -31,6 +32,10 @@ const SellerAccountPage = () => {
   
   // Use our simplified hook
   const { accountStatus, isLoading, error, createAccount, updateAccount, refreshStatus } = useSellerAccount();
+  const { sellerLevelData, isLoading: levelLoading } = useSellerLevel();
+  
+  // Get the active tab from URL query parameter
+  const activeTab = (router.query.tab as string) || 'setup';
   
   // Handle account creation with local loading state
   const handleCreateAccount = () => {
@@ -160,11 +165,19 @@ const SellerAccountPage = () => {
           {isLoading ? (
             <LoadingState />
           ) : (
-            <Tabs defaultValue="setup" className="w-full">
+            <Tabs value={activeTab} onValueChange={(value) => router.push(`/dashboard/seller-account?tab=${value}`, undefined, { shallow: true })} className="w-full">
               <TabsList className="flex flex-col sm:grid sm:grid-cols-4 w-full h-auto gap-1 sm:gap-0">
                 <TabsTrigger value="setup" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Account Setup</TabsTrigger>
                 <TabsTrigger value="payouts" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Payouts & Earnings</TabsTrigger>
-                <TabsTrigger value="seller-level" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Seller Level</TabsTrigger>
+                <TabsTrigger value="seller-level" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Seller Level
+                  {sellerLevelData && !levelLoading && (
+                    <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+                      {sellerLevelData.level}
+                    </span>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="info" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Info & FAQ</TabsTrigger>
               </TabsList>
               
