@@ -106,7 +106,7 @@ const SellerLevelDashboard = () => {
       </Card>
 
       {/* Progress to Next Level */}
-      {sellerLevelData.level < 3 && (
+      {sellerLevelData.level < 5 && (
         <SellerLevelProgress
           currentLevel={sellerLevelData.level}
           completedSales={sellerLevelData.completedSales}
@@ -187,10 +187,11 @@ const SellerLevelDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {([1, 2, 3] as SellerLevel[]).map((level) => {
+            {([1, 2, 3, 4, 5] as SellerLevel[]).map((level) => {
               const config = SELLER_LEVEL_CONFIG[level];
               const isCurrentLevel = level === sellerLevelData.level;
               const isUnlocked = level <= sellerLevelData.level;
+              const isHighTier = level >= 4;
               
               return (
                 <div
@@ -200,13 +201,15 @@ const SellerLevelDashboard = () => {
                       ? 'border-primary bg-primary/5' 
                       : isUnlocked 
                         ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
-                        : 'border-muted bg-muted/30'
+                        : isHighTier
+                          ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+                          : 'border-muted bg-muted/30'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`text-2xl ${isUnlocked ? '' : 'grayscale opacity-50'}`}>
-                        {config.badge.icon}
+                        {config.badge.icon || (isHighTier ? '👑' : '🏷️')}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -217,6 +220,11 @@ const SellerLevelDashboard = () => {
                           {isUnlocked && !isCurrentLevel && (
                             <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400">
                               Unlocked
+                            </Badge>
+                          )}
+                          {isHighTier && !isUnlocked && (
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                              Manual Approval Required
                             </Badge>
                           )}
                         </div>
@@ -255,6 +263,17 @@ const SellerLevelDashboard = () => {
                           )}
                           <li>No unresolved disputes</li>
                         </ul>
+                        
+                        {isHighTier && (
+                          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                              <strong>Special Requirements:</strong> {level === 4 
+                                ? 'Requires Stripe Connect Standard Account, business verification, enhanced identity verification, and support ticket approval.'
+                                : 'Reserved for storefronts and businesses. Requires Stripe Connect Standard Account and support ticket approval.'
+                              }
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
