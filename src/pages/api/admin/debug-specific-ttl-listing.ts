@@ -41,13 +41,30 @@ export default async function handler(
     const shouldBeDeleted = deleteAtDate && now > deleteAtDate;
     const timeDiff = deleteAtDate ? now.getTime() - deleteAtDate.getTime() : null;
     
-    // Test the query that the cron job uses
-    const queryTest = await db.collection('listings')
-      .where(LISTING_TTL_CONFIG.ttlField, '<=', admin.firestore.Timestamp.fromDate(now))
-      .where(admin.firestore.FieldPath.documentId(), '==', listingId)
-      .get();
+    // Test if this listing would be found by the cron job query
+    // We can't combine inequality and document ID equality, so we'll test differently
+    let foundInQuery = false;
     
-    const foundInQuery = !queryTest.empty;
+    try {
+      // First, test the general query that the cron job uses
+      const generalQuery = await db.collection('listings')
+        .where(LISTING_TTL_CONFIG.ttlField, '<=', admin.firestore.Timestamp.fromDate(now))
+        .limit(100) // Limit to avoid large queries
+        .get();
+      
+      // Check if our specific listing is in the results
+      foundInQuery = generalQuery.docs.some(doc => doc.id === listingId);
+      
+      // If not found in first batch, check if it has the TTL field and should be included
+      if (!foundInQuery && deleteAt) {
+        const listingDeleteAtTimestamp = admin.firestore.Timestamp.fromDate(deleteAtDate);
+        const nowTimestamp = admin.firestore.Timestamp.fromDate(now);
+        foundInQuery = listingDeleteAtTimestamp.toMillis() <= nowTimestamp.toMillis();
+      }
+    } catch (queryError) {
+      console.error('[TTL Debug] Query test error:', queryError);
+      foundInQuery = false;
+    }
     
     const diagnostics = {
       listingId,
