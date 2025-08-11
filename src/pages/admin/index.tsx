@@ -736,49 +736,87 @@ export default function AdminDashboard() {
                     </Button>
                   </Card>
                   
-                  {/* Check TTL Listing Status */}
+                  {/* Debug Specific TTL Listing */}
                   <Card className="p-4">
-                    <h3 className="font-semibold mb-2">Check TTL Listing Status</h3>
-                    <p className="text-sm text-muted-foreground mb-4">🔍 Diagnose why a specific listing wasn't deleted by TTL policy</p>
+                    <h3 className="font-semibold mb-2">Debug Specific TTL Listing</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🔍 Diagnose why a specific listing wasn't deleted by TTL cleanup and optionally delete it manually</p>
                     <div className="space-y-3">
                       <div className="space-y-2">
-                        <Label htmlFor="checkTtlListingId">Listing ID</Label>
+                        <Label htmlFor="debugTtlListingId">Listing ID</Label>
                         <Input
-                          id="checkTtlListingId"
-                          placeholder="Enter listing ID to check (e.g., hem67FELn6lyPPQinm3L)"
+                          id="debugTtlListingId"
+                          placeholder="Enter listing ID to debug (e.g., qXwGkL0PrD0h3DtAoCOS)"
                           value={testTtlListingId}
                           onChange={(e) => setTestTtlListingId(e.target.value)}
                         />
                       </div>
-                      <Button
-                        onClick={async () => {
-                          if (!testTtlListingId) {
-                            setApiResponse({ error: 'Listing ID is required' });
-                            setResponseDialog(true);
-                            return;
-                          }
-                          setLoading(true);
-                          try {
-                            const response = await fetch(`/api/admin/check-ttl-listing?listingId=${testTtlListingId}`, {
-                              method: 'GET',
-                              headers: {
-                                'Authorization': `Bearer ${adminSecret}`
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={async () => {
+                            if (!testTtlListingId) {
+                              setApiResponse({ error: 'Listing ID is required' });
+                              setResponseDialog(true);
+                              return;
+                            }
+                            setLoading(true);
+                            try {
+                              const response = await fetch(`/api/admin/debug-specific-ttl-listing?listingId=${testTtlListingId}`, {
+                                method: 'GET',
+                                headers: {
+                                  'Authorization': `Bearer ${adminSecret}`
+                                }
+                              });
+                              const data = await response.json();
+                              setApiResponse(data);
+                              setResponseDialog(true);
+                            } catch (error) {
+                              setApiResponse({ error: 'Failed to debug TTL listing' });
+                              setResponseDialog(true);
+                            }
+                            setLoading(false);
+                          }}
+                          disabled={loading || !testTtlListingId}
+                          className="flex-1"
+                        >
+                          {loading ? 'Debugging...' : 'Debug Listing'}
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            if (!testTtlListingId) {
+                              setApiResponse({ error: 'Listing ID is required' });
+                              setResponseDialog(true);
+                              return;
+                            }
+                            setLoading(true);
+                            try {
+                              const response = await fetch(`/api/admin/debug-specific-ttl-listing?listingId=${testTtlListingId}`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${adminSecret}`,
+                                  'Content-Type': 'application/json'
+                                }
+                              });
+                              const data = await response.json();
+                              setApiResponse(data);
+                              setResponseDialog(true);
+                              
+                              // Clear the input on successful deletion
+                              if (response.ok && data.action === 'DELETED') {
+                                setTestTtlListingId('');
                               }
-                            });
-                            const data = await response.json();
-                            setApiResponse(data);
-                            setResponseDialog(true);
-                          } catch (error) {
-                            setApiResponse({ error: 'Failed to check TTL listing status' });
-                            setResponseDialog(true);
-                          }
-                          setLoading(false);
-                        }}
-                        disabled={loading || !testTtlListingId}
-                        className="w-full"
-                      >
-                        {loading ? 'Checking...' : 'Check TTL Status'}
-                      </Button>
+                            } catch (error) {
+                              setApiResponse({ error: 'Failed to delete TTL listing' });
+                              setResponseDialog(true);
+                            }
+                            setLoading(false);
+                          }}
+                          disabled={loading || !testTtlListingId}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          {loading ? 'Deleting...' : 'Force Delete'}
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                   
