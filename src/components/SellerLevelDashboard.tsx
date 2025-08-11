@@ -8,7 +8,7 @@ import { SELLER_LEVEL_CONFIG, SellerLevel } from '@/types/seller-level';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { TrendingUp, Shield, Star, Calendar, Award, ChevronDown, CreditCard } from 'lucide-react';
+import { TrendingUp, Shield, Star, Calendar, Award, ChevronDown, CreditCard, Info } from 'lucide-react';
 import { useRouter } from 'next/router';
 
 const SellerLevelDashboard = () => {
@@ -236,7 +236,13 @@ const SellerLevelDashboard = () => {
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-primary">${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()}</div>
-              <div className="text-sm text-muted-foreground">Total Listing Limit</div>
+              <div className="text-sm text-muted-foreground inline-flex items-center gap-1">
+                Total Listing Limit
+                <Info
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                  title="Applies to Buy Now (Stripe) listings only. Offers and messaging are not restricted."
+                />
+              </div>
               {sellerLevelData.currentLimits.maxActiveListings && (
                 <div className="mt-2">
                   <div className="text-2xl font-bold text-primary">{sellerLevelData.currentLimits.maxActiveListings}</div>
@@ -362,9 +368,10 @@ const SellerLevelDashboard = () => {
                           <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[1].description}</p>
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-sm font-medium">
+                      <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
+                        <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
                           ${SELLER_LEVEL_CONFIG[1].limits.maxTotalListingValue.toLocaleString()} total
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                         {SELLER_LEVEL_CONFIG[1].limits.maxActiveListings && (
                           <div className="text-sm text-muted-foreground">
@@ -417,9 +424,10 @@ const SellerLevelDashboard = () => {
                           <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[2].description}</p>
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-sm font-medium">
+                      <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
+                        <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
                           ${SELLER_LEVEL_CONFIG[2].limits.maxTotalListingValue.toLocaleString()} total
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                         {SELLER_LEVEL_CONFIG[2].limits.maxActiveListings && (
                           <div className="text-sm text-muted-foreground">
@@ -478,9 +486,10 @@ const SellerLevelDashboard = () => {
                           <p className="text-sm text-muted-foreground">{SELLER_LEVEL_CONFIG[3].description}</p>
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-sm font-medium">
+                      <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
+                        <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
                           ${SELLER_LEVEL_CONFIG[3].limits.maxTotalListingValue.toLocaleString()} total
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                         {SELLER_LEVEL_CONFIG[3].limits.maxActiveListings && (
                           <div className="text-sm text-muted-foreground">
@@ -548,9 +557,10 @@ const SellerLevelDashboard = () => {
                         </div>
                       </div>
                       
-                      <div className="text-right space-y-1">
-                        <div className="text-sm font-medium">
+                      <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
+                        <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
                           ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                       </div>
                       
@@ -620,9 +630,10 @@ const SellerLevelDashboard = () => {
                         </div>
                       </div>
                       
-                      <div className="text-right space-y-1">
-                        <div className="text-sm font-medium">
+                      <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
+                        <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
                           ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                       </div>
                       
