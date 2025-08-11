@@ -99,12 +99,13 @@ export default async function handler(
       batch.delete(listingDoc.ref);
       
       // Clean up related data
-      if (listingData?.shortId) {
+      if (listingData?.shortId && typeof listingData.shortId === 'string' && listingData.shortId.trim()) {
         const shortIdRef = db.collection('shortIdMappings').doc(listingData.shortId);
         batch.delete(shortIdRef);
       }
       
-      if (listingData?.userId) {
+      if (listingData?.userId && typeof listingData.userId === 'string' && listingData.userId.trim() && 
+          listingId && typeof listingId === 'string' && listingId.trim()) {
         const userListingRef = db.collection('users').doc(listingData.userId)
           .collection('listings').doc(listingId);
         batch.delete(userListingRef);
