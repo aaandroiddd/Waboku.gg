@@ -34,36 +34,33 @@ export default async function handler(
     const deleteAt = listingData?.[LISTING_TTL_CONFIG.ttlField];
     
     // Convert timestamps for comparison
-    const deleteAtDate = deleteAt?.toDate ? deleteAt.toDate() : new Date(deleteAt);
-    const archivedAtDate = listingData?.archivedAt?.toDate ? listingData.archivedAt.toDate() : new Date(listingData?.archivedAt);
+    let deleteAtDate = null;
+    let archivedAtDate = null;
+    
+    try {
+      deleteAtDate = deleteAt?.toDate ? deleteAt.toDate() : (deleteAt ? new Date(deleteAt) : null);
+      archivedAtDate = listingData?.archivedAt?.toDate ? listingData.archivedAt.toDate() : (listingData?.archivedAt ? new Date(listingData.archivedAt) : null);
+    } catch (dateError) {
+      console.warn('[TTL Debug] Date conversion error:', dateError);
+    }
     
     // Check if it should be deleted
     const shouldBeDeleted = deleteAtDate && now > deleteAtDate;
     const timeDiff = deleteAtDate ? now.getTime() - deleteAtDate.getTime() : null;
     
-    // Test if this listing would be found by the cron job query
-    // We can't combine inequality and document ID equality, so we'll test differently
-    let foundInQuery = false;
+    // Simple check if this listing would be found by the cron job
+    // Instead of running a complex query, we'll just check the timestamp logic
+    let wouldBeFoundByCron = false;
     
-    try {
-      // First, test the general query that the cron job uses
-      const generalQuery = await db.collection('listings')
-        .where(LISTING_TTL_CONFIG.ttlField, '<=', admin.firestore.Timestamp.fromDate(now))
-        .limit(100) // Limit to avoid large queries
-        .get();
-      
-      // Check if our specific listing is in the results
-      foundInQuery = generalQuery.docs.some(doc => doc.id === listingId);
-      
-      // If not found in first batch, check if it has the TTL field and should be included
-      if (!foundInQuery && deleteAt) {
-        const listingDeleteAtTimestamp = admin.firestore.Timestamp.fromDate(deleteAtDate);
+    if (deleteAt && deleteAtDate) {
+      try {
         const nowTimestamp = admin.firestore.Timestamp.fromDate(now);
-        foundInQuery = listingDeleteAtTimestamp.toMillis() <= nowTimestamp.toMillis();
+        const deleteAtTimestamp = deleteAt.toMillis ? deleteAt : admin.firestore.Timestamp.fromDate(deleteAtDate);
+        wouldBeFoundByCron = deleteAtTimestamp.toMillis() <= nowTimestamp.toMillis();
+      } catch (timestampError) {
+        console.warn('[TTL Debug] Timestamp comparison error:', timestampError);
+        wouldBeFoundByCron = shouldBeDeleted; // Fallback to simple date comparison
       }
-    } catch (queryError) {
-      console.error('[TTL Debug] Query test error:', queryError);
-      foundInQuery = false;
     }
     
     const diagnostics = {
@@ -71,17 +68,26 @@ export default async function handler(
       currentTime: now.toISOString(),
       listing: {
         status: listingData?.status,
-        archivedAt: archivedAtDate?.toISOString(),
-        deleteAt: deleteAtDate?.toISOString(),
-        ttlReason: listingData?.ttlReason,
-        ttlSetAt: listingData?.ttlSetAt?.toDate?.()?.toISOString()
+        archivedAt: archivedAtDate?.toISOString() || null,
+        deleteAt: deleteAtDate?.toISOString() || null,
+        ttlReason: listingData?.ttlReason || null,
+        ttlSetAt: listingData?.ttlSetAt?.toDate?.()?.toISOString() || null,
+        hasDeleteAtField: !!deleteAt,
+        deleteAtRawValue: deleteAt?.toString() || null
       },
       analysis: {
         shouldBeDeleted,
         timePastDeletion: timeDiff ? `${Math.round(timeDiff / (1000 * 60))} minutes` : null,
-        foundInCleanupQuery: foundInQuery,
-        deleteAtTimestamp: deleteAt?.toMillis?.() || deleteAt,
-        currentTimestamp: admin.firestore.Timestamp.fromDate(now).toMillis()
+        wouldBeFoundByCronJob: wouldBeFoundByCron,
+        deleteAtTimestamp: deleteAt?.toMillis?.() || (deleteAtDate ? deleteAtDate.getTime() : null),
+        currentTimestamp: now.getTime(),
+        ttlFieldName: LISTING_TTL_CONFIG.ttlField
+      },
+      cronJobQuery: {
+        field: LISTING_TTL_CONFIG.ttlField,
+        operator: '<=',
+        value: now.toISOString(),
+        explanation: 'Cron job finds listings where deleteAt <= current time'
       }
     };
     
@@ -119,7 +125,8 @@ export default async function handler(
     console.error('[TTL Debug] Error:', error);
     return res.status(500).json({
       error: 'Failed to debug TTL listing',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     });
   }
 }
