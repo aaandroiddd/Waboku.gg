@@ -31,7 +31,9 @@ import {
   UserX,
   SortAsc,
   SortDesc,
-  Timer
+  Timer,
+  Award,
+  Settings
 } from "lucide-react";
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';

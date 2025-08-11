@@ -11,6 +11,12 @@ import {
   canAdvanceToNextLevel, 
   getNextLevelRequirements 
 } from '@/types/seller-level';
+import { 
+  enforceSellerLevelRequirements, 
+  validateSellerLevelRequirements,
+  shouldDemoteSellerLevel,
+  SellerStats 
+} from '@/lib/seller-level-enforcement';
 
 interface UseSellerLevelProps {
   userId?: string;
@@ -128,11 +134,33 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
       // Calculate current stats
       const stats = await calculateSellerStats(uid);
 
-      // Calculate current level based on stats
-      const currentLevel = calculateSellerLevel(stats);
+      // Get existing seller level data from Firestore
+      let existingLevelData = null;
+      let manuallySet = false;
+      let storedLevel = 1;
+
+      try {
+        const sellerLevelDoc = await getDoc(doc(db, 'sellerLevels', uid));
+        if (sellerLevelDoc.exists()) {
+          existingLevelData = sellerLevelDoc.data();
+          storedLevel = existingLevelData.level || 1;
+          manuallySet = existingLevelData.manuallySet || false;
+        }
+      } catch (error) {
+        console.warn('Could not fetch existing seller level:', error);
+      }
+
+      // Enforce seller level requirements
+      const enforcedLevel = enforceSellerLevelRequirements(storedLevel, stats, manuallySet);
+      
+      // Check if user should be demoted
+      const demotionCheck = shouldDemoteSellerLevel(storedLevel, stats, manuallySet);
+      
+      // Use the enforced level
+      const currentLevel = enforcedLevel;
       const config = SELLER_LEVEL_CONFIG[currentLevel];
 
-      // Check if can advance to next level
+      // Check if can advance to next level (only for levels 1-3, 4-5 require manual approval)
       const canAdvance = canAdvanceToNextLevel(currentLevel, stats);
       const nextLevelRequirements = getNextLevelRequirements(currentLevel);
 
@@ -153,13 +181,44 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
       // Cache the data
       sellerLevelCache.set(uid, levelData);
 
-      // Try to save/update seller level data in Firestore, but don't fail if it doesn't work
+      // Save/update seller level data in Firestore
       try {
-        await setDoc(doc(db, 'sellerLevels', uid), {
+        const updateData = {
           ...levelData,
           lastLevelCheck: new Date(),
-          updatedAt: new Date()
-        }, { merge: true });
+          updatedAt: new Date(),
+          // Preserve manual settings if they exist
+          manuallySet: existingLevelData?.manuallySet || false,
+          manuallySetBy: existingLevelData?.manuallySetBy || null,
+          manuallySetReason: existingLevelData?.manuallySetReason || null
+        };
+
+        // If level was demoted, log the demotion
+        if (demotionCheck.shouldDemote) {
+          updateData.lastDemotion = {
+            previousLevel: storedLevel,
+            newLevel: currentLevel,
+            reason: demotionCheck.reason,
+            demotedAt: new Date(),
+            automatic: true
+          };
+        }
+
+        await setDoc(doc(db, 'sellerLevels', uid), updateData, { merge: true });
+
+        // Log level changes
+        if (storedLevel !== currentLevel) {
+          await setDoc(doc(db, 'sellerLevelHistory', `${uid}_${Date.now()}`), {
+            userId: uid,
+            previousLevel: storedLevel,
+            newLevel: currentLevel,
+            reason: demotionCheck.shouldDemote ? demotionCheck.reason : 'Automatic level calculation',
+            changedBy: 'system',
+            timestamp: new Date(),
+            automatic: true,
+            statsAtTime: stats
+          });
+        }
       } catch (writeError) {
         console.warn('Could not save seller level data to Firestore:', writeError);
         // Continue without failing - we can still show the calculated data
@@ -192,20 +251,20 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
 
     const limits = sellerLevelData.currentLimits;
 
-    // Check individual item limit
-    if (price > limits.maxIndividualItemValue) {
-      return {
-        allowed: false,
-        reason: `Item price ($${price}) exceeds your level ${sellerLevelData.level} limit of $${limits.maxIndividualItemValue} per item`
-      };
+    // Check total listing value limit if provided and not unlimited
+    if (limits.maxTotalListingValue !== null && totalActiveValue !== undefined) {
+      if ((totalActiveValue + price) > limits.maxTotalListingValue) {
+        return {
+          allowed: false,
+          reason: `Adding this item would exceed your level ${sellerLevelData.level} total listing limit of $${limits.maxTotalListingValue.toLocaleString()}`
+        };
+      }
     }
 
-    // Check total listing value limit if provided
-    if (totalActiveValue !== undefined && (totalActiveValue + price) > limits.maxTotalListingValue) {
-      return {
-        allowed: false,
-        reason: `Adding this item would exceed your level ${sellerLevelData.level} total listing limit of $${limits.maxTotalListingValue}`
-      };
+    // Check max active listings limit if it exists
+    if (limits.maxActiveListings !== undefined) {
+      // This would need to be checked with actual listing count, but for now we'll allow it
+      // The actual check should be done when creating listings with the current active count
     }
 
     return { allowed: true };

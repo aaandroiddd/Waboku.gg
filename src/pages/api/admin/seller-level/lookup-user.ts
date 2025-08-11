@@ -95,6 +95,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn('Could not fetch seller level:', error);
     }
 
+    // Get account/premium status
+    let isPremium = false;
+    let stripeConnectStatus = null;
+    let hasStripeStandard = false;
+    
+    try {
+      const accountDoc = await getDoc(doc(db, 'accounts', userId));
+      if (accountDoc.exists()) {
+        const accountData = accountDoc.data();
+        isPremium = accountData.tier === 'premium' || accountData.premiumGrantedByLevel === true;
+        
+        // Check Stripe Connect status
+        if (accountData.stripeConnectAccountId) {
+          stripeConnectStatus = accountData.stripeConnectStatus || 'connected';
+          hasStripeStandard = accountData.stripeConnectType === 'standard';
+        }
+      }
+    } catch (error) {
+      console.warn('Could not fetch account data:', error);
+    }
+
+    // Calculate chargeback rate (placeholder - would need actual chargeback data)
+    const chargebackRate = 0;
+
+    // Count unresolved disputes (placeholder - would need actual dispute system)
+    const unresolvedDisputes = 0;
+
     const userInfo = {
       userId,
       username: userData.username || 'Unknown',
@@ -103,7 +130,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       completedSales,
       rating,
       reviewCount,
-      accountAge
+      accountAge,
+      chargebackRate,
+      unresolvedDisputes,
+      joinDate,
+      isPremium,
+      stripeConnectStatus,
+      hasStripeStandard
     };
 
     res.status(200).json(userInfo);
