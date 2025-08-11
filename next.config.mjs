@@ -110,7 +110,7 @@ const nextConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
-      'styled-jsx/style': new URL('./src/shims/styled-jsx-style.js', import.meta.url).pathname,
+      'styled-jsx/style': `${process.cwd()}/src/shims/styled-jsx-style.js`,
     };
     return config;
   },
