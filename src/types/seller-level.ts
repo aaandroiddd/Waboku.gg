@@ -10,7 +10,7 @@ export interface SellerLevelRequirements {
 }
 
 export interface SellerLevelLimits {
-  maxTotalListingValue: number; // in dollars
+  maxTotalListingValue: number | null; // in dollars, null means unlimited
   maxActiveListings?: number;
 }
 
@@ -94,7 +94,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 5000
+      maxTotalListingValue: 10000
     },
     badge: {
       icon: '',
@@ -105,7 +105,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
   4: {
     level: 4,
     name: 'Level 4 Seller',
-    description: 'High-end sellers with established reputation or proven track record from other platforms',
+    description: 'High-end sellers with established reputation. Includes premium account benefits at no additional cost.',
     requirements: {
       minCompletedSales: 100,
       maxChargebackRate: 1,
@@ -115,7 +115,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 10000
+      maxTotalListingValue: 100000
     },
     badge: {
       icon: '',
@@ -126,7 +126,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
   5: {
     level: 5,
     name: 'Level 5 Seller',
-    description: 'Reserved for storefronts and businesses with exceptional performance',
+    description: 'Reserved for storefronts and businesses with exceptional performance. Unlimited listing value with premium account benefits included.',
     requirements: {
       minCompletedSales: 300,
       maxChargebackRate: 0.5,
@@ -136,7 +136,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 100000
+      maxTotalListingValue: null
     },
     badge: {
       icon: '',

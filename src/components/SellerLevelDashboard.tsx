@@ -114,7 +114,10 @@ const SellerLevelDashboard = () => {
                       
                       <div className="text-right space-y-1">
                         <div className="text-sm font-medium">
-                          ${config.limits.maxTotalListingValue.toLocaleString()} total
+                          {config.limits.maxTotalListingValue 
+                            ? `$${config.limits.maxTotalListingValue.toLocaleString()} total`
+                            : 'Unlimited'
+                          }
                         </div>
                         {config.limits.maxActiveListings && (
                           <div className="text-sm text-muted-foreground">
@@ -235,7 +238,12 @@ const SellerLevelDashboard = () => {
               </p>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-primary">${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-primary">
+                {sellerLevelData.currentLimits.maxTotalListingValue 
+                  ? `$${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()}`
+                  : 'Unlimited'
+                }
+              </div>
               <div className="text-sm text-muted-foreground inline-flex items-center gap-1">
                 Total Listing Limit
                 <Info
@@ -370,7 +378,10 @@ const SellerLevelDashboard = () => {
                       </div>
                       <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
                         <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
-                          ${SELLER_LEVEL_CONFIG[1].limits.maxTotalListingValue.toLocaleString()} total
+                          {SELLER_LEVEL_CONFIG[1].limits.maxTotalListingValue 
+                            ? `$${SELLER_LEVEL_CONFIG[1].limits.maxTotalListingValue.toLocaleString()} total`
+                            : 'Unlimited'
+                          }
                           <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                         {SELLER_LEVEL_CONFIG[1].limits.maxActiveListings && (
@@ -426,7 +437,10 @@ const SellerLevelDashboard = () => {
                       </div>
                       <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
                         <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
-                          ${SELLER_LEVEL_CONFIG[2].limits.maxTotalListingValue.toLocaleString()} total
+                          {SELLER_LEVEL_CONFIG[2].limits.maxTotalListingValue 
+                            ? `$${SELLER_LEVEL_CONFIG[2].limits.maxTotalListingValue.toLocaleString()} total`
+                            : 'Unlimited'
+                          }
                           <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                         {SELLER_LEVEL_CONFIG[2].limits.maxActiveListings && (
@@ -488,7 +502,10 @@ const SellerLevelDashboard = () => {
                       </div>
                       <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
                         <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
-                          ${SELLER_LEVEL_CONFIG[3].limits.maxTotalListingValue.toLocaleString()} total
+                          {SELLER_LEVEL_CONFIG[3].limits.maxTotalListingValue 
+                            ? `$${SELLER_LEVEL_CONFIG[3].limits.maxTotalListingValue.toLocaleString()} total`
+                            : 'Unlimited'
+                          }
                           <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                         {SELLER_LEVEL_CONFIG[3].limits.maxActiveListings && (
@@ -559,7 +576,10 @@ const SellerLevelDashboard = () => {
                       
                       <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
                         <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
-                          ${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total
+                          {SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue 
+                            ? `$${SELLER_LEVEL_CONFIG[4].limits.maxTotalListingValue.toLocaleString()} total`
+                            : 'Unlimited'
+                          }
                           <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                       </div>
@@ -632,7 +652,10 @@ const SellerLevelDashboard = () => {
                       
                       <div className="ml-auto w-32 sm:w-40 text-right space-y-1">
                         <div className="text-sm font-medium inline-flex items-center gap-1 justify-end">
-                          ${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total
+                          {SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue 
+                            ? `$${SELLER_LEVEL_CONFIG[5].limits.maxTotalListingValue.toLocaleString()} total`
+                            : 'Unlimited'
+                          }
                           <Info className="h-3.5 w-3.5 text-muted-foreground" title="Buy Now (Stripe) listings only; offers/messaging unaffected." />
                         </div>
                       </div>
