@@ -7,6 +7,7 @@ import { SafeListingTimer } from "@/components/SafeListingTimer";
 import { EmptyStateCard } from "@/components/EmptyStateCard";
 import { getListingUrl } from "@/lib/listing-slug";
 import { parseDate, formatDate } from "@/lib/date-utils";
+import { filterVisibleListings } from "@/lib/client-ttl";
 
 interface ArchivedListingsProps {
   listings: Listing[];
@@ -23,6 +24,9 @@ export function ArchivedListings({
   onDelete,
   onView,
 }: ArchivedListingsProps) {
+  // Filter out listings that should be hidden based on their deleteAt timestamp
+  const visibleListings = filterVisibleListings(listings);
+
   const getConditionColor = (condition: string | undefined | null) => {
     if (!condition || typeof condition !== 'string') return 'bg-gray-100 text-gray-800';
     
@@ -43,7 +47,7 @@ export function ArchivedListings({
     }
   };
 
-  if (listings.length === 0) {
+  if (visibleListings.length === 0) {
     return (
       <EmptyStateCard
         title="No archived listings"
@@ -55,7 +59,7 @@ export function ArchivedListings({
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {listings.map((listing) => (
+      {visibleListings.map((listing) => (
         <Card key={listing.id} className="relative group hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex justify-between items-start">

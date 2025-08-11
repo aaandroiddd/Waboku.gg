@@ -42,6 +42,7 @@ import { ViewCounter } from '@/components/ViewCounter';
 import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
 import { useDashboardNavigationDetection } from '@/hooks/useNavigationState';
 import { getListingUrl, getProfileUrl } from '@/lib/listing-slug';
+import { filterVisibleListings } from '@/lib/client-ttl';
 
 // Create a separate component that uses the dashboard context
 const ListingsContent = () => {
@@ -590,7 +591,9 @@ const ListingsContent = () => {
   }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery, user, listingsLoading, listingsLoadAttempts, showDiagnostics]);
   
   // Filter for archived listings specifically - ensure we're explicitly checking for 'archived' status
-  const archivedListings = allListings.filter(listing => listing.status === 'archived');
+  // Then filter out listings that should be hidden based on their deleteAt timestamp
+  const allArchivedListings = allListings.filter(listing => listing.status === 'archived');
+  const archivedListings = filterVisibleListings(allArchivedListings);
 
   useEffect(() => {
     if (!loading && !user) {
