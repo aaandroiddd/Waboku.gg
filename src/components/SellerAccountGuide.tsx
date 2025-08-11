@@ -3,11 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, AlertCircle, ArrowRight, ExternalLink, RefreshCw, Lock, MessageCircle, XCircle, Clock, AlertTriangle, Shield, Mail, Calendar, TrendingUp, DollarSign } from 'lucide-react';
+import {
+  CheckCircle,
+  AlertCircle,
+  ArrowRight,
+  ExternalLink,
+  RefreshCw,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  Shield,
+  Mail,
+  Calendar,
+  TrendingUp,
+} from 'lucide-react';
 import { useSellerAccountEligibility } from '@/hooks/useSellerAccountEligibility';
-import { useSellerLevel } from '@/hooks/useSellerLevel';
-import { SellerLevelBadge } from '@/components/SellerLevelBadge';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
 
 interface SellerAccountGuideProps {
@@ -29,9 +39,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
   onUpdateAccount,
   onRefreshStatus,
 }) => {
-  const router = useRouter();
   const { isEligible, requirements, loading: eligibilityLoading, error } = useSellerAccountEligibility();
-  const { sellerLevelData, isLoading: levelLoading, config: levelConfig } = useSellerLevel();
 
   const getRequirementIcon = (requirementId: string) => {
     switch (requirementId) {
@@ -45,7 +53,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
         return CheckCircle;
     }
   };
-  
+
   // Show loading state while checking eligibility
   if (eligibilityLoading) {
     return (
@@ -61,7 +69,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
           </div>
         </CardContent>
       </Card>
@@ -82,8 +90,8 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
           <p className="text-muted-foreground mb-4">
             Unable to check your eligibility status: {error}
           </p>
-          <Button 
-            onClick={() => window.location.reload()} 
+          <Button
+            onClick={() => window.location.reload()}
             variant="outline"
           >
             Try Again
@@ -92,7 +100,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
       </Card>
     );
   }
-  
+
   // Check if user already has an active Stripe Connect account
   if (accountStatus.isConnected && accountStatus.isEnabled && !accountStatus.needsMoreInfo) {
     return (
@@ -116,56 +124,16 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">Account Connected & Verified</h2>
                   <p className="text-lg mb-4 leading-relaxed">
-                    Congratulations! Your Stripe Connect account has been successfully linked and verified. 
+                    Congratulations! Your Stripe Connect account has been successfully linked and verified.
                     You can now receive secure payments directly to your bank account when customers purchase your listings.
                   </p>
-                  
->>>>>>> REPLACE
 
-<<<<<<< SEARCH
-                  {/* Seller Level Information */}
-                  {sellerLevelData && levelConfig && !levelLoading && (
-                    <div className="mb-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-base">Your Current Seller Level</h3>
-                        <Link href="/dashboard/seller-account?tab=seller-level">
-                          <Button variant="ghost" size="sm">
-                            <TrendingUp className="h-4 w-4 mr-1" />
-                            View Details
-                          </Button>
-                        </Link>
-                      </div>
-                      
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-                        <SellerLevelBadge
-                          level={sellerLevelData.level}
-                          salesCount={sellerLevelData.completedSales}
-                          rating={sellerLevelData.rating}
-                          reviewCount={sellerLevelData.reviewCount}
-                          accountAge={sellerLevelData.accountAge}
-                          compact={true}
-                        />
-                        <div className="text-sm text-muted-foreground">
-                          {sellerLevelData.completedSales} sales • {sellerLevelData.rating ? `${sellerLevelData.rating.toFixed(1)}★` : 'No ratings'}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-blue-600" />
-                          <span>Total listings limit: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-=======
-                  
                   <div className="space-y-3 mb-4">
                     <p className="font-medium text-sm">What this means for you:</p>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                        <span>Your identity has been verified by Stripe's secure verification process</span>
+                        <span>Your identity has been verified by Stripe&apos;s secure verification process</span>
                       </div>
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
@@ -173,7 +141,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                       </div>
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                        <span>You're protected by Stripe's advanced fraud detection and dispute management</span>
+                        <span>You&apos;re protected by Stripe&apos;s advanced fraud detection and dispute management</span>
                       </div>
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
@@ -188,7 +156,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                       {requirements.map((requirement) => {
                         const IconComponent = getRequirementIcon(requirement.id);
                         return (
-                          <div 
+                          <div
                             key={requirement.id}
                             className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/50 rounded border border-green-300 dark:border-green-700"
                           >
@@ -201,11 +169,22 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                         );
                       })}
                     </div>
+
+                    {isEligible && (
+                      <div className="flex justify-end mt-3">
+                        <Link href="/dashboard/seller-account?tab=seller-level">
+                          <Button variant="secondary" size="sm">
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                            View Seller Level Details
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -214,7 +193,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                   <p className="text-xs text-muted-foreground">Stripe account linked</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                 <div>
@@ -222,7 +201,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                   <p className="text-xs text-muted-foreground">Account approved</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                 <div>
@@ -234,18 +213,18 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button 
-            onClick={onUpdateAccount} 
-            variant="outline" 
+          <Button
+            onClick={onUpdateAccount}
+            variant="outline"
             disabled={isLoading}
             className="w-full"
           >
             {isLoading ? "Loading..." : "Update Account Information"}
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
-          
+
           {onRefreshStatus && (
-            <Button 
+            <Button
               onClick={onRefreshStatus}
               variant="ghost"
               size="sm"
@@ -286,46 +265,21 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                   <p className="text-lg mb-4">
                     Your Stripe Connect account has been created but requires additional information to complete setup.
                   </p>
-                  
-                  {/* Seller Level Information */}
-                  {sellerLevelData && levelConfig && !levelLoading && (
-                    <div className="mb-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-base">Your Current Seller Level</h3>
-                        <Link href="/dashboard/seller-account?tab=seller-level">
-                          <Button variant="ghost" size="sm">
-                            <TrendingUp className="h-4 w-4 mr-1" />
-                            View Details
-                          </Button>
-                        </Link>
-                      </div>
-                      
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-                        <SellerLevelBadge
-                          level={sellerLevelData.level}
-                          salesCount={sellerLevelData.completedSales}
-                          rating={sellerLevelData.rating}
-                          reviewCount={sellerLevelData.reviewCount}
-                          accountAge={sellerLevelData.accountAge}
-                          compact={true}
-                        />
-                        <div className="text-sm text-muted-foreground">
-                          {sellerLevelData.completedSales} sales • {sellerLevelData.rating ? `${sellerLevelData.rating.toFixed(1)}★` : 'No ratings'}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-blue-600" />
-                          <span>Total listings limit: <strong>${levelConfig.limits.maxTotalListingValue.toLocaleString()}</strong></span>
-                        </div>
-                      </div>
+
+                  {isEligible && (
+                    <div className="flex justify-end">
+                      <Link href="/dashboard/seller-account?tab=seller-level">
+                        <Button variant="secondary" size="sm">
+                          <TrendingUp className="h-4 w-4 mr-1" />
+                          View Seller Level Details
+                        </Button>
+                      </Link>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -334,7 +288,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                   <p className="text-xs text-muted-foreground">Stripe account linked</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <Clock className="h-5 w-5 text-amber-500 flex-shrink-0" />
                 <div>
@@ -344,7 +298,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary">
                 <AlertCircle className="h-5 w-5 text-gray-500 flex-shrink-0" />
                 <div>
@@ -356,17 +310,17 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button 
-            onClick={onUpdateAccount} 
+          <Button
+            onClick={onUpdateAccount}
             disabled={isLoading}
             className="w-full"
           >
             {isLoading ? "Loading..." : "Complete Account Setup"}
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
-          
+
           {onRefreshStatus && (
-            <Button 
+            <Button
               onClick={onRefreshStatus}
               variant="ghost"
               size="sm"
@@ -402,22 +356,22 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
               <div className="space-y-3">
                 <p className="font-medium">Security Requirements</p>
                 <p>
-                  To ensure the security and integrity of our marketplace, you must meet the following 
+                  To ensure the security and integrity of our marketplace, you must meet the following
                   requirements before setting up your seller account:
                 </p>
               </div>
             </AlertDescription>
           </Alert>
-          
+
           <div className="space-y-4">
             {requirements.map((requirement) => {
               const IconComponent = getRequirementIcon(requirement.id);
               return (
-                <div 
+                <div
                   key={requirement.id}
                   className={`flex items-start gap-3 p-4 rounded-lg border ${
-                    requirement.met 
-                      ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+                    requirement.met
+                      ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
                       : 'bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700'
                   }`}
                 >
@@ -438,7 +392,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                           {requirement.label}
                         </h4>
                       </div>
-                      <Badge 
+                      <Badge
                         variant={requirement.met ? "default" : "secondary"}
                         className={`flex-shrink-0 ${requirement.met ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}`}
                       >
@@ -482,7 +436,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
       </Card>
     );
   }
-  
+
   // If user is eligible but hasn't connected yet, show the setup option
   return (
     <Card>
@@ -507,7 +461,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                   {requirements.map((requirement) => {
                     const IconComponent = getRequirementIcon(requirement.id);
                     return (
-                      <div 
+                      <div
                         key={requirement.id}
                         className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded border border-green-200 dark:border-green-800"
                       >
@@ -520,34 +474,34 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
                     );
                   })}
                 </div>
+
+                {isEligible && (
+                  <div className="flex justify-end">
+                    <Link href="/dashboard/seller-account?tab=seller-level">
+                      <Button variant="secondary" size="sm">
+                        <TrendingUp className="h-4 w-4 mr-1" />
+                        View Seller Level Details
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </AlertDescription>
           </Alert>
-
-          {isEligible && (
-            <div className="flex justify-end">
-              <Link href="/dashboard/seller-account?tab=seller-level">
-                <Button variant="secondary" size="sm">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  View Seller Level Details
-                </Button>
-              </Link>
-            </div>
-          )}
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <Button 
-          onClick={onCreateAccount} 
+        <Button
+          onClick={onCreateAccount}
           disabled={isLoading}
           className="w-full"
         >
           {isLoading ? "Loading..." : "Create Seller Account"}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
-        
+
         {onRefreshStatus && (
-          <Button 
+          <Button
             onClick={onRefreshStatus}
             variant="ghost"
             size="sm"
