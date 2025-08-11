@@ -327,8 +327,12 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       return `${days}d ${hours}h ${minutes}m`;
     } else if (hours > 0) {
       return `${hours}h ${minutes}m`;
-    } else {
+    } else if (minutes > 0) {
       return `${minutes}m`;
+    } else if (timeLeft > 0) {
+      return '<1m';
+    } else {
+      return '0m';
     }
   };
 
@@ -352,6 +356,28 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   // Add a 5-minute buffer to prevent premature expiration display
   const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
   const isExpiredWithBuffer = isExpired && timeLeft <= bufferTime;
+
+  // When an archived timer runs out, we don't delete instantly on the client.
+  // Deletion is handled by Firestore TTL and a backup cron that runs at :15 every 2 hours.
+  // Show friendlier copy to avoid "0m" UX.
+  const getNextCleanupText = useCallback(() => {
+    try {
+      const now = new Date();
+      const candidate = new Date(now.getTime());
+      // Next run is at minute 15 of the next even hour (00, 02, 04, ... 22)
+      candidate.setMinutes(15, 0, 0);
+      if (now.getMinutes() >= 15) {
+        candidate.setHours(candidate.getHours() + 1);
+      }
+      if (candidate.getHours() % 2 !== 0) {
+        candidate.setHours(candidate.getHours() + 1);
+      }
+      const timeStr = candidate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return `during the next cleanup run (~${timeStr})`;
+    } catch {
+      return 'during the next cleanup run';
+    }
+  }, []);
   
   if (isExpiredWithBuffer && status === 'active') {
     return (
@@ -391,9 +417,19 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         <Alert variant="warning">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Archived: Will be automatically deleted in {formatTimeLeft()}
+            {timeLeft > 0
+              ? `Archived: Will be automatically deleted in ${formatTimeLeft()}`
+              : `Archived: Scheduled for automatic deletion ${getNextCleanupText()}. No action is required.`}
           </AlertDescription>
         </Alert>
+      )}
+      {status === 'archived' && archivedAt && timeLeft === 0 && !isProcessing && listingId && (
+        <button
+          onClick={triggerManualCleanup}
+          className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 self-start"
+        >
+          Click to refresh status
+        </button>
       )}
       <div className="h-2 w-full bg-red-100 rounded-full overflow-hidden">
         <div 
