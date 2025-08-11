@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { LISTING_TTL_CONFIG } from '@/lib/listing-ttl';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,7 +22,9 @@ export default async function handler(
     const db = admin.firestore();
     const now = new Date();
     
-    // Get the specific listing
+    console.log('[TTL Debug] Starting debug for listing:', listingId);
+    
+    // Get the specific listing - this is a simple document get, no query
     const listingDoc = await db.collection('listings').doc(listingId).get();
     
     if (!listingDoc.exists) {
@@ -31,7 +32,7 @@ export default async function handler(
     }
     
     const listingData = listingDoc.data();
-    const deleteAt = listingData?.[LISTING_TTL_CONFIG.ttlField];
+    const deleteAt = listingData?.deleteAt; // Use direct field name instead of config
     
     // Convert timestamps for comparison
     let deleteAtDate = null;
@@ -48,8 +49,7 @@ export default async function handler(
     const shouldBeDeleted = deleteAtDate && now > deleteAtDate;
     const timeDiff = deleteAtDate ? now.getTime() - deleteAtDate.getTime() : null;
     
-    // Simple check if this listing would be found by the cron job
-    // Instead of running a complex query, we'll just check the timestamp logic
+    // Simple timestamp comparison without complex queries
     let wouldBeFoundByCron = false;
     
     if (deleteAt && deleteAtDate) {
@@ -73,7 +73,9 @@ export default async function handler(
         ttlReason: listingData?.ttlReason || null,
         ttlSetAt: listingData?.ttlSetAt?.toDate?.()?.toISOString() || null,
         hasDeleteAtField: !!deleteAt,
-        deleteAtRawValue: deleteAt?.toString() || null
+        deleteAtRawValue: deleteAt?.toString() || null,
+        userId: listingData?.userId || null,
+        shortId: listingData?.shortId || null
       },
       analysis: {
         shouldBeDeleted,
@@ -81,10 +83,10 @@ export default async function handler(
         wouldBeFoundByCronJob: wouldBeFoundByCron,
         deleteAtTimestamp: deleteAt?.toMillis?.() || (deleteAtDate ? deleteAtDate.getTime() : null),
         currentTimestamp: now.getTime(),
-        ttlFieldName: LISTING_TTL_CONFIG.ttlField
+        ttlFieldName: 'deleteAt'
       },
       cronJobQuery: {
-        field: LISTING_TTL_CONFIG.ttlField,
+        field: 'deleteAt',
         operator: '<=',
         value: now.toISOString(),
         explanation: 'Cron job finds listings where deleteAt <= current time'
@@ -93,31 +95,55 @@ export default async function handler(
     
     // If manual cleanup is requested
     if (req.method === 'POST' && shouldBeDeleted) {
-      const batch = db.batch();
-      
-      // Delete the main listing
-      batch.delete(listingDoc.ref);
-      
-      // Clean up related data
-      if (listingData?.shortId && typeof listingData.shortId === 'string' && listingData.shortId.trim()) {
-        const shortIdRef = db.collection('shortIdMappings').doc(listingData.shortId);
-        batch.delete(shortIdRef);
+      try {
+        console.log('[TTL Debug] Starting manual deletion for listing:', listingId);
+        
+        // Use individual deletes instead of batch to avoid any query conflicts
+        const deletePromises = [];
+        
+        // Delete the main listing
+        deletePromises.push(listingDoc.ref.delete());
+        
+        // Clean up related data with proper validation
+        if (listingData?.shortId && typeof listingData.shortId === 'string' && listingData.shortId.trim()) {
+          const shortIdRef = db.collection('shortIdMappings').doc(listingData.shortId);
+          deletePromises.push(shortIdRef.delete().catch(err => {
+            console.warn('[TTL Debug] Error deleting shortId mapping:', err);
+          }));
+        }
+        
+        if (listingData?.userId && typeof listingData.userId === 'string' && listingData.userId.trim()) {
+          // Validate that the userId and listingId are valid Firestore document IDs
+          const userIdValid = /^[a-zA-Z0-9_-]+$/.test(listingData.userId);
+          const listingIdValid = /^[a-zA-Z0-9_-]+$/.test(listingId);
+          
+          if (userIdValid && listingIdValid) {
+            const userListingRef = db.collection('users').doc(listingData.userId)
+              .collection('listings').doc(listingId);
+            deletePromises.push(userListingRef.delete().catch(err => {
+              console.warn('[TTL Debug] Error deleting user listing reference:', err);
+            }));
+          } else {
+            console.warn('[TTL Debug] Invalid document ID format:', { userId: listingData.userId, listingId });
+          }
+        }
+        
+        await Promise.all(deletePromises);
+        
+        console.log('[TTL Debug] Manual deletion completed for listing:', listingId);
+        
+        return res.status(200).json({
+          ...diagnostics,
+          action: 'DELETED',
+          message: 'Listing manually deleted due to expired TTL'
+        });
+      } catch (deleteError) {
+        console.error('[TTL Debug] Error during manual deletion:', deleteError);
+        return res.status(500).json({
+          error: 'Failed to delete listing',
+          message: deleteError instanceof Error ? deleteError.message : 'Unknown deletion error'
+        });
       }
-      
-      if (listingData?.userId && typeof listingData.userId === 'string' && listingData.userId.trim() && 
-          listingId && typeof listingId === 'string' && listingId.trim()) {
-        const userListingRef = db.collection('users').doc(listingData.userId)
-          .collection('listings').doc(listingId);
-        batch.delete(userListingRef);
-      }
-      
-      await batch.commit();
-      
-      return res.status(200).json({
-        ...diagnostics,
-        action: 'DELETED',
-        message: 'Listing manually deleted due to expired TTL'
-      });
     }
     
     return res.status(200).json(diagnostics);
