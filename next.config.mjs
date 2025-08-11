@@ -1,10 +1,4 @@
 /** @type {import('next').NextConfig} */
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const nextConfig = {
   async redirects() {
     return [
@@ -116,7 +110,7 @@ const nextConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
-      'styled-jsx/style': path.resolve(__dirname, 'src/shims/styled-jsx-style.ts'),
+      'styled-jsx/style': new URL('./src/shims/styled-jsx-style.js', import.meta.url).pathname,
     };
     return config;
   },
