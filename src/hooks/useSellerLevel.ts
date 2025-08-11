@@ -36,8 +36,29 @@ export function useSellerLevel({ userId }: UseSellerLevelProps = {}) {
       }
 
       const userData = userDoc.data();
-      const joinDate = userData.createdAt?.toDate() || new Date();
-      const accountAge = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
+      // Resolve join date from multiple possible fields and types (Firestore Timestamp | ISO string | number)
+      let joinDateVal: any = userData.joinDate ?? userData.createdAt ?? userData.created_at ?? null;
+      let joinDate: Date;
+
+      try {
+        if (joinDateVal && typeof joinDateVal === 'object' && typeof joinDateVal.toDate === 'function') {
+          joinDate = joinDateVal.toDate();
+        } else if (typeof joinDateVal === 'string') {
+          // ISO string from screenshot example "2025-01-29T23:21:25.575Z"
+          joinDate = new Date(joinDateVal);
+        } else if (typeof joinDateVal === 'number') {
+          joinDate = new Date(joinDateVal);
+        } else {
+          // Fallback to current date if not available
+          joinDate = new Date();
+        }
+      } catch {
+        joinDate = new Date();
+      }
+
+      // Days since join, never negative
+      const millis = Date.now() - joinDate.getTime();
+      const accountAge = Math.max(0, Math.floor(millis / (1000 * 60 * 60 * 24)));
 
       // Get completed sales count from orders
       const ordersQuery = query(
