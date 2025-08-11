@@ -90,7 +90,7 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
-    minimumCacheTTL: 86400, // Increase cache TTL to 24 hours
+    minimumCacheTTL: 86400, // 24 hours
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
@@ -101,10 +101,9 @@ const nextConfig = {
   compress: true,
   swcMinify: true,
   experimental: {
-    optimizeCss: false, // Disable this as it's causing issues
-    largePageDataBytes: 256 * 1000, // Increase to 256KB to reduce file operations
+    optimizeCss: false,
+    largePageDataBytes: 256 * 1000,
   },
-  // Temporarily disable output file tracing to prevent EMFILE errors
   outputFileTracing: false,
   webpack: (config) => {
     config.resolve = config.resolve || {};
@@ -116,4 +115,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
