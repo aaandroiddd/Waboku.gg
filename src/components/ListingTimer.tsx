@@ -336,27 +336,6 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     }
   };
 
-  // Show a loading state while initializing
-  if (!isInitialized) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Loading listing status...
-          </AlertDescription>
-        </Alert>
-        <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-500 animate-pulse rounded-full" style={{ width: '30%' }} />
-        </div>
-      </div>
-    );
-  }
-
-  // Add a 5-minute buffer to prevent premature expiration display
-  const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
-  const isExpiredWithBuffer = isExpired && timeLeft <= bufferTime;
-
   // When an archived timer runs out, we don't delete instantly on the client.
   // Deletion is handled by Firestore TTL and a backup cron that runs at :15 every 2 hours.
   // Show friendlier copy to avoid "0m" UX.
@@ -379,6 +358,27 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     }
   }, []);
   
+  // Show a loading state while initializing
+  if (!isInitialized) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Loading listing status...
+          </AlertDescription>
+        </Alert>
+        <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-500 animate-pulse rounded-full" style={{ width: '30%' }} />
+        </div>
+      </div>
+    );
+  }
+
+  // Add a 5-minute buffer to prevent premature expiration display
+  const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+  const isExpiredWithBuffer = isExpired && timeLeft <= bufferTime;
+
   if (isExpiredWithBuffer && status === 'active') {
     return (
       <div className="flex flex-col gap-2">

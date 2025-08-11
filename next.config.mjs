@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const nextConfig = {
   async redirects() {
     return [
@@ -106,6 +112,14 @@ const nextConfig = {
   },
   // Temporarily disable output file tracing to prevent EMFILE errors
   outputFileTracing: false,
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      'styled-jsx/style': path.resolve(__dirname, 'src/shims/styled-jsx-style.ts'),
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
