@@ -18,7 +18,7 @@ import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
-import { GameCategories } from '@/components/GameCategories';
+import { MobileSelect } from '@/components/ui/mobile-select';
 
 interface BulkListingItem {
   id: string;
@@ -296,10 +296,28 @@ export default function BulkListingPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`game-${item.id}`}>Game *</Label>
-                    <GameCategories
+                    <MobileSelect
                       value={item.game}
-                      onChange={(value) => updateItem(item.id, 'game', value)}
+                      onValueChange={(value) => updateItem(item.id, 'game', value)}
                       placeholder="Select game"
+                      options={[
+                        { value: "dbs", label: "Dragon Ball Super Card Game" },
+                        { value: "digimon", label: "Digimon" },
+                        { value: "lorcana", label: "Disney Lorcana" },
+                        { value: "flesh-and-blood", label: "Flesh and Blood" },
+                        { value: "gundam", label: "Gundam" },
+                        { value: "mtg", label: "Magic: The Gathering" },
+                        { value: "onepiece", label: "One Piece Card Game" },
+                        { value: "pokemon", label: "Pokemon" },
+                        { value: "star-wars", label: "Star Wars: Unlimited" },
+                        { value: "union-arena", label: "Union Arena" },
+                        { value: "universus", label: "Universus" },
+                        { value: "vanguard", label: "Vanguard" },
+                        { value: "weiss", label: "Weiss Schwarz" },
+                        { value: "yugioh", label: "Yu-Gi-Oh!" },
+                        { value: "accessories", label: "Accessories" },
+                        { value: "other", label: "Other" }
+                      ]}
                     />
                   </div>
                 </div>
