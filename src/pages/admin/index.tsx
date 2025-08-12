@@ -820,6 +820,36 @@ export default function AdminDashboard() {
                     </div>
                   </Card>
                   
+                  {/* Find All Expired TTL Listings */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Find All Expired TTL Listings</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🔍 Find all listings that should have been deleted by TTL cleanup but still exist</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/admin/find-expired-ttl-listings', {
+                            method: 'GET',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`
+                            }
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to find expired TTL listings' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Searching...' : 'Find All Expired Listings'}
+                    </Button>
+                  </Card>
+                  
                   {/* Check Offers Status */}
                   <Card className="p-4">
                     <h3 className="font-semibold mb-2">Check Current Offers Status</h3>
