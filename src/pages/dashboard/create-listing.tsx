@@ -34,6 +34,9 @@ import { Badge } from "@/components/ui/badge";
 import { MultiImageUpload } from "@/components/MultiImageUpload";
 import { useSellerLevel } from "@/hooks/useSellerLevel";
 import { SellerLevelBadge, SellerLevelProgress } from "@/components/SellerLevelBadge";
+import { CreateListingWizard } from "@/components/CreateListingWizard";
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import * as XLSX from 'xlsx';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -197,6 +200,8 @@ const CreateListingPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeListingCount, setActiveListingCount] = useState<number | null>(null);
   const [totalActiveValue, setTotalActiveValue] = useState<number>(0);
+  const [useModernWizard, setUseModernWizard] = useState(false);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Bulk listing states
@@ -377,6 +382,30 @@ const CreateListingPage = () => {
       setUploadProgress(0);
     }
   };
+
+  // Load user preferences to determine which create listing experience to show
+  useEffect(() => {
+    const loadUserPreferences = async () => {
+      if (!user?.uid) {
+        setIsLoadingPreferences(false);
+        return;
+      }
+
+      try {
+        const preferencesDoc = await getDoc(doc(db, 'userPreferences', user.uid));
+        if (preferencesDoc.exists()) {
+          const data = preferencesDoc.data();
+          setUseModernWizard(data.useModernCreateListing || false);
+        }
+      } catch (error) {
+        console.error('Error loading user preferences:', error);
+      } finally {
+        setIsLoadingPreferences(false);
+      }
+    };
+
+    loadUserPreferences();
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -862,8 +891,19 @@ const CreateListingPage = () => {
     }
   }, [router.isReady, router.query, toast]);
 
-  if (loading || !user) {
+  if (loading || !user || isLoadingPreferences) {
     return null;
+  }
+
+  // If user has enabled modern wizard, show that instead
+  if (useModernWizard) {
+    return (
+      <RouteGuard requireAuth={true}>
+        <DashboardLayout>
+          <CreateListingWizard />
+        </DashboardLayout>
+      </RouteGuard>
+    );
   }
 
   return (
@@ -872,6 +912,11 @@ const CreateListingPage = () => {
         <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Create New Listing</h1>
+          <div className="text-sm text-muted-foreground">
+            <Link href="/dashboard/settings" className="text-primary hover:underline">
+              Switch to modern wizard
+            </Link>
+          </div>
         </div>
         
         {/* Only show Stripe Connect notice if status is confirmed as not active */}

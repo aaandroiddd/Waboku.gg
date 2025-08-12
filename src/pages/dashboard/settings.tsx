@@ -30,6 +30,11 @@ import { BlockedUsersManager } from '@/components/BlockedUsersManager';
 import { EmailChangeForm } from '@/components/EmailChangeForm';
 import { NotificationPreferences } from '@/types/notification';
 
+// User preferences type
+interface UserPreferences {
+  useModernCreateListing?: boolean;
+}
+
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
   {
@@ -80,6 +85,12 @@ const SettingsPageContent = () => {
     updatedAt: new Date()
   });
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  
+  // User preferences state
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>({
+    useModernCreateListing: false
+  });
+  const [isLoadingUserPreferences, setIsLoadingUserPreferences] = useState(false);
   
   const { user, profile, updateProfile, deleteAccount } = useAuth();
   const [formData, setFormData] = useState({
@@ -164,6 +175,48 @@ const SettingsPageContent = () => {
     } catch (error) {
       console.error('Error saving notification preferences:', error);
       setError("Failed to save notification preferences");
+      setTimeout(() => setError(""), 5000);
+    }
+  };
+
+  // Load user preferences
+  const loadUserPreferences = async () => {
+    if (!user?.uid) return;
+    
+    setIsLoadingUserPreferences(true);
+    try {
+      const preferencesDoc = await getDoc(doc(db, 'userPreferences', user.uid));
+      if (preferencesDoc.exists()) {
+        const data = preferencesDoc.data() as UserPreferences;
+        setUserPreferences(data);
+      } else {
+        // Create default preferences
+        const defaultPreferences: UserPreferences = {
+          useModernCreateListing: false
+        };
+        
+        await setDoc(doc(db, 'userPreferences', user.uid), defaultPreferences);
+        setUserPreferences(defaultPreferences);
+      }
+    } catch (error) {
+      console.error('Error loading user preferences:', error);
+    } finally {
+      setIsLoadingUserPreferences(false);
+    }
+  };
+
+  // Save user preferences
+  const saveUserPreferences = async (newPreferences: UserPreferences) => {
+    if (!user?.uid) return;
+    
+    try {
+      await setDoc(doc(db, 'userPreferences', user.uid), newPreferences);
+      setUserPreferences(newPreferences);
+      setSuccess("Preferences updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      console.error('Error saving user preferences:', error);
+      setError("Failed to save preferences");
       setTimeout(() => setError(""), 5000);
     }
   };
@@ -279,6 +332,9 @@ const SettingsPageContent = () => {
         
         // Load notification preferences
         await loadNotificationPreferences();
+        
+        // Load user preferences
+        await loadUserPreferences();
       } catch (err: any) {
         console.error('Error loading user data:', err);
         setError("Failed to load user data");
@@ -733,6 +789,40 @@ const SettingsPageContent = () => {
                     >
                       💻 System
                     </button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Create Listing Preference */}
+                <div className="space-y-4">
+                  <div>
+                    <Label>Create Listing Experience</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose between the classic form or the new guided wizard
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Use Modern Create Listing Wizard</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Enable the new 4-step guided listing creation experience
+                      </p>
+                    </div>
+                    {isLoadingUserPreferences ? (
+                      <Skeleton className="h-6 w-10" />
+                    ) : (
+                      <Switch
+                        checked={userPreferences.useModernCreateListing}
+                        onCheckedChange={(checked) => {
+                          const newPreferences = {
+                            ...userPreferences,
+                            useModernCreateListing: checked
+                          };
+                          saveUserPreferences(newPreferences);
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
