@@ -913,7 +913,7 @@ const CreateListingPage = () => {
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p>
-                      <strong>Listing Limits:</strong> ${totalActiveValue.toLocaleString()} / ${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()} total value
+                      <strong>Listing Limits:</strong> ${(totalActiveValue || 0).toLocaleString()} / ${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()} total value
                     </p>
                     <p>
                       <strong>Max per item:</strong> ${sellerLevelData.currentLimits.maxIndividualItemValue.toLocaleString()}

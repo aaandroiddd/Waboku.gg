@@ -29,6 +29,7 @@
     "@stripe/stripe-js": "^2.4.0",
     "stripe": "^14.14.0",
     "styled-jsx": "^5.1.1",
+    "styled-jsx-plugin-postcss": "^4.0.1",
     "micro": "^10.0.1",
     "react-markdown": "^9.0.1",
     "xlsx": "^0.18.5",
