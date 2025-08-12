@@ -105,14 +105,7 @@ const nextConfig = {
     largePageDataBytes: 256 * 1000,
   },
   outputFileTracing: false,
-  webpack: (config) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      'styled-jsx/style': `${process.cwd()}/src/shims/styled-jsx-style.js`,
-    };
-    return config;
-  },
+
 };
 
 module.exports = nextConfig;
