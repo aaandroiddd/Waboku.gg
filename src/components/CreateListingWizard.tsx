@@ -799,7 +799,7 @@ export const CreateListingWizard = () => {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between mb-8">
+      <div className="flex justify-between mb-16 pb-8">
         <Button
           variant="outline"
           onClick={handlePrevious}
