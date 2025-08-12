@@ -274,7 +274,7 @@ export const CreateListingWizard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="price">Price *</Label>
@@ -709,11 +709,6 @@ export const CreateListingWizard = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Create New Listing</h1>
-        <div className="text-sm text-muted-foreground">
-          <Link href="/dashboard/settings" className="text-primary hover:underline">
-            Switch to classic form
-          </Link>
-        </div>
       </div>
 
       {/* Progress Bar */}
