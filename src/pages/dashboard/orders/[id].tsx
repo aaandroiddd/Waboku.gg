@@ -968,7 +968,7 @@ export default function OrderDetailsPage() {
                     ) : (
                       <div className="flex justify-between">
                         <span>Item Price:</span>
-                        <span>{formatPrice(order.listingSnapshot?.price || order.amount)}</span>
+                        <span>{formatPrice(order.listingSnapshot?.price || (order.offerPrice || order.amount))}</span>
                       </div>
                     )}
                     {order.offerPrice !== undefined && (
@@ -977,11 +977,24 @@ export default function OrderDetailsPage() {
                         <span className="font-medium text-green-600 dark:text-green-400">{formatPrice(order.offerPrice)}</span>
                       </div>
                     )}
-                    {order.platformFee !== undefined && (
+                    {/* Show shipping cost if available */}
+                    {(order.shippingCost !== undefined && order.shippingCost > 0) || (order.listingSnapshot?.shippingCost !== undefined && order.listingSnapshot.shippingCost > 0) ? (
                       <div className="flex justify-between">
-                        <span>Platform Fee{isUserBuyer ? '' : ' (deducted)'}:</span>
-                        <span className={isUserBuyer ? '' : 'text-red-600 dark:text-red-400'}>
-                          {isUserBuyer ? '' : '-'}{formatPrice(order.platformFee)}
+                        <span>Shipping:</span>
+                        <span>{formatPrice(order.shippingCost || order.listingSnapshot?.shippingCost || 0)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between">
+                        <span>Shipping:</span>
+                        <span className="text-green-600 dark:text-green-400">Free</span>
+                      </div>
+                    )}
+                    {/* Only show platform fee to sellers, not buyers */}
+                    {!isUserBuyer && order.platformFee !== undefined && (
+                      <div className="flex justify-between">
+                        <span>Platform Fee (deducted):</span>
+                        <span className="text-red-600 dark:text-red-400">
+                          -{formatPrice(order.platformFee)}
                         </span>
                       </div>
                     )}
@@ -990,7 +1003,7 @@ export default function OrderDetailsPage() {
                       <span>{isUserBuyer ? 'Total Paid:' : 'Your Earnings:'}</span>
                       <span>
                         {isUserBuyer 
-                          ? formatPrice(order.amount || (order.offerPrice || 0))
+                          ? formatPrice(order.amount)
                           : formatPrice((order.amount || (order.offerPrice || 0)) - (order.platformFee || 0))
                         }
                       </span>

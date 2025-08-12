@@ -10,6 +10,7 @@ export interface Order {
   transferId?: string;
   transferAmount?: number;
   platformFee?: number;
+  shippingCost?: number; // Shipping cost for the order
   paymentStatus?: string;
   paymentMethod?: {
     brand: string;
@@ -83,5 +84,6 @@ export interface Order {
     title: string;
     price: number;
     imageUrl: string | null;
+    shippingCost?: number; // Shipping cost from the listing snapshot
   };
 }

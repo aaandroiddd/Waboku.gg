@@ -28,6 +28,7 @@ export interface Listing {
   offersOnly?: boolean;
   finalSale?: boolean;
   language?: string;
+  shippingCost?: number;
   location?: {
     latitude?: number;
     longitude?: number;
@@ -63,6 +64,7 @@ export interface CreateListingData {
   offersOnly?: boolean;
   finalSale?: boolean;
   language?: string;
+  shippingCost?: string;
 }
 
 export interface UserFavorite {

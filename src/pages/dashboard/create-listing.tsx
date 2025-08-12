@@ -227,6 +227,7 @@ const CreateListingPage = () => {
     offersOnly: false,
     finalSale: false,
     language: "English",
+    shippingCost: "" as string,
   });
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -1165,6 +1166,36 @@ const CreateListingPage = () => {
                     )}
                   </div>
 
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="shippingCost">Shipping Cost</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">Optional shipping cost that will be added to the total price for buyers</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="shippingCost"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.shippingCost}
+                      onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty for free shipping or buyer-arranged pickup
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="game">Category *</Label>
                     <MobileSelect

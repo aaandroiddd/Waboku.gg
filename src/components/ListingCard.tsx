@@ -330,9 +330,25 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold text-sm sm:text-base">
-                  {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
-                </span>
+                <div className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold text-sm sm:text-base text-right">
+                  {listing.offersOnly ? (
+                    <span>Offers Only</span>
+                  ) : (
+                    <div>
+                      <div>{formatPrice(listing.price)}</div>
+                      {listing.shippingCost && listing.shippingCost > 0 && (
+                        <div className="text-xs opacity-90">
+                          + {formatPrice(listing.shippingCost)} shipping
+                        </div>
+                      )}
+                      {(!listing.shippingCost || listing.shippingCost === 0) && (
+                        <div className="text-xs opacity-90">
+                          Free shipping
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </MobileAnimationWrapper>
 
               {/* Top Bar with Favorite and Graded Badge */}
