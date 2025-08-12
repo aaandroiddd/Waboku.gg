@@ -1,6 +1,6 @@
 import * as React from "react"
 import { type DialogProps } from "@radix-ui/react-dialog"
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons"
+import { Search } from "lucide-react"
 import { Command as CommandPrimitive } from "cmdk"
 
 import { cn } from "@/lib/utils"
@@ -66,7 +66,7 @@ const CommandInput = React.forwardRef<
         ></path>
       </svg>
     ) : (
-      <MagnifyingGlassIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     )}
     <CommandPrimitive.Input
       ref={ref}

@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import Script from 'next/script';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { ReloadIcon } from "@radix-ui/react-icons";
+import { RotateCcw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { containsExplicitContent } from "@/util/string";
 
@@ -195,7 +195,7 @@ export function LocationInput({
                 className="ml-2"
                 onClick={retryGoogleMaps}
               >
-                <ReloadIcon className="mr-2 h-4 w-4" />
+                <RotateCcw className="mr-2 h-4 w-4" />
                 Retry Google Maps
               </Button>
             </AlertDescription>
