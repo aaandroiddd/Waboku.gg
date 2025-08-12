@@ -31,6 +31,7 @@ interface FormData {
   offersOnly: boolean;
   quantity: string;
   cardName: string;
+  disableBuyNow: boolean;
   
   // Part 2
   description: string;
@@ -75,6 +76,7 @@ export const CreateListingWizard = () => {
     offersOnly: false,
     quantity: '',
     cardName: '',
+    disableBuyNow: false,
     
     // Part 2
     description: '',
@@ -179,6 +181,10 @@ export const CreateListingWizard = () => {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
+      // Check if user is over seller level limits and prevent navigation
+      if (sellerLevelError && !formData.offersOnly && !formData.disableBuyNow) {
+        return; // Don't proceed if there's a seller level error and buy now is not disabled
+      }
       setCurrentStep(prev => Math.min(prev + 1, 4));
     }
   };
@@ -309,6 +315,8 @@ export const CreateListingWizard = () => {
                           setSellerLevelError(null);
                         }
                       }
+                    } else {
+                      setSellerLevelError(null);
                     }
                   }}
                   placeholder={formData.offersOnly ? "Accepting offers only" : "0.00"}
@@ -348,7 +356,8 @@ export const CreateListingWizard = () => {
                       setFormData(prev => ({ 
                         ...prev, 
                         offersOnly: checked,
-                        price: checked ? "" : prev.price
+                        price: checked ? "" : prev.price,
+                        disableBuyNow: checked ? false : prev.disableBuyNow // Reset disableBuyNow if offers only is enabled
                       }));
                       if (checked) {
                         setErrors(prev => ({ ...prev, price: '' }));
@@ -366,6 +375,46 @@ export const CreateListingWizard = () => {
               </div>
             </div>
 
+            {/* Disable Buy Now Option - only show when there's a seller level error */}
+            {sellerLevelError && !formData.offersOnly && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="disableBuyNow" 
+                    checked={formData.disableBuyNow}
+                    onCheckedChange={(checked) => {
+                      if (typeof checked === 'boolean') {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          disableBuyNow: checked
+                        }));
+                        if (checked) {
+                          setSellerLevelError(null);
+                        } else {
+                          // Re-check limits when unchecking
+                          if (formData.price && sellerLevelData && checkListingLimits) {
+                            const priceValue = parseFloat(formData.price);
+                            if (!isNaN(priceValue)) {
+                              const limitCheck = checkListingLimits(priceValue, totalActiveValue);
+                              if (!limitCheck.allowed) {
+                                setSellerLevelError(limitCheck.reason);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="disableBuyNow" className="cursor-pointer">Disable Buy Now</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Disable the Buy Now button to proceed. Buyers will only be able to make offers on this listing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="cardName">Card Name (if applicable)</Label>
               <Input
@@ -380,9 +429,13 @@ export const CreateListingWizard = () => {
               <div className="mt-6 p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   Looking for bulk listing?{' '}
-                  <Link href="/dashboard/create-listing?tab=bulk" className="text-primary hover:underline">
+                  <button 
+                    type="button"
+                    onClick={() => router.push('/dashboard/create-listing?tab=bulk')}
+                    className="text-primary hover:underline"
+                  >
                     Switch to bulk listing
-                  </Link>
+                  </button>
                 </p>
               </div>
             )}
@@ -761,17 +814,29 @@ export const CreateListingWizard = () => {
 
       {/* Seller Level Information */}
       {sellerLevelData && (
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className={`p-4 border rounded-lg ${
+          sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+        }`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100">
+              <h3 className={`font-medium ${
+                sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+                  ? 'text-yellow-900 dark:text-yellow-100'
+                  : 'text-blue-900 dark:text-blue-100'
+              }`}>
                 {sellerLevelData.level === 1 ? 'Level 1 Seller' : 
                  sellerLevelData.level === 2 ? 'Level 2 Seller' : 
                  sellerLevelData.level === 3 ? 'Level 3 Seller' : 
                  sellerLevelData.level === 4 ? 'Level 4 Seller' : 
                  'Level 5 Seller'}
               </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+              <p className={`text-sm ${
+                sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+                  ? 'text-yellow-700 dark:text-yellow-300'
+                  : 'text-blue-700 dark:text-blue-300'
+              }`}>
                 Current active listings value: ${totalActiveValue.toLocaleString()} / 
                 {sellerLevelData.currentLimits.maxTotalListingValue === null 
                   ? ' Unlimited' 
@@ -780,7 +845,11 @@ export const CreateListingWizard = () => {
             </div>
             <Link 
               href="/dashboard/seller-account?tab=seller-level" 
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              className={`text-sm hover:underline ${
+                sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-blue-600 dark:text-blue-400'
+              }`}
             >
               View Details
             </Link>
@@ -810,7 +879,10 @@ export const CreateListingWizard = () => {
         </Button>
         
         {currentStep < 4 ? (
-          <Button onClick={handleNext}>
+          <Button 
+            onClick={handleNext}
+            disabled={sellerLevelError && !formData.offersOnly && !formData.disableBuyNow}
+          >
             Next
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
