@@ -277,7 +277,7 @@ export const CreateListingWizard = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="price">Price {!formData.offersOnly && '*'}</Label>
+                  <Label htmlFor="price">Price *</Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox 
                       id="offersOnly" 
@@ -466,7 +466,7 @@ export const CreateListingWizard = () => {
                       }
                     }}
                   />
-                  <Label htmlFor="isGraded">Graded Card (not graded by default)</Label>
+                  <Label htmlFor="isGraded">Graded Card</Label>
                 </div>
 
                 {formData.isGraded && (
@@ -527,7 +527,6 @@ export const CreateListingWizard = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label>Location *</Label>
               <LocationInput
                 onLocationSelect={(city, state) => {
                   setFormData(prev => ({ ...prev, city, state }));
@@ -564,7 +563,7 @@ export const CreateListingWizard = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="images">Card Images * (timestamp required)</Label>
+              <Label htmlFor="images">Upload your photos</Label>
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                 <Input
                   id="images"
@@ -589,7 +588,7 @@ export const CreateListingWizard = () => {
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                Upload clear photos of your card. A timestamp is required for verification.
+                Upload clear photos of your card. A timestamp is required for verification. Maximum 10 images allowed.
               </p>
               {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
             </div>
