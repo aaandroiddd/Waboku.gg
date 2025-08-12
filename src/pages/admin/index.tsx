@@ -911,6 +911,108 @@ export default function AdminDashboard() {
                     </Button>
                   </Card>
                   
+                  {/* Monitor TTL Cron Health */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Monitor TTL Cron Health</h3>
+                    <p className="text-sm text-muted-foreground mb-4">📊 Check if the TTL cron job is working properly and detect overdue listings</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/admin/monitor-ttl-cron', {
+                            method: 'GET',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`
+                            }
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to monitor TTL cron health' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {loading ? 'Checking Health...' : 'Check Cron Health'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Emergency TTL Cleanup */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Emergency TTL Cleanup</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🚨 Emergency cleanup for listings overdue by 3+ hours (limited to 20 deletions)</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/admin/backup-ttl-cleanup', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              emergencyOnly: true,
+                              reason: 'admin_emergency',
+                              maxDeletions: 20
+                            })
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to run emergency TTL cleanup' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      {loading ? 'Emergency Cleanup...' : 'Emergency Cleanup (3+ Hours)'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Full Backup TTL Cleanup */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Full Backup TTL Cleanup</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧹 Full backup cleanup for all expired listings (limited to 50 deletions)</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/admin/backup-ttl-cleanup', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              emergencyOnly: false,
+                              reason: 'admin_full',
+                              maxDeletions: 50
+                            })
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to run full backup TTL cleanup' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      {loading ? 'Full Cleanup...' : 'Full Backup Cleanup'}
+                    </Button>
+                  </Card>
+                  
                   {/* Check Offers Status */}
                   <Card className="p-4">
                     <h3 className="font-semibold mb-2">Check Current Offers Status</h3>
