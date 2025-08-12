@@ -20,7 +20,42 @@ import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClientCache } from './useClientCache';
 import { ACCOUNT_TIERS } from '@/types/account';
-import { addClientTTLToListing, CLIENT_LISTING_TTL_CONFIG } from '@/lib/client-ttl';
+import { Timestamp } from 'firebase/firestore';
+
+// Client-side TTL configuration for automatic deletion
+const CLIENT_LISTING_TTL_CONFIG = {
+  ttlField: 'deleteAt', // Firestore TTL field
+  gracePeriod: 24 * 60 * 60 * 1000, // 24 hours grace period
+  archiveDuration: 7 * 24 * 60 * 60 * 1000, // 7 days in archive
+};
+
+/**
+ * Calculate TTL timestamp for a listing when it gets archived (client-side version)
+ * @param archivedAt - When the listing was archived
+ * @returns Firestore Timestamp for TTL deletion
+ */
+function calculateClientListingTTL(archivedAt: Date = new Date()): Timestamp {
+  const deleteAt = new Date(archivedAt.getTime() + CLIENT_LISTING_TTL_CONFIG.archiveDuration);
+  return Timestamp.fromDate(deleteAt);
+}
+
+/**
+ * Update listing with TTL for automatic deletion (client-side version)
+ * @param listingData - Listing data to update
+ * @param archivedAt - When the listing was archived
+ * @returns Updated listing data with TTL
+ */
+function addClientTTLToListing(listingData: any, archivedAt: Date = new Date()) {
+  return {
+    ...listingData,
+    status: 'archived',
+    archivedAt: Timestamp.fromDate(archivedAt),
+    [CLIENT_LISTING_TTL_CONFIG.ttlField]: calculateClientListingTTL(archivedAt),
+    // Keep track of when TTL was set for debugging
+    ttlSetAt: Timestamp.now(),
+    ttlReason: 'automated_archive'
+  };
+}
 
 // Game name mappings for consistent filtering
 const GAME_NAME_MAPPING: { [key: string]: string[] } = {
