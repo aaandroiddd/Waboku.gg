@@ -15,7 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
 import { useAccount } from '@/contexts/AccountContext';
-import { ArrowLeft, ArrowRight, Check, Upload } from 'lucide-react';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
+import { ArrowLeft, ArrowRight, Check, Upload, AlertCircle } from 'lucide-react';
 import { validateTextContent } from '@/util/string';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -59,10 +60,13 @@ export const CreateListingWizard = () => {
   const { createListing } = useListings();
   const { profile } = useProfile(user?.uid);
   const { accountTier } = useAccount();
+  const { sellerLevelData, isLoading: sellerLevelLoading, checkListingLimits, getTotalActiveListingValue } = useSellerLevel();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [totalActiveValue, setTotalActiveValue] = useState<number>(0);
+  const [sellerLevelError, setSellerLevelError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<FormData>({
     // Part 1
@@ -103,6 +107,13 @@ export const CreateListingWizard = () => {
       }));
     }
   }, [profile]);
+
+  // Fetch total active listing value for seller level checks
+  useEffect(() => {
+    if (user?.uid && getTotalActiveListingValue) {
+      getTotalActiveListingValue(user.uid).then(setTotalActiveValue);
+    }
+  }, [user?.uid, getTotalActiveListingValue]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -276,42 +287,41 @@ export const CreateListingWizard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="price">Price *</Label>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="offersOnly" 
-                      checked={formData.offersOnly}
-                      onCheckedChange={(checked) => {
-                        if (typeof checked === 'boolean') {
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            offersOnly: checked,
-                            price: checked ? "" : prev.price
-                          }));
-                          if (checked) {
-                            setErrors(prev => ({ ...prev, price: '' }));
-                          }
-                        }
-                      }}
-                    />
-                    <label htmlFor="offersOnly" className="text-sm font-medium leading-none cursor-pointer">
-                      Offers Only
-                    </label>
-                  </div>
-                </div>
+                <Label htmlFor="price">Price *</Label>
                 <Input
                   id="price"
                   type="number"
                   min="0"
                   step="0.01"
                   value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  onChange={(e) => {
+                    const newPrice = e.target.value;
+                    setFormData(prev => ({ ...prev, price: newPrice }));
+                    
+                    // Check seller level limits if price is entered and not offers only
+                    if (newPrice && !formData.offersOnly && sellerLevelData && checkListingLimits) {
+                      const priceValue = parseFloat(newPrice);
+                      if (!isNaN(priceValue)) {
+                        const limitCheck = checkListingLimits(priceValue, totalActiveValue);
+                        if (!limitCheck.allowed) {
+                          setSellerLevelError(limitCheck.reason);
+                        } else {
+                          setSellerLevelError(null);
+                        }
+                      }
+                    }
+                  }}
                   placeholder={formData.offersOnly ? "Accepting offers only" : "0.00"}
                   disabled={formData.offersOnly}
                   className={errors.price ? "border-red-500" : ""}
                 />
                 {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                {sellerLevelError && (
+                  <div className="flex items-start space-x-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                    <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">{sellerLevelError}</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -324,6 +334,35 @@ export const CreateListingWizard = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
                   placeholder="Enter quantity"
                 />
+              </div>
+            </div>
+
+            {/* Offers Only Option - moved below price and quantity */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="offersOnly" 
+                  checked={formData.offersOnly}
+                  onCheckedChange={(checked) => {
+                    if (typeof checked === 'boolean') {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        offersOnly: checked,
+                        price: checked ? "" : prev.price
+                      }));
+                      if (checked) {
+                        setErrors(prev => ({ ...prev, price: '' }));
+                        setSellerLevelError(null);
+                      }
+                    }
+                  }}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="offersOnly" className="cursor-pointer">Offers Only</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable this option to allow buyers to only provide offers instead of setting a fixed price
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -720,7 +759,34 @@ export const CreateListingWizard = () => {
         <Progress value={(currentStep / 4) * 100} className="w-full" />
       </div>
 
-
+      {/* Seller Level Information */}
+      {sellerLevelData && (
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                {sellerLevelData.level === 1 ? 'Level 1 Seller' : 
+                 sellerLevelData.level === 2 ? 'Level 2 Seller' : 
+                 sellerLevelData.level === 3 ? 'Level 3 Seller' : 
+                 sellerLevelData.level === 4 ? 'Level 4 Seller' : 
+                 'Level 5 Seller'}
+              </h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Current active listings value: ${totalActiveValue.toLocaleString()} / 
+                {sellerLevelData.currentLimits.maxTotalListingValue === null 
+                  ? ' Unlimited' 
+                  : ` $${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()}`}
+              </p>
+            </div>
+            <Link 
+              href="/dashboard/seller-account?tab=seller-level" 
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              View Details
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <Card>
