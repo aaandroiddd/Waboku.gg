@@ -200,7 +200,7 @@ const CreateListingPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeListingCount, setActiveListingCount] = useState<number | null>(null);
   const [totalActiveValue, setTotalActiveValue] = useState<number>(0);
-  const [useModernWizard, setUseModernWizard] = useState(false);
+  const [useLegacyForm, setUseLegacyForm] = useState(false);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
   
@@ -395,10 +395,16 @@ const CreateListingPage = () => {
         const preferencesDoc = await getDoc(doc(db, 'userPreferences', user.uid));
         if (preferencesDoc.exists()) {
           const data = preferencesDoc.data();
-          setUseModernWizard(data.useModernCreateListing || false);
+          // Default to modern wizard (true), only use legacy form if explicitly set to false
+          setUseLegacyForm(data.useModernCreateListing === false);
+        } else {
+          // Default to modern wizard for new users
+          setUseLegacyForm(false);
         }
       } catch (error) {
         console.error('Error loading user preferences:', error);
+        // Default to modern wizard on error
+        setUseLegacyForm(false);
       } finally {
         setIsLoadingPreferences(false);
       }
@@ -895,974 +901,975 @@ const CreateListingPage = () => {
     return null;
   }
 
-  // If user has enabled modern wizard, show that instead
-  if (useModernWizard) {
+  // Show legacy form only if user has explicitly disabled the modern wizard
+  if (useLegacyForm) {
     return (
       <RouteGuard requireAuth={true}>
         <DashboardLayout>
-          <CreateListingWizard />
-        </DashboardLayout>
-      </RouteGuard>
-    );
-  }
-
-  return (
-    <RouteGuard requireAuth={true}>
-      <DashboardLayout>
-        <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Create New Listing</h1>
-          <div className="text-sm text-muted-foreground">
-            <Link href="/dashboard/settings" className="text-primary hover:underline">
-              Switch to modern wizard
-            </Link>
+          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold">Create New Listing</h1>
+            <div className="text-sm text-muted-foreground">
+              <Link href="/dashboard/settings" className="text-primary hover:underline">
+                Switch to modern wizard
+              </Link>
+            </div>
           </div>
-        </div>
-        
-        {/* Only show Stripe Connect notice if status is confirmed as not active */}
-        {stripeConnectStatus !== 'none' && stripeConnectStatus !== 'active' && (
-          <Alert variant="warning" className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Stripe Connect Not Set Up</AlertTitle>
-            <AlertDescription>
-              <p className="mb-2">You can create listings without Stripe Connect, but you won't be able to receive direct payments through our platform. You'll need to communicate with buyers manually to arrange payment.</p>
-              <p className="mb-2">For a better selling experience with secure payments directly to your account, we recommend setting up Stripe Connect.</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2 bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/50"
-                onClick={() => router.push('/dashboard/connect-account')}
-              >
-                Set Up Stripe Connect
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+          
+          {/* Only show Stripe Connect notice if status is confirmed as not active */}
+          {stripeConnectStatus !== 'none' && stripeConnectStatus !== 'active' && (
+            <Alert variant="warning" className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Stripe Connect Not Set Up</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">You can create listings without Stripe Connect, but you won't be able to receive direct payments through our platform. You'll need to communicate with buyers manually to arrange payment.</p>
+                <p className="mb-2">For a better selling experience with secure payments directly to your account, we recommend setting up Stripe Connect.</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/50"
+                  onClick={() => router.push('/dashboard/connect-account')}
+                >
+                  Set Up Stripe Connect
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Show seller level information */}
-        {sellerLevelData && !sellerLevelLoading && (
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold">Your Seller Level</h3>
-                    <SellerLevelBadge
-                      level={sellerLevelData.level}
-                      salesCount={sellerLevelData.completedSales}
-                      rating={sellerLevelData.rating}
-                      reviewCount={sellerLevelData.reviewCount}
-                      accountAge={sellerLevelData.accountAge}
-                      compact={true}
-                    />
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>
-                      <strong>Listing Limits:</strong> ${(totalActiveValue || 0).toLocaleString()} / ${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()} total value
-                    </p>
-                    <p>
-                      <strong>Max per item:</strong> ${sellerLevelData.currentLimits.maxIndividualItemValue.toLocaleString()}
-                    </p>
-                    {sellerLevelData.currentLimits.maxActiveListings && (
+          {/* Show seller level information */}
+          {sellerLevelData && !sellerLevelLoading && (
+            <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold">Your Seller Level</h3>
+                      <SellerLevelBadge
+                        level={sellerLevelData.level}
+                        salesCount={sellerLevelData.completedSales}
+                        rating={sellerLevelData.rating}
+                        reviewCount={sellerLevelData.reviewCount}
+                        accountAge={sellerLevelData.accountAge}
+                        compact={true}
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
                       <p>
-                        <strong>Active listings:</strong> {activeListingCount || 0} / {sellerLevelData.currentLimits.maxActiveListings}
+                        <strong>Listing Limits:</strong> ${(totalActiveValue || 0).toLocaleString()} / ${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()} total value
                       </p>
-                    )}
+                      <p>
+                        <strong>Max per item:</strong> ${sellerLevelData.currentLimits.maxIndividualItemValue.toLocaleString()}
+                      </p>
+                      {sellerLevelData.currentLimits.maxActiveListings && (
+                        <p>
+                          <strong>Active listings:</strong> {activeListingCount || 0} / {sellerLevelData.currentLimits.maxActiveListings}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {sellerLevelData.canAdvance && (
+                    <div className="text-center">
+                      <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                        🎉 Ready to Level Up!
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-                {sellerLevelData.canAdvance && (
-                  <div className="text-center">
-                    <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                      🎉 Ready to Level Up!
-                    </Badge>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show listing limit information for free users */}
+          {accountTier === 'free' && activeListingCount !== null && (
+            <Alert className={`${activeListingCount >= features.maxActiveListings ? 'bg-red-500/10 border-red-500 text-red-700 dark:text-red-500' : 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-500'}`}>
+              <Info className="h-4 w-4" />
+              <AlertTitle>
+                {activeListingCount >= features.maxActiveListings ? 'Listing Limit Reached' : 'Free Account Listing Limit'}
+              </AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">
+                  You currently have <strong>{activeListingCount}</strong> of <strong>{features.maxActiveListings}</strong> active listings.
+                </p>
+                {activeListingCount >= features.maxActiveListings ? (
+                  <div>
+                    <p className="mb-2">You've reached your free account limit. To create more listings, you can:</p>
+                    <ul className="list-disc list-inside mb-3 space-y-1">
+                      <li>Delete or archive an existing listing</li>
+                      <li>Upgrade to Premium for unlimited listings</li>
+                    </ul>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/50"
+                        onClick={() => router.push('/dashboard')}
+                      >
+                        Manage Listings
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
+                        onClick={() => router.push('/dashboard/account-status')}
+                      >
+                        Upgrade to Premium
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="mb-2">Upgrade to Premium for unlimited listings and additional features!</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
+                      onClick={() => router.push('/dashboard/account-status')}
+                    >
+                      Learn About Premium
+                    </Button>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Show listing limit information for free users */}
-        {accountTier === 'free' && activeListingCount !== null && (
-          <Alert className={`${activeListingCount >= features.maxActiveListings ? 'bg-red-500/10 border-red-500 text-red-700 dark:text-red-500' : 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-500'}`}>
-            <Info className="h-4 w-4" />
-            <AlertTitle>
-              {activeListingCount >= features.maxActiveListings ? 'Listing Limit Reached' : 'Free Account Listing Limit'}
-            </AlertTitle>
-            <AlertDescription>
-              <p className="mb-2">
-                You currently have <strong>{activeListingCount}</strong> of <strong>{features.maxActiveListings}</strong> active listings.
-              </p>
-              {activeListingCount >= features.maxActiveListings ? (
-                <div>
-                  <p className="mb-2">You've reached your free account limit. To create more listings, you can:</p>
-                  <ul className="list-disc list-inside mb-3 space-y-1">
-                    <li>Delete or archive an existing listing</li>
-                    <li>Upgrade to Premium for unlimited listings</li>
-                  </ul>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/50"
-                      onClick={() => router.push('/dashboard')}
-                    >
-                      Manage Listings
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
-                      onClick={() => router.push('/dashboard/account-status')}
-                    >
-                      Upgrade to Premium
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p className="mb-2">Upgrade to Premium for unlimited listings and additional features!</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
-                    onClick={() => router.push('/dashboard/account-status')}
-                  >
-                    Learn About Premium
-                  </Button>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Card className="transition-all duration-300 hover:shadow-lg">
-          <CardContent className="pt-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="single">Single Listing</TabsTrigger>
-                <TabsTrigger value="bulk" disabled={accountTier !== 'premium'}>
-                  Bulk Listing
-                  {accountTier !== 'premium' && (
-                    <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Show premium required message for free users */}
-              {accountTier !== 'premium' && activeTab === 'bulk' && (
-                <Alert className="mt-4 bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Premium Feature</AlertTitle>
-                  <AlertDescription>
-                    <p className="mb-2">Bulk listing is a premium feature that allows you to upload multiple listings at once using a spreadsheet.</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
-                      onClick={() => router.push('/dashboard/account-status')}
-                    >
-                      Upgrade to Premium
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <TabsContent value="single" className="mt-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cardName">Card Name</Label>
-                    <Input
-                      id="cardName"
-                      value={formData.cardName}
-                      onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
-                      placeholder="Enter card name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      min="0"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                      placeholder="Enter quantity (optional)"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="title">Listing Title *</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs">Include the card's name, condition, edition, and any other important details</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <Input
-                    id="title"
-                    required
-                    maxLength={MAX_TITLE_LENGTH}
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., Mint Condition Blue-Eyes White Dragon - 1st Edition"
-                    className={errors.title ? "border-red-500" : ""}
-                  />
-                  <div className="flex justify-between text-sm">
-                    {errors.title ? (
-                      <p className="text-red-500">{errors.title}</p>
-                    ) : (
-                      <p className="text-muted-foreground">
-                        {formData.title.length}/{MAX_TITLE_LENGTH} characters
-                      </p>
+          <Card className="transition-all duration-300 hover:shadow-lg">
+            <CardContent className="pt-6">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="single">Single Listing</TabsTrigger>
+                  <TabsTrigger value="bulk" disabled={accountTier !== 'premium'}>
+                    Bulk Listing
+                    {accountTier !== 'premium' && (
+                      <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>
                     )}
-                  </div>
-                </div>
+                  </TabsTrigger>
+                </TabsList>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  {/* Use the account context to check if user is premium */}
-                  {accountTier === 'premium' ? (
-                    <MarkdownEditor
-                      value={formData.description}
-                      onChange={(value) => setFormData({ ...formData, description: value })}
-                      maxLength={MAX_DESCRIPTION_LENGTH}
-                      error={errors.description}
-                    />
-                  ) : (
-                    <>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        maxLength={MAX_DESCRIPTION_LENGTH}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Provide detailed information about your card"
-                        className={`min-h-[120px] ${errors.description ? "border-red-500" : ""}`}
+                {/* Show premium required message for free users */}
+                {accountTier !== 'premium' && activeTab === 'bulk' && (
+                  <Alert className="mt-4 bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Premium Feature</AlertTitle>
+                    <AlertDescription>
+                      <p className="mb-2">Bulk listing is a premium feature that allows you to upload multiple listings at once using a spreadsheet.</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
+                        onClick={() => router.push('/dashboard/account-status')}
+                      >
+                        Upgrade to Premium
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <TabsContent value="single" className="mt-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cardName">Card Name</Label>
+                      <Input
+                        id="cardName"
+                        value={formData.cardName}
+                        onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
+                        placeholder="Enter card name"
                       />
-                      <div className="flex justify-between text-sm">
-                        {errors.description ? (
-                          <p className="text-red-500">{errors.description}</p>
-                        ) : (
-                          <p className="text-muted-foreground">
-                            {formData.description.length}/{MAX_DESCRIPTION_LENGTH} characters
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="price">Price {!formData.offersOnly && '*'}</Label>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="offersOnly" 
-                          checked={formData.offersOnly}
-                          onCheckedChange={(checked) => {
-                            if (typeof checked === 'boolean') {
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                offersOnly: checked,
-                                // Clear price if offers only is checked
-                                price: checked ? "" : prev.price
-                              }));
-                              // Clear price error if offers only is checked
-                              if (checked) {
-                                setErrors(prev => ({ ...prev, price: undefined }));
-                              }
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="offersOnly"
-                          className="text-sm font-medium leading-none cursor-pointer"
-                        >
-                          Offers Only
-                        </label>
-                      </div>
                     </div>
-                    <Input
-                      id="price"
-                      required={!formData.offersOnly}
-                      disabled={formData.offersOnly}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      placeholder={formData.offersOnly ? "Accepting offers only" : "0.00"}
-                      className={errors.price ? "border-red-500" : ""}
-                    />
-                    {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
-                    {formData.offersOnly && (
-                      <p className="text-xs text-muted-foreground">
-                        Buyers will be able to make offers, but won't be able to purchase directly.
-                      </p>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantity</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="0"
+                        value={formData.quantity}
+                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                        placeholder="Enter quantity (optional)"
+                      />
+                    </div>
                   </div>
-
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <Label htmlFor="shippingCost">Shipping Cost</Label>
+                      <Label htmlFor="title">Listing Title *</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="max-w-xs">Optional shipping cost that will be added to the total price for buyers</p>
+                            <p className="max-w-xs">Include the card's name, condition, edition, and any other important details</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
                     <Input
-                      id="shippingCost"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.shippingCost}
-                      onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
-                      placeholder="0.00"
+                      id="title"
+                      required
+                      maxLength={MAX_TITLE_LENGTH}
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="e.g., Mint Condition Blue-Eyes White Dragon - 1st Edition"
+                      className={errors.title ? "border-red-500" : ""}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Leave empty for free shipping or buyer-arranged pickup
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="game">Category *</Label>
-                    <MobileSelect
-                      value={formData.game}
-                      onValueChange={(value) => {
-                        if (value === 'accessories') {
-                          // Clear grading data when switching to accessories
-                          const { gradeLevel, gradingCompany, isGraded, ...rest } = formData;
-                          setFormData({ ...rest, game: value });
-                        } else {
-                          setFormData({ ...formData, game: value });
-                        }
-                      }}
-                      placeholder="Select category"
-                      className={errors.game ? "border-red-500" : ""}
-                      options={[
-                        { value: "dbs", label: "Dragon Ball Super Card Game" },
-                        { value: "digimon", label: "Digimon" },
-                        { value: "lorcana", label: "Disney Lorcana" },
-                        { value: "flesh-and-blood", label: "Flesh and Blood" },
-                        { value: "gundam", label: "Gundam" },
-                        { value: "mtg", label: "Magic: The Gathering" },
-                        { value: "onepiece", label: "One Piece Card Game" },
-                        { value: "pokemon", label: "Pokemon" },
-                        { value: "star-wars", label: "Star Wars: Unlimited" },
-                        { value: "union-arena", label: "Union Arena" },
-                        { value: "universus", label: "Universus" },
-                        { value: "vanguard", label: "Vanguard" },
-                        { value: "weiss", label: "Weiss Schwarz" },
-                        { value: "yugioh", label: "Yu-Gi-Oh!" },
-                        { value: "accessories", label: "Accessories" },
-                        { value: "other", label: "Other" }
-                      ]}
-                    />
-                    {errors.game && <p className="text-sm text-red-500">{errors.game}</p>}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="condition">Condition *</Label>
-                    <MobileSelect
-                      value={formData.condition}
-                      onValueChange={(value) => setFormData({ ...formData, condition: value })}
-                      placeholder="Select condition"
-                      options={[
-                        { value: "mint", label: "Mint" },
-                        { value: "near mint", label: "Near Mint" },
-                        { value: "excellent", label: "Excellent" },
-                        { value: "good", label: "Good" },
-                        { value: "light played", label: "Light Played" },
-                        { value: "played", label: "Played" },
-                        { value: "poor", label: "Poor" }
-                      ]}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <MobileSelect
-                      value={formData.language}
-                      onValueChange={(value) => setFormData({ ...formData, language: value })}
-                      placeholder="Select language"
-                      options={[
-                        { value: "English", label: "English" },
-                        { value: "Japanese", label: "Japanese" },
-                        { value: "Spanish", label: "Spanish" },
-                        { value: "Chinese", label: "Chinese" },
-                        { value: "French", label: "French" },
-                        { value: "German", label: "German" }
-                      ]}
-                    />
-                  </div>
-                </div>
-
-                {formData.game !== 'accessories' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="isGraded">Graded Card</Label>
-                      <Switch
-                        id="isGraded"
-                        checked={formData.isGraded}
-                        onCheckedChange={(checked) => {
-                          if (!checked) {
-                            // Remove grading fields when unchecking
-                            const { gradeLevel, gradingCompany, ...rest } = formData;
-                            setFormData({
-                              ...rest,
-                              isGraded: false
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              isGraded: true
-                            });
-                          }
-                        }}
-                      />
+                    <div className="flex justify-between text-sm">
+                      {errors.title ? (
+                        <p className="text-red-500">{errors.title}</p>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          {formData.title.length}/{MAX_TITLE_LENGTH} characters
+                        </p>
+                      )}
                     </div>
+                  </div>
 
-                    {formData.isGraded && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="gradeLevel">Grade Level</Label>
-                          <MobileSelect
-                            value={formData.gradeLevel?.toString() || ""}
-                            onValueChange={(value) => setFormData({ ...formData, gradeLevel: parseFloat(value) })}
-                            placeholder="Select grade"
-                            options={[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5].map((grade) => ({
-                              value: grade.toString(),
-                              label: grade.toFixed(1)
-                            }))}
-                          />
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    {/* Use the account context to check if user is premium */}
+                    {accountTier === 'premium' ? (
+                      <MarkdownEditor
+                        value={formData.description}
+                        onChange={(value) => setFormData({ ...formData, description: value })}
+                        maxLength={MAX_DESCRIPTION_LENGTH}
+                        error={errors.description}
+                      />
+                    ) : (
+                      <>
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          maxLength={MAX_DESCRIPTION_LENGTH}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="Provide detailed information about your card"
+                          className={`min-h-[120px] ${errors.description ? "border-red-500" : ""}`}
+                        />
+                        <div className="flex justify-between text-sm">
+                          {errors.description ? (
+                            <p className="text-red-500">{errors.description}</p>
+                          ) : (
+                            <p className="text-muted-foreground">
+                              {formData.description.length}/{MAX_DESCRIPTION_LENGTH} characters
+                            </p>
+                          )}
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="gradingCompany">Grading Company</Label>
-                          <MobileSelect
-                            value={formData.gradingCompany || ""}
-                            onValueChange={(value) => setFormData({ ...formData, gradingCompany: value })}
-                            placeholder="Select company"
-                            options={[
-                              { value: "PSA", label: "PSA" },
-                              { value: "BGS", label: "BGS" },
-                              { value: "CGC", label: "CGC" },
-                              { value: "other", label: "Other" }
-                            ]}
-                          />
-                        </div>
-                      </div>
+                      </>
                     )}
                   </div>
-                )}
 
-                <LocationInput
-                  onLocationSelect={(city, state) => {
-                    setFormData(prev => ({ ...prev, city, state }));
-                    setErrors(prev => ({ ...prev, location: undefined }));
-                  }}
-                  initialCity={formData.city}
-                  initialState={formData.state}
-                  error={errors.location}
-                />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <Label htmlFor="price">Price {!formData.offersOnly && '*'}</Label>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="offersOnly" 
+                            checked={formData.offersOnly}
+                            onCheckedChange={(checked) => {
+                              if (typeof checked === 'boolean') {
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  offersOnly: checked,
+                                  // Clear price if offers only is checked
+                                  price: checked ? "" : prev.price
+                                }));
+                                // Clear price error if offers only is checked
+                                if (checked) {
+                                  setErrors(prev => ({ ...prev, price: undefined }));
+                                }
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor="offersOnly"
+                            className="text-sm font-medium leading-none cursor-pointer"
+                          >
+                            Offers Only
+                          </label>
+                        </div>
+                      </div>
+                      <Input
+                        id="price"
+                        required={!formData.offersOnly}
+                        disabled={formData.offersOnly}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder={formData.offersOnly ? "Accepting offers only" : "0.00"}
+                        className={errors.price ? "border-red-500" : ""}
+                      />
+                      {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                      {formData.offersOnly && (
+                        <p className="text-xs text-muted-foreground">
+                          Buyers will be able to make offers, but won't be able to purchase directly.
+                        </p>
+                      )}
+                    </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="finalSale" 
-                      checked={formData.finalSale}
-                      onCheckedChange={(checked) => {
-                        if (typeof checked === 'boolean') {
-                          setFormData(prev => ({ ...prev, finalSale: checked }));
-                        }
-                      }}
-                    />
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="finalSale"
-                        className="text-sm font-medium leading-none cursor-pointer"
-                      >
-                        Final Sale
-                      </label>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="shippingCost">Shipping Cost</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">Optional shipping cost that will be added to the total price for buyers</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Input
+                        id="shippingCost"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.shippingCost}
+                        onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
+                        placeholder="0.00"
+                      />
                       <p className="text-xs text-muted-foreground">
-                        Mark this item as final sale (no returns or refunds accepted)
+                        Leave empty for free shipping or buyer-arranged pickup
                       </p>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="images">Card Images *</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs">Upload clear photos of your card. Include timestamps if needed for verification.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                      <Input
-                        id="images"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        multiple
-                        onChange={handleImageChange}
-                        className={`${errors.images ? "border-red-500" : ""} hidden`}
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="game">Category *</Label>
+                      <MobileSelect
+                        value={formData.game}
+                        onValueChange={(value) => {
+                          if (value === 'accessories') {
+                            // Clear grading data when switching to accessories
+                            const { gradeLevel, gradingCompany, isGraded, ...rest } = formData;
+                            setFormData({ ...rest, game: value });
+                          } else {
+                            setFormData({ ...formData, game: value });
+                          }
+                        }}
+                        placeholder="Select category"
+                        className={errors.game ? "border-red-500" : ""}
+                        options={[
+                          { value: "dbs", label: "Dragon Ball Super Card Game" },
+                          { value: "digimon", label: "Digimon" },
+                          { value: "lorcana", label: "Disney Lorcana" },
+                          { value: "flesh-and-blood", label: "Flesh and Blood" },
+                          { value: "gundam", label: "Gundam" },
+                          { value: "mtg", label: "Magic: The Gathering" },
+                          { value: "onepiece", label: "One Piece Card Game" },
+                          { value: "pokemon", label: "Pokemon" },
+                          { value: "star-wars", label: "Star Wars: Unlimited" },
+                          { value: "union-arena", label: "Union Arena" },
+                          { value: "universus", label: "Universus" },
+                          { value: "vanguard", label: "Vanguard" },
+                          { value: "weiss", label: "Weiss Schwarz" },
+                          { value: "yugioh", label: "Yu-Gi-Oh!" },
+                          { value: "accessories", label: "Accessories" },
+                          { value: "other", label: "Other" }
+                        ]}
                       />
-                      <label htmlFor="images" className="cursor-pointer">
-                        <div className="space-y-2">
-                          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                            </svg>
+                      {errors.game && <p className="text-sm text-red-500">{errors.game}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="condition">Condition *</Label>
+                      <MobileSelect
+                        value={formData.condition}
+                        onValueChange={(value) => setFormData({ ...formData, condition: value })}
+                        placeholder="Select condition"
+                        options={[
+                          { value: "mint", label: "Mint" },
+                          { value: "near mint", label: "Near Mint" },
+                          { value: "excellent", label: "Excellent" },
+                          { value: "good", label: "Good" },
+                          { value: "light played", label: "Light Played" },
+                          { value: "played", label: "Played" },
+                          { value: "poor", label: "Poor" }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="language">Language</Label>
+                      <MobileSelect
+                        value={formData.language}
+                        onValueChange={(value) => setFormData({ ...formData, language: value })}
+                        placeholder="Select language"
+                        options={[
+                          { value: "English", label: "English" },
+                          { value: "Japanese", label: "Japanese" },
+                          { value: "Spanish", label: "Spanish" },
+                          { value: "Chinese", label: "Chinese" },
+                          { value: "French", label: "French" },
+                          { value: "German", label: "German" }
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {formData.game !== 'accessories' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="isGraded">Graded Card</Label>
+                        <Switch
+                          id="isGraded"
+                          checked={formData.isGraded}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Remove grading fields when unchecking
+                              const { gradeLevel, gradingCompany, ...rest } = formData;
+                              setFormData({
+                                ...rest,
+                                isGraded: false
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                isGraded: true
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {formData.isGraded && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="gradeLevel">Grade Level</Label>
+                            <MobileSelect
+                              value={formData.gradeLevel?.toString() || ""}
+                              onValueChange={(value) => setFormData({ ...formData, gradeLevel: parseFloat(value) })}
+                              placeholder="Select grade"
+                              options={[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5].map((grade) => ({
+                                value: grade.toString(),
+                                label: grade.toFixed(1)
+                              }))}
+                            />
                           </div>
-                          <div className="text-sm font-medium">
-                            Click to upload or drag and drop
+
+                          <div className="space-y-2">
+                            <Label htmlFor="gradingCompany">Grading Company</Label>
+                            <MobileSelect
+                              value={formData.gradingCompany || ""}
+                              onValueChange={(value) => setFormData({ ...formData, gradingCompany: value })}
+                              placeholder="Select company"
+                              options={[
+                                { value: "PSA", label: "PSA" },
+                                { value: "BGS", label: "BGS" },
+                                { value: "CGC", label: "CGC" },
+                                { value: "other", label: "Other" }
+                              ]}
+                            />
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            JPG, PNG or WebP (max. 5MB per image)
-                          </p>
                         </div>
-                      </label>
+                      )}
                     </div>
-                    <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 inline-block mr-2">
-                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
-                      </svg>
-                      Note: Images will be displayed in the listing in the order they are uploaded
-                    </div>
+                  )}
+
+                  <LocationInput
+                    onLocationSelect={(city, state) => {
+                      setFormData(prev => ({ ...prev, city, state }));
+                      setErrors(prev => ({ ...prev, location: undefined }));
+                    }}
+                    initialCity={formData.city}
+                    initialState={formData.state}
+                    error={errors.location}
+                  />
+
+                  <div className="space-y-4">
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="terms" 
-                        required
+                        id="finalSale" 
+                        checked={formData.finalSale}
                         onCheckedChange={(checked) => {
                           if (typeof checked === 'boolean') {
-                            setFormData(prev => ({ ...prev, termsAccepted: checked }))
+                            setFormData(prev => ({ ...prev, finalSale: checked }));
                           }
                         }}
                       />
-                      <label
-                        htmlFor="terms"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        I confirm that I own or have the rights to use these images and agree to the{" "}
-                        <Link href="/terms-of-use" className="text-primary hover:underline">
-                          Terms of Use
-                        </Link>
-                      </label>
-                    </div>
-                  </div>
-                  {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
-                  {formData.images.length > 0 && (
-                    <div className="space-y-4">
-                      <p className="text-sm text-green-600">
-                        {formData.images.length} image(s) selected
-                      </p>
-                      <div className="grid grid-cols-4 gap-4">
-                        {Array.from(formData.images).map((file, index) => (
-                          <div 
-                            key={index}
-                            className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all
-                              ${index === formData.coverImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'}`}
-                          >
-                            <img
-                              src={URL.createObjectURL(file)}
-                              alt={`Preview ${index + 1}`}
-                              className="w-full h-full object-cover"
-                              onClick={() => setFormData(prev => ({ ...prev, coverImageIndex: index }))}
-                            />
-                            {index === formData.coverImageIndex && (
-                              <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                                Cover
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newImages = [...formData.images];
-                                newImages.splice(index, 1);
-                                let newCoverIndex = formData.coverImageIndex;
-                                if (index === formData.coverImageIndex) {
-                                  newCoverIndex = Math.min(newImages.length - 1, 0);
-                                } else if (index < formData.coverImageIndex) {
-                                  newCoverIndex = Math.max(0, formData.coverImageIndex - 1);
-                                }
-                                setFormData(prev => ({
-                                  ...prev,
-                                  images: newImages,
-                                  coverImageIndex: newCoverIndex
-                                }));
-                              }}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="finalSale"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Final Sale
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Mark this item as final sale (no returns or refunds accepted)
+                        </p>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {isSubmitting && uploadProgress > 0 && (
-                  <div className="space-y-2">
-                    <Progress value={uploadProgress} className="w-full" />
-                    <p className="text-sm text-center">Uploading images... {Math.round(uploadProgress)}%</p>
                   </div>
-                )}
-              </div>
 
-              <div className="flex justify-between pt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.back()}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || (accountTier === 'free' && activeListingCount !== null && activeListingCount >= features.maxActiveListings)}
-                >
-                  {isSubmitting ? 'Creating...' : 
-                   (accountTier === 'free' && activeListingCount !== null && activeListingCount >= features.maxActiveListings) ? 'Listing Limit Reached' : 
-                   'Create Listing'}
-                </Button>
-              </div>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="bulk" className="mt-6">
-                {accountTier === 'premium' ? (
-                  <div className="space-y-6">
-                    {/* Step 1: Download Template */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Step 1: Download Template</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Download our Excel template to get started with bulk listing. Fill in your listing details following the provided format.
-                      </p>
-                      <Button 
-                        onClick={generateTemplate}
-                        className="flex items-center gap-2"
-                        variant="outline"
-                      >
-                        <FileSpreadsheet className="h-4 w-4" />
-                        Download Template
-                      </Button>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="images">Card Images *</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">Upload clear photos of your card. Include timestamps if needed for verification.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
-
-                    {/* Step 2: Upload Filled Template */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Step 2: Upload Your Listings</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload your completed Excel file. We'll validate the data and show you a preview.
-                      </p>
                       <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                         <Input
+                          id="images"
                           type="file"
-                          accept=".xlsx,.xls"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                          id="bulk-upload"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          onChange={handleImageChange}
+                          className={`${errors.images ? "border-red-500" : ""} hidden`}
                         />
-                        <label htmlFor="bulk-upload" className="cursor-pointer">
+                        <label htmlFor="images" className="cursor-pointer">
                           <div className="space-y-2">
                             <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                              <Upload className="w-6 h-6" />
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                              </svg>
                             </div>
                             <div className="text-sm font-medium">
                               Click to upload or drag and drop
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              Excel files only (.xlsx, .xls)
+                              JPG, PNG or WebP (max. 5MB per image)
                             </p>
                           </div>
                         </label>
                       </div>
-                      
                       <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 inline-block mr-2">
                           <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
                         </svg>
-                        Make sure your spreadsheet follows the template format. Each row will become a separate listing.
+                        Note: Images will be displayed in the listing in the order they are uploaded
                       </div>
-
-                      <Alert className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Important</AlertTitle>
-                        <AlertDescription>
-                          Each game category has specific valid options (e.g., 'pokemon', 'mtg', 'lorcana', 'flesh-and-blood'). The template includes examples and instructions for all valid options.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-
-                    {/* Step 3: Review and Add Images */}
-                    {bulkListings.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Step 3: Review Listings & Add Images</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Review your listings below and add images for each one. All listings must have at least one image.
-                        </p>
-                        
-                        {/* Location Input for all listings */}
-                        <div className="bg-muted p-4 rounded-lg">
-                          <h4 className="font-medium mb-2">Set Location for All Listings</h4>
-                          <LocationInput
-                            onLocationSelect={(city, state) => {
-                              // Update all listings with the same location
-                              setBulkListings(prev => prev.map(listing => ({
-                                ...listing,
-                                city,
-                                state
-                              })));
-                            }}
-                            initialCity={bulkListings[0]?.city || formData.city}
-                            initialState={bulkListings[0]?.state || formData.state}
-                          />
-                        </div>
-
-                        {/* Listings Table */}
-                        <div className="border rounded-lg overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Condition</TableHead>
-                                <TableHead>Images</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {bulkListings.map((listing, index) => (
-                                <TableRow key={listing.id}>
-                                  <TableCell className="font-medium max-w-[200px] truncate">
-                                    {listing.title}
-                                  </TableCell>
-                                  <TableCell>${listing.price}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline">
-                                      {GAME_CATEGORIES[listing.game] || listing.game}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant="secondary">
-                                      {CONDITION_MAPPING[listing.condition] || listing.condition}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      {listing.images && listing.images.length > 0 ? (
-                                        <Badge variant="default" className="bg-green-500">
-                                          {listing.images.length} image{listing.images.length > 1 ? 's' : ''}
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="destructive">
-                                          No images
-                                        </Badge>
-                                      )}
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setCurrentEditingListingId(listing.id);
-                                          setShowImageUploadDialog(true);
-                                        }}
-                                      >
-                                        <ImageIcon className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    {listing.status === 'error' ? (
-                                      <Badge variant="destructive">Error</Badge>
-                                    ) : listing.status === 'ready' ? (
-                                      <Badge variant="default" className="bg-green-500">Ready</Badge>
-                                    ) : listing.status === 'uploaded' ? (
-                                      <Badge variant="default" className="bg-blue-500">Uploaded</Badge>
-                                    ) : (
-                                      <Badge variant="secondary">Pending</Badge>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {isMobile ? (
-                                      <Button
-                                        size="sm"
-                                        variant="destructive"
-                                        onClick={() => handleRemoveListing(listing)}
-                                      >
-                                        Remove
-                                      </Button>
-                                    ) : (
-                                      <AlertDialog open={removeConfirmListingId === listing.id} onOpenChange={(open) => !open && setRemoveConfirmListingId(null)}>
-                                        <AlertDialogTrigger asChild>
-                                          <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() => handleRemoveListing(listing)}
-                                          >
-                                            Remove
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Remove Listing</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Are you sure you want to remove "{listing.title}" from your bulk creation? This action cannot be undone and you'll lose all the information entered for this listing.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={() => {
-                                                removeListing(listing.id);
-                                                setRemoveConfirmListingId(null);
-                                              }}
-                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            >
-                                              Remove
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-
-                        {/* Error Details */}
-                        {bulkListings.some(listing => listing.status === 'error') && (
-                          <div className="space-y-2">
-                            <h4 className="font-medium text-red-600">Listings with Errors:</h4>
-                            {bulkListings
-                              .filter(listing => listing.status === 'error')
-                              .map(listing => (
-                                <div key={listing.id} className="bg-red-50 dark:bg-red-950 p-3 rounded-lg">
-                                  <p className="font-medium">{listing.title}</p>
-                                  <p className="text-sm text-red-600 dark:text-red-400">{listing.error}</p>
-                                </div>
-                              ))}
-                          </div>
-                        )}
-
-                        {/* Submit All Button */}
-                        <div className="flex justify-between items-center pt-6">
-                          <div className="text-sm text-muted-foreground">
-                            {bulkListings.length} listing{bulkListings.length > 1 ? 's' : ''} ready to upload
-                          </div>
-                          <Button
-                            onClick={submitAllListings}
-                            disabled={
-                              isSubmitting || 
-                              bulkListings.length === 0 ||
-                              bulkListings.some(listing => !listing.images || listing.images.length === 0) ||
-                              bulkListings.some(listing => listing.status === 'error')
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="terms" 
+                          required
+                          onCheckedChange={(checked) => {
+                            if (typeof checked === 'boolean') {
+                              setFormData(prev => ({ ...prev, termsAccepted: checked }))
                             }
-                            className="flex items-center gap-2"
-                          >
-                            {isSubmitting ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Creating Listings...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="h-4 w-4" />
-                                Create All Listings
-                              </>
-                            )}
-                          </Button>
-                        </div>
-
-                        {/* Progress during upload */}
-                        {isSubmitting && (
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>Overall Progress</span>
-                              <span>{overallProgress}%</span>
+                          }}
+                        />
+                        <label
+                          htmlFor="terms"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          I confirm that I own or have the rights to use these images and agree to the{" "}
+                          <Link href="/terms-of-use" className="text-primary hover:underline">
+                            Terms of Use
+                          </Link>
+                        </label>
+                      </div>
+                    </div>
+                    {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
+                    {formData.images.length > 0 && (
+                      <div className="space-y-4">
+                        <p className="text-sm text-green-600">
+                          {formData.images.length} image(s) selected
+                        </p>
+                        <div className="grid grid-cols-4 gap-4">
+                          {Array.from(formData.images).map((file, index) => (
+                            <div 
+                              key={index}
+                              className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all
+                                ${index === formData.coverImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'}`}
+                            >
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onClick={() => setFormData(prev => ({ ...prev, coverImageIndex: index }))}
+                              />
+                              {index === formData.coverImageIndex && (
+                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                                  Cover
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newImages = [...formData.images];
+                                  newImages.splice(index, 1);
+                                  let newCoverIndex = formData.coverImageIndex;
+                                  if (index === formData.coverImageIndex) {
+                                    newCoverIndex = Math.min(newImages.length - 1, 0);
+                                  } else if (index < formData.coverImageIndex) {
+                                    newCoverIndex = Math.max(0, formData.coverImageIndex - 1);
+                                  }
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    images: newImages,
+                                    coverImageIndex: newCoverIndex
+                                  }));
+                                }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
                             </div>
-                            <Progress value={overallProgress} className="w-full" />
-                            {currentUploadIndex >= 0 && (
-                              <p className="text-sm text-center">
-                                Uploading listing {currentUploadIndex + 1} of {bulkListings.length}...
-                              </p>
-                            )}
-                          </div>
-                        )}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">
-                      Bulk listing is only available for Premium users.
-                    </p>
-                    <Button onClick={() => router.push('/dashboard/account-status')}>
-                      Upgrade to Premium
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
 
-            {/* Multi-Image Upload Dialog */}
-            {showImageUploadDialog && (
-              <MultiImageUpload
-                open={showImageUploadDialog}
-                onOpenChange={(open) => {
-                  setShowImageUploadDialog(open);
-                  if (!open) {
-                    setCurrentEditingListingId(null);
+                  {isSubmitting && uploadProgress > 0 && (
+                    <div className="space-y-2">
+                      <Progress value={uploadProgress} className="w-full" />
+                      <p className="text-sm text-center">Uploading images... {Math.round(uploadProgress)}%</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between pt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || (accountTier === 'free' && activeListingCount !== null && activeListingCount >= features.maxActiveListings)}
+                  >
+                    {isSubmitting ? 'Creating...' : 
+                     (accountTier === 'free' && activeListingCount !== null && activeListingCount >= features.maxActiveListings) ? 'Listing Limit Reached' : 
+                     'Create Listing'}
+                  </Button>
+                </div>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="bulk" className="mt-6">
+                  {accountTier === 'premium' ? (
+                    <div className="space-y-6">
+                      {/* Step 1: Download Template */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Step 1: Download Template</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Download our Excel template to get started with bulk listing. Fill in your listing details following the provided format.
+                        </p>
+                        <Button 
+                          onClick={generateTemplate}
+                          className="flex items-center gap-2"
+                          variant="outline"
+                        >
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Download Template
+                        </Button>
+                      </div>
+
+                      {/* Step 2: Upload Filled Template */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Step 2: Upload Your Listings</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Upload your completed Excel file. We'll validate the data and show you a preview.
+                        </p>
+                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                          <Input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            id="bulk-upload"
+                          />
+                          <label htmlFor="bulk-upload" className="cursor-pointer">
+                            <div className="space-y-2">
+                              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                                <Upload className="w-6 h-6" />
+                              </div>
+                              <div className="text-sm font-medium">
+                                Click to upload or drag and drop
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Excel files only (.xlsx, .xls)
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 inline-block mr-2">
+                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                          </svg>
+                          Make sure your spreadsheet follows the template format. Each row will become a separate listing.
+                        </div>
+
+                        <Alert className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Important</AlertTitle>
+                          <AlertDescription>
+                            Each game category has specific valid options (e.g., 'pokemon', 'mtg', 'lorcana', 'flesh-and-blood'). The template includes examples and instructions for all valid options.
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+
+                      {/* Step 3: Review and Add Images */}
+                      {bulkListings.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Step 3: Review Listings & Add Images</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Review your listings below and add images for each one. All listings must have at least one image.
+                          </p>
+                          
+                          {/* Location Input for all listings */}
+                          <div className="bg-muted p-4 rounded-lg">
+                            <h4 className="font-medium mb-2">Set Location for All Listings</h4>
+                            <LocationInput
+                              onLocationSelect={(city, state) => {
+                                // Update all listings with the same location
+                                setBulkListings(prev => prev.map(listing => ({
+                                  ...listing,
+                                  city,
+                                  state
+                                })));
+                              }}
+                              initialCity={bulkListings[0]?.city || formData.city}
+                              initialState={bulkListings[0]?.state || formData.state}
+                            />
+                          </div>
+
+                          {/* Listings Table */}
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Title</TableHead>
+                                  <TableHead>Price</TableHead>
+                                  <TableHead>Category</TableHead>
+                                  <TableHead>Condition</TableHead>
+                                  <TableHead>Images</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {bulkListings.map((listing, index) => (
+                                  <TableRow key={listing.id}>
+                                    <TableCell className="font-medium max-w-[200px] truncate">
+                                      {listing.title}
+                                    </TableCell>
+                                    <TableCell>${listing.price}</TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline">
+                                        {GAME_CATEGORIES[listing.game] || listing.game}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="secondary">
+                                        {CONDITION_MAPPING[listing.condition] || listing.condition}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        {listing.images && listing.images.length > 0 ? (
+                                          <Badge variant="default" className="bg-green-500">
+                                            {listing.images.length} image{listing.images.length > 1 ? 's' : ''}
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="destructive">
+                                            No images
+                                          </Badge>
+                                        )}
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setCurrentEditingListingId(listing.id);
+                                            setShowImageUploadDialog(true);
+                                          }}
+                                        >
+                                          <ImageIcon className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      {listing.status === 'error' ? (
+                                        <Badge variant="destructive">Error</Badge>
+                                      ) : listing.status === 'ready' ? (
+                                        <Badge variant="default" className="bg-green-500">Ready</Badge>
+                                      ) : listing.status === 'uploaded' ? (
+                                        <Badge variant="default" className="bg-blue-500">Uploaded</Badge>
+                                      ) : (
+                                        <Badge variant="secondary">Pending</Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isMobile ? (
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => handleRemoveListing(listing)}
+                                        >
+                                          Remove
+                                        </Button>
+                                      ) : (
+                                        <AlertDialog open={removeConfirmListingId === listing.id} onOpenChange={(open) => !open && setRemoveConfirmListingId(null)}>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="destructive"
+                                              onClick={() => handleRemoveListing(listing)}
+                                            >
+                                              Remove
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Remove Listing</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                Are you sure you want to remove "{listing.title}" from your bulk creation? This action cannot be undone and you'll lose all the information entered for this listing.
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction
+                                                onClick={() => {
+                                                  removeListing(listing.id);
+                                                  setRemoveConfirmListingId(null);
+                                                }}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                              >
+                                                Remove
+                                              </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+
+                          {/* Error Details */}
+                          {bulkListings.some(listing => listing.status === 'error') && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-red-600">Listings with Errors:</h4>
+                              {bulkListings
+                                .filter(listing => listing.status === 'error')
+                                .map(listing => (
+                                  <div key={listing.id} className="bg-red-50 dark:bg-red-950 p-3 rounded-lg">
+                                    <p className="font-medium">{listing.title}</p>
+                                    <p className="text-sm text-red-600 dark:text-red-400">{listing.error}</p>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+
+                          {/* Submit All Button */}
+                          <div className="flex justify-between items-center pt-6">
+                            <div className="text-sm text-muted-foreground">
+                              {bulkListings.length} listing{bulkListings.length > 1 ? 's' : ''} ready to upload
+                            </div>
+                            <Button
+                              onClick={submitAllListings}
+                              disabled={
+                                isSubmitting || 
+                                bulkListings.length === 0 ||
+                                bulkListings.some(listing => !listing.images || listing.images.length === 0) ||
+                                bulkListings.some(listing => listing.status === 'error')
+                              }
+                              className="flex items-center gap-2"
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  Creating Listings...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4" />
+                                  Create All Listings
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          {/* Progress during upload */}
+                          {isSubmitting && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Overall Progress</span>
+                                <span>{overallProgress}%</span>
+                              </div>
+                              <Progress value={overallProgress} className="w-full" />
+                              {currentUploadIndex >= 0 && (
+                                <p className="text-sm text-center">
+                                  Uploading listing {currentUploadIndex + 1} of {bulkListings.length}...
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">
+                        Bulk listing is only available for Premium users.
+                      </p>
+                      <Button onClick={() => router.push('/dashboard/account-status')}>
+                        Upgrade to Premium
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              {/* Multi-Image Upload Dialog */}
+              {showImageUploadDialog && (
+                <MultiImageUpload
+                  open={showImageUploadDialog}
+                  onOpenChange={(open) => {
+                    setShowImageUploadDialog(open);
+                    if (!open) {
+                      setCurrentEditingListingId(null);
+                    }
+                  }}
+                  onImagesConfirm={handleImagesConfirm}
+                  existingImages={
+                    currentEditingListingId 
+                      ? bulkListings.find(l => l.id === currentEditingListingId)?.images || []
+                      : []
                   }
-                }}
-                onImagesConfirm={handleImagesConfirm}
-                existingImages={
-                  currentEditingListingId 
-                    ? bulkListings.find(l => l.id === currentEditingListingId)?.images || []
-                    : []
-                }
-                maxImages={10}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+                  maxImages={10}
+                />
+              )}
+            </CardContent>
+          </Card>
+          </div>
+        </DashboardLayout>
+      </RouteGuard>
+    );
+  }
+
+  // Default to modern wizard
+  return (
+    <RouteGuard requireAuth={true}>
+      <DashboardLayout>
+        <CreateListingWizard />
+      </DashboardLayout>
     </RouteGuard>
   );
 };

@@ -88,7 +88,7 @@ const SettingsPageContent = () => {
   
   // User preferences state
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
-    useModernCreateListing: false
+    useModernCreateListing: true
   });
   const [isLoadingUserPreferences, setIsLoadingUserPreferences] = useState(false);
   
@@ -192,7 +192,7 @@ const SettingsPageContent = () => {
       } else {
         // Create default preferences
         const defaultPreferences: UserPreferences = {
-          useModernCreateListing: false
+          useModernCreateListing: true
         };
         
         await setDoc(doc(db, 'userPreferences', user.uid), defaultPreferences);
