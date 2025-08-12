@@ -375,8 +375,8 @@ export const CreateListingWizard = () => {
               </div>
             </div>
 
-            {/* Disable Buy Now Option - only show when there's a seller level error */}
-            {sellerLevelError && !formData.offersOnly && (
+            {/* Disable Buy Now Option - show when there's a seller level error OR when disableBuyNow is already checked */}
+            {(sellerLevelError || formData.disableBuyNow) && !formData.offersOnly && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
@@ -431,7 +431,7 @@ export const CreateListingWizard = () => {
                   Looking for bulk listing?{' '}
                   <button 
                     type="button"
-                    onClick={() => router.push('/dashboard/create-listing?tab=bulk')}
+                    onClick={() => router.push('/dashboard/bulk-listing')}
                     className="text-primary hover:underline"
                   >
                     Switch to bulk listing
