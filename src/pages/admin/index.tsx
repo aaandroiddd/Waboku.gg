@@ -880,6 +880,37 @@ export default function AdminDashboard() {
                     </Button>
                   </Card>
                   
+                  {/* Manual TTL Cleanup - Delete Overdue */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Manual TTL Cleanup (Delete Overdue)</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🚨 Immediately delete all expired TTL listings that should have been removed by the cron job</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/admin/manual-ttl-cleanup', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to run manual TTL cleanup' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {loading ? 'Deleting Overdue...' : 'Delete Overdue Listings'}
+                    </Button>
+                  </Card>
+                  
                   {/* Check Offers Status */}
                   <Card className="p-4">
                     <h3 className="font-semibold mb-2">Check Current Offers Status</h3>
