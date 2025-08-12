@@ -6,8 +6,8 @@
       "schedule": "0 * * * *"
     },
     {
-      "path": "/api/cron/cleanup-ttl-listings",
-      "schedule": "15 */2 * * *"
+      "path": "/api/cron/cleanup-ttl-listings-simple",
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/listings/cleanup-related-data",

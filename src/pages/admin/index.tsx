@@ -911,6 +911,37 @@ export default function AdminDashboard() {
                     </Button>
                   </Card>
                   
+                  {/* Test Simplified TTL Cron Job */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Test Simplified TTL Cron Job</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧪 Test the new simplified TTL cron job that uses the same logic as the working manual cleanup</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/cron/cleanup-ttl-listings-simple', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to test simplified TTL cron job' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      {loading ? 'Testing Simplified Cron...' : 'Test Simplified TTL Cron'}
+                    </Button>
+                  </Card>
+                  
                   {/* Monitor TTL Cron Health */}
                   <Card className="p-4">
                     <h3 className="font-semibold mb-2">Monitor TTL Cron Health</h3>
