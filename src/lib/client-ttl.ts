@@ -4,6 +4,53 @@
  */
 
 import { Listing } from '@/types/database';
+import { Timestamp } from 'firebase/firestore';
+
+/**
+ * Client-side TTL configuration (matches server-side config)
+ */
+export interface ClientTTLConfig {
+  // TTL field name for Firestore automatic deletion
+  ttlField: string;
+  // Grace period before TTL kicks in (in milliseconds)
+  gracePeriod: number;
+  // Archive duration before automatic deletion (7 days)
+  archiveDuration: number;
+}
+
+export const CLIENT_LISTING_TTL_CONFIG: ClientTTLConfig = {
+  ttlField: 'deleteAt', // Firestore TTL field
+  gracePeriod: 24 * 60 * 60 * 1000, // 24 hours grace period
+  archiveDuration: 7 * 24 * 60 * 60 * 1000, // 7 days in archive
+};
+
+/**
+ * Calculate TTL timestamp for a listing when it gets archived (client-side version)
+ * @param archivedAt - When the listing was archived
+ * @returns Firestore Timestamp for TTL deletion
+ */
+export function calculateClientListingTTL(archivedAt: Date = new Date()): Timestamp {
+  const deleteAt = new Date(archivedAt.getTime() + CLIENT_LISTING_TTL_CONFIG.archiveDuration);
+  return Timestamp.fromDate(deleteAt);
+}
+
+/**
+ * Update listing with TTL for automatic deletion (client-side version)
+ * @param listingData - Listing data to update
+ * @param archivedAt - When the listing was archived
+ * @returns Updated listing data with TTL
+ */
+export function addClientTTLToListing(listingData: any, archivedAt: Date = new Date()) {
+  return {
+    ...listingData,
+    status: 'archived',
+    archivedAt: Timestamp.fromDate(archivedAt),
+    [CLIENT_LISTING_TTL_CONFIG.ttlField]: calculateClientListingTTL(archivedAt),
+    // Keep track of when TTL was set for debugging
+    ttlSetAt: Timestamp.now(),
+    ttlReason: 'automated_archive'
+  };
+}
 
 /**
  * Checks if a listing should be hidden from the UI based on its deleteAt timestamp
