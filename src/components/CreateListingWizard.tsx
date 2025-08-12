@@ -720,25 +720,7 @@ export const CreateListingWizard = () => {
         <Progress value={(currentStep / 4) * 100} className="w-full" />
       </div>
 
-      {/* Step Indicator */}
-      <div className="flex justify-between items-center">
-        {[1, 2, 3, 4].map((step) => (
-          <div key={step} className="flex items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step < currentStep ? 'bg-primary text-primary-foreground' :
-              step === currentStep ? 'bg-primary/20 text-primary border-2 border-primary' :
-              'bg-muted text-muted-foreground'
-            }`}>
-              {step < currentStep ? <Check className="w-4 h-4" /> : step}
-            </div>
-            {step < 4 && (
-              <div className={`w-16 h-0.5 mx-2 ${
-                step < currentStep ? 'bg-primary' : 'bg-muted'
-              }`} />
-            )}
-          </div>
-        ))}
-      </div>
+
 
       {/* Main Content */}
       <Card>
@@ -751,7 +733,7 @@ export const CreateListingWizard = () => {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="flex justify-between mb-8">
         <Button
           variant="outline"
           onClick={handlePrevious}
