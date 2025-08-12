@@ -105,15 +105,6 @@ const nextConfig = {
     largePageDataBytes: 256 * 1000,
   },
   outputFileTracing: false,
-  webpack: (config) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      // Use an absolute path string without extra imports to avoid ESM pitfalls
-      'styled-jsx/style': `${process.cwd()}/src/shims/styled-jsx-style.js`,
-    };
-    return config;
-  },
 };
 
 export default nextConfig;
