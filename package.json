@@ -90,7 +90,8 @@
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
 
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "styled-jsx": "^5.1.6"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.6",
