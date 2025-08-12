@@ -850,6 +850,36 @@ export default function AdminDashboard() {
                     </Button>
                   </Card>
                   
+                  {/* Test TTL Cron Job Logic */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Test TTL Cron Job Logic</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧪 Test the TTL cron job logic manually to debug why it's not working</p>
+                    <Button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const response = await fetch('/api/admin/test-ttl-cron-job', {
+                            method: 'GET',
+                            headers: {
+                              'Authorization': `Bearer ${adminSecret}`
+                            }
+                          });
+                          const data = await response.json();
+                          setApiResponse(data);
+                          setResponseDialog(true);
+                        } catch (error) {
+                          setApiResponse({ error: 'Failed to test TTL cron job logic' });
+                          setResponseDialog(true);
+                        }
+                        setLoading(false);
+                      }}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Testing...' : 'Test Cron Job Logic'}
+                    </Button>
+                  </Card>
+                  
                   {/* Check Offers Status */}
                   <Card className="p-4">
                     <h3 className="font-semibold mb-2">Check Current Offers Status</h3>
