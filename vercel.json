@@ -1,7 +1,7 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile --prefer-offline",
   "functions": {
-    "api/**": {
+    "src/pages/api/**/*.ts": {
       "includeFiles": "node_modules/styled-jsx/**"
     }
   },
