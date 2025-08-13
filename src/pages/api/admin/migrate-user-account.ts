@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
 
 interface MigrationRequest {
@@ -58,6 +58,9 @@ export default async function handler(
       favorites: 0,
       wantedPosts: 0
     };
+
+    // Initialize Firebase Admin
+    const { auth: adminAuth, db: adminDb } = getFirebaseAdmin();
 
     // Step 1: Get current user data
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();

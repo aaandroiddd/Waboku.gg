@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase-admin';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { calculateSellerLevel, SELLER_LEVEL_CONFIG } from '@/types/seller-level';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,28 +14,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Price and userId are required' });
     }
 
-    const { db } = await getFirebaseServices();
+    const { db } = getFirebaseAdmin();
     if (!db) {
       return res.status(500).json({ error: 'Database not initialized' });
     }
 
     // Get user data for account age
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (!userDoc.exists()) {
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     const userData = userDoc.data();
-    const joinDate = userData.createdAt?.toDate() || new Date();
+    const joinDate = userData?.createdAt?.toDate() || new Date();
     const accountAge = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
 
     // Get completed sales count from orders
-    const ordersQuery = query(
-      collection(db, 'orders'),
-      where('sellerId', '==', userId),
-      where('status', '==', 'completed')
-    );
-    const ordersSnapshot = await getDocs(ordersQuery);
+    const ordersSnapshot = await db
+      .collection('orders')
+      .where('sellerId', '==', userId)
+      .where('status', '==', 'completed')
+      .get();
     const completedSales = ordersSnapshot.docs.length;
 
     // Get review stats
@@ -44,11 +42,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let reviewCount = 0;
     
     try {
-      const reviewStatsDoc = await getDoc(doc(db, 'reviewStats', userId));
-      if (reviewStatsDoc.exists()) {
+      const reviewStatsDoc = await db.collection('reviewStats').doc(userId).get();
+      if (reviewStatsDoc.exists) {
         const statsData = reviewStatsDoc.data();
-        rating = statsData.averageRating || null;
-        reviewCount = statsData.totalReviews || 0;
+        rating = statsData?.averageRating || null;
+        reviewCount = statsData?.totalReviews || 0;
       }
     } catch (reviewError) {
       console.warn('Could not fetch review stats:', reviewError);
@@ -74,13 +72,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const limits = config.limits;
 
     // Get current total active listing value
-    const listingsQuery = query(
-      collection(db, 'listings'),
-      where('userId', '==', userId),
-      where('status', '==', 'active')
-    );
-
-    const listingsSnapshot = await getDocs(listingsQuery);
+    const listingsSnapshot = await db
+      .collection('listings')
+      .where('userId', '==', userId)
+      .where('status', '==', 'active')
+      .get();
     let totalActiveValue = 0;
 
     listingsSnapshot.docs.forEach(doc => {
