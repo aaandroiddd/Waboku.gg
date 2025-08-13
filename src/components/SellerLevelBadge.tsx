@@ -11,6 +11,7 @@ import {
   getSpecialRequirementsText
 } from '@/types/seller-level';
 import { cn } from '@/lib/utils';
+import { useStripeVerifiedUser } from '@/hooks/useStripeVerifiedUser';
 
 interface SellerLevelBadgeProps {
   level: SellerLevel;
@@ -21,6 +22,8 @@ interface SellerLevelBadgeProps {
   className?: string;
   showAllBadges?: boolean;
   compact?: boolean;
+  userId?: string;
+  hideIfNotVerified?: boolean;
 }
 
 export function SellerLevelBadge({
@@ -31,10 +34,19 @@ export function SellerLevelBadge({
   accountAge,
   className,
   showAllBadges = true,
-  compact = false
+  compact = false,
+  userId,
+  hideIfNotVerified = true
 }: SellerLevelBadgeProps) {
   const config = SELLER_LEVEL_CONFIG[level];
   const tenureBadge = getTenureBadge(accountAge);
+
+  // Hide seller-level badges for non-verified users when userId is provided
+  const { isVerified, loading: verifyLoading } = useStripeVerifiedUser(userId ?? null);
+  if (userId && hideIfNotVerified) {
+    if (verifyLoading) return null;
+    if (!isVerified) return null;
+  }
 
   if (compact) {
     return (

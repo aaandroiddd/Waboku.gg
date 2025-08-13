@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { getFirebaseServices } from '@/lib/firebase';
 import { BadgeTooltip } from '@/components/BadgeTooltip';
 import { useRouter } from 'next/router';
+import { useStripeVerifiedUser } from '@/hooks/useStripeVerifiedUser';
 
 interface SellerBadgeProps {
   className?: string;
   userId?: string;
   showOnlyOnProfile?: boolean;
+  hideIfNotStripeVerified?: boolean;
 }
 
 interface UserData {
@@ -24,10 +26,11 @@ interface UserData {
   };
 }
 
-export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
+export function SellerBadge({ className, userId, showOnlyOnProfile = false, hideIfNotStripeVerified = false }: SellerBadgeProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
+  const { isVerified, loading: verifyLoading } = useStripeVerifiedUser(userId ?? null);
   
   useEffect(() => {
     if (!userId) return;
@@ -58,6 +61,10 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
   }, [userId]);
 
   if (!userData || !userId) return null;
+  if (hideIfNotStripeVerified) {
+    if (verifyLoading) return null;
+    if (!isVerified) return null;
+  }
 
   // Enhanced premium status check
   const isPremiumActive = (() => {

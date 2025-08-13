@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { CreditCard } from 'lucide-react';
 import { BadgeTooltip } from '@/components/BadgeTooltip';
-import { useOptimizedSellerStatus } from '@/hooks/useFirestoreOptimizer';
+import { useStripeVerifiedUser } from '@/hooks/useStripeVerifiedUser';
 
 interface StripeSellerBadgeProps {
   className?: string;
@@ -9,10 +9,10 @@ interface StripeSellerBadgeProps {
 }
 
 export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps) {
-  const { hasStripeAccount, isLoading } = useOptimizedSellerStatus(userId);
+  const { isVerified, loading } = useStripeVerifiedUser(userId);
   
   // Show skeleton loader while loading
-  if (isLoading) {
+  if (loading) {
     return (
       <Badge 
         variant="secondary"
@@ -24,8 +24,8 @@ export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps)
     );
   }
 
-  // Don't render anything if the user doesn't have a Stripe account
-  if (!hasStripeAccount) return null;
+  // Hide badge if the seller is not Stripe-verified
+  if (!isVerified) return null;
 
   return (
     <BadgeTooltip content="This seller has connected their Stripe account, verified their identity, and can accept secure payments">
