@@ -181,7 +181,7 @@ const SellerAccountPage = () => {
               <TabsList className="flex flex-col sm:grid sm:grid-cols-4 w-full h-auto gap-1 sm:gap-0">
                 <TabsTrigger value="setup" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Account Setup</TabsTrigger>
                 <TabsTrigger value="payouts" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Payouts & Earnings</TabsTrigger>
-                <TabsTrigger value="seller-level" disabled={!isVerified} title={!isVerified ? 'Complete Account Setup to unlock Seller Level' : undefined} className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6 flex items-center gap-2">
+                <TabsTrigger value="seller-level" disabled={!isVerified} title={!isVerified ? (verifyReason || 'Complete Account Setup to unlock Seller Level') : undefined} className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
                   Seller Level
                   {sellerLevelData && !levelLoading && (

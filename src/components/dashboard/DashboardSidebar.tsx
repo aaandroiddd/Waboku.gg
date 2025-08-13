@@ -21,6 +21,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useStripeVerified } from '@/hooks/useStripeVerified';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -38,6 +39,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   
   // Get seller level data
   const { sellerLevelData, isLoading: sellerLevelLoading } = useSellerLevel();
+  const { isVerified: isStripeVerified, loading: stripeVerifyLoading, reason: stripeReason } = useStripeVerified();
 
   // Theme handling function
   const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
@@ -367,7 +369,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                       </svg>
                       Verified
                     </div>
-                    {sellerLevelData && !sellerLevelLoading && (
+                    {sellerLevelData && !sellerLevelLoading && isStripeVerified && (
                       <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-primary bg-primary/10 hover:bg-primary/20 border-primary/20">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"

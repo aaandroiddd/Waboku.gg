@@ -91,8 +91,22 @@ export function summarizeStripeVerification(signals: StripeSignals | null | unde
   if (!signals.stripeConnectAccountId) {
     return { verified: false, reason: 'Stripe Connect not started' };
   }
-  if (signals.stripeConnectStatus && signals.stripeConnectStatus !== 'active') {
+  // Treat non-active statuses and incomplete setup as "setup in progress"
+  const normalizedStatus = (signals.stripeConnectStatus || '').toLowerCase();
+  if (normalizedStatus && normalizedStatus !== 'active') {
+    // Common in-progress statuses from Connect
+    if (
+      normalizedStatus === 'pending' ||
+      normalizedStatus === 'in_progress' || normalizedStatus === 'in-progress' ||
+      normalizedStatus === 'requirements_due' || normalizedStatus === 'requirements-due' ||
+      normalizedStatus.startsWith('restricted')
+    ) {
+      return { verified: false, reason: 'Account setup in progress' };
+    }
     return { verified: false, reason: `Stripe Connect status: ${signals.stripeConnectStatus}` };
+  }
+  if (signals.stripeConnectAccountId && signals.stripeConnectDetailsSubmitted === false) {
+    return { verified: false, reason: 'Account setup in progress' };
   }
   if (!signals.stripeConnectChargesEnabled || !signals.stripeConnectPayoutsEnabled) {
     return { verified: false, reason: 'Charges/payouts not enabled' };

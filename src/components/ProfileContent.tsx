@@ -288,6 +288,7 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
                             reviewCount={sellerLevelData.reviewCount}
                             accountAge={sellerLevelData.accountAge}
                             compact={true}
+                            userId={userId || undefined}
                           />
                         )}
                         <ModeratorBadge userId={userId} />
