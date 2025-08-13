@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { toast } from 'sonner';
 import BuyNowTutorial from './BuyNowTutorial';
 import CheckoutTutorial from './CheckoutTutorial';
+import { useStripeVerifiedUser } from '@/hooks/useStripeVerifiedUser';
 
 interface BuyNowButtonProps {
   listingId: string;
@@ -46,6 +47,9 @@ export function BuyNowButton({
   const [showCheckoutTutorial, setShowCheckoutTutorial] = useState(false);
   const [tutorialCompleted, setTutorialCompleted] = useState(false);
 
+  const { isVerified: sellerVerified, reason: sellerReason, loading: sellerLoading } = useStripeVerifiedUser(sellerId);
+  const isButtonDisabled = disabled || isLoading || sellerLoading || !sellerVerified;
+
   const handleBuyNow = async () => {
     if (!user) {
       toast.error('Please sign in to purchase this item');
@@ -57,6 +61,16 @@ export function BuyNowButton({
 
     if (user.uid === sellerId) {
       toast.error('You cannot purchase your own listing');
+      return;
+    }
+
+    // Verify seller can receive payments before proceeding
+    if (sellerLoading) {
+      toast.message('Checking seller payment status...');
+      return;
+    }
+    if (!sellerVerified) {
+      toast.error(`This seller can't accept payments yet: ${sellerReason}`);
       return;
     }
 
@@ -147,7 +161,8 @@ export function BuyNowButton({
       />
       <Button
         onClick={handleBuyNow}
-        disabled={disabled || isLoading}
+        disabled={isButtonDisabled}
+        title={sellerLoading ? 'Checking seller payment status...' : (!sellerVerified ? `Seller cannot receive payments: ${sellerReason}` : undefined)}
         className={className}
         variant={variant}
         size={size}
