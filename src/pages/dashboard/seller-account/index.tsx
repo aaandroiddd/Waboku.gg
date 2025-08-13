@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import Head from 'next/head';
 import PayoutDashboard from '@/components/PayoutDashboard';
 import SellerLevelDashboard from '@/components/SellerLevelDashboard';
+import { useStripeVerified } from '@/hooks/useStripeVerified';
 
 // Simple loading state component
 const LoadingState = () => (
@@ -33,6 +34,7 @@ const SellerAccountPage = () => {
   // Use our simplified hook
   const { accountStatus, isLoading, error, createAccount, updateAccount, refreshStatus } = useSellerAccount();
   const { sellerLevelData, isLoading: levelLoading } = useSellerLevel();
+  const { isVerified, reason: verifyReason, loading: verifyLoading } = useStripeVerified();
   
   // Get the active tab from URL query parameter
   const activeTab = (router.query.tab as string) || 'setup';
@@ -119,6 +121,16 @@ const SellerAccountPage = () => {
       handleStripeReturn();
     }
   }, [router.isReady, router.query, refreshStatus]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (activeTab === 'seller-level' && !verifyLoading && !isVerified) {
+      router.replace('/dashboard/seller-account?tab=setup', undefined, { shallow: true });
+      toast.info('Stripe verification required', {
+        description: 'Please complete Account Setup to access Seller Level.'
+      });
+    }
+  }, [router.isReady, activeTab, isVerified, verifyLoading, router]);
   
   // Determine if any loading state is active
   const isAnyLoading = isLoading || isCreatingAccount || isUpdatingAccount;
@@ -169,7 +181,7 @@ const SellerAccountPage = () => {
               <TabsList className="flex flex-col sm:grid sm:grid-cols-4 w-full h-auto gap-1 sm:gap-0">
                 <TabsTrigger value="setup" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Account Setup</TabsTrigger>
                 <TabsTrigger value="payouts" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6">Payouts & Earnings</TabsTrigger>
-                <TabsTrigger value="seller-level" className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6 flex items-center gap-2">
+                <TabsTrigger value="seller-level" disabled={!isVerified} title={!isVerified ? 'Complete Account Setup to unlock Seller Level' : undefined} className="w-full justify-start text-sm sm:text-base px-4 py-3 sm:px-6 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
                   Seller Level
                   {sellerLevelData && !levelLoading && (
@@ -196,7 +208,17 @@ const SellerAccountPage = () => {
               </TabsContent>
               
               <TabsContent value="seller-level" className="mt-6">
-                <SellerLevelDashboard />
+                {!verifyLoading && !isVerified ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Stripe verification required</AlertTitle>
+                    <AlertDescription>
+                      {verifyReason || 'Please complete your Stripe Connect verification to access Seller Level features.'}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <SellerLevelDashboard />
+                )}
               </TabsContent>
               
               <TabsContent value="info" className="mt-6">
