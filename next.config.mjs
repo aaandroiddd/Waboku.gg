@@ -104,7 +104,7 @@ const nextConfig = {
     largePageDataBytes: 256 * 1000,
     esmExternals: 'loose',
   },
-  outputFileTracing: false,
+  outputFileTracing: true,
 };
 
 export default nextConfig;
