@@ -323,6 +323,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // User preferences collection rules
+    match /userPreferences/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // SECURITY: Security events collection for monitoring
     match /securityEvents/{eventId} {
       allow read: if false; // Only server-side access
