@@ -83,16 +83,29 @@ async function getListingSuggestions(db: any, query: string, limit: number): Pro
     // Query listings collection for active listings
     const listingsRef = db.collection('listings');
     
-    // Create multiple queries to search different fields
-    const queries = [
-      // Search by title (most important)
-      listingsRef
-        .where('status', '==', 'active')
-        .where('expiresAt', '>', now)
-        .orderBy('expiresAt')
-        .orderBy('createdAt', 'desc')
-        .limit(limit * 2), // Get more to filter and rank
+    // Build case variants for prefix search
+    const makeVariants = (s: string) => {
+      const cap = s.charAt(0).toUpperCase() + s.slice(1);
+      const titleCase = s.replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const upper = s.toUpperCase();
+      return Array.from(new Set([s, cap, titleCase, upper]));
+    };
+    const variants = makeVariants(query);
+    
+    // Create multiple queries:
+    // - a recent pool by createdAt (fallback)
+    // - prefix searches on title and cardName (case variants)
+    const queries: any[] = [
+      listingsRef.orderBy('createdAt', 'desc').limit(Math.max(limit * 4, 40)),
     ];
+    for (const v of variants) {
+      queries.push(
+        listingsRef.orderBy('title').startAt(v).endAt(v + '\uf8ff').limit(limit * 3)
+      );
+      queries.push(
+        listingsRef.orderBy('cardName').startAt(v).endAt(v + '\uf8ff').limit(limit * 2)
+      );
+    }
 
     // Execute all queries in parallel
     const queryPromises = queries.map(q => q.get());
@@ -107,6 +120,12 @@ async function getListingSuggestions(db: any, query: string, limit: number): Pro
         seenIds.add(doc.id);
 
         const data = doc.data();
+
+        // Filter: only include active and non-expired listings
+        const expiresAtDate = data.expiresAt?.toDate ? data.expiresAt.toDate() : data.expiresAt;
+        if (data.status !== 'active' || (expiresAtDate && expiresAtDate <= now)) {
+          return;
+        }
         
         // Check if the listing matches our search query
         const title = (data.title || '').toLowerCase();
