@@ -350,7 +350,7 @@ const SellerLevelDashboard = () => {
               sellerLevelData.level === 1 
                 ? 'border-primary bg-primary/5' 
                 : sellerLevelData.level > 1
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+                  ? 'border-muted bg-muted/20 opacity-60'
                   : 'border-muted bg-muted/30'
             }`}>
               <Collapsible open={isLevel1Open} onOpenChange={setIsLevel1Open}>
@@ -409,7 +409,7 @@ const SellerLevelDashboard = () => {
               sellerLevelData.level === 2 
                 ? 'border-primary bg-primary/5' 
                 : sellerLevelData.level > 2
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+                  ? 'border-muted bg-muted/20 opacity-60'
                   : 'border-muted bg-muted/30'
             }`}>
               <Collapsible open={isLevel2Open} onOpenChange={setIsLevel2Open}>
@@ -474,7 +474,7 @@ const SellerLevelDashboard = () => {
               sellerLevelData.level === 3 
                 ? 'border-primary bg-primary/5' 
                 : sellerLevelData.level > 3
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+                  ? 'border-muted bg-muted/20 opacity-60'
                   : 'border-muted bg-muted/30'
             }`}>
               <Collapsible open={isLevel3Open} onOpenChange={setIsLevel3Open}>
@@ -545,7 +545,7 @@ const SellerLevelDashboard = () => {
               sellerLevelData.level === 4 
                 ? 'border-primary bg-primary/5' 
                 : sellerLevelData.level > 4
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+                  ? 'border-muted bg-muted/20 opacity-60'
                   : 'border-muted bg-muted/30'
             }`}>
               <Collapsible open={isLevel4Open} onOpenChange={setIsLevel4Open}>

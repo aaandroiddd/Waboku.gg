@@ -73,7 +73,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 2000
+      maxTotalListingValue: 5000
     },
     badge: {
       icon: '',
@@ -90,11 +90,11 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxChargebackRate: 2,
       minRating: 4.0,
       minReviewCount: 3,
-      minAccountAge: 60,
+      minAccountAge: 30,
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 10000
+      maxTotalListingValue: 30000
     },
     badge: {
       icon: '',
@@ -111,7 +111,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxChargebackRate: 1,
       minRating: 4.5,
       minReviewCount: 50,
-      minAccountAge: 180,
+      minAccountAge: 0,
       maxUnresolvedDisputes: 0
     },
     limits: {
@@ -132,7 +132,7 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxChargebackRate: 0.5,
       minRating: 4.7,
       minReviewCount: 150,
-      minAccountAge: 365,
+      minAccountAge: 0,
       maxUnresolvedDisputes: 0
     },
     limits: {
@@ -159,7 +159,7 @@ export const LEVEL_ADVANCEMENT_REQUIREMENTS: Record<SellerLevel, SellerLevelRequ
     maxChargebackRate: 2,
     minRating: 4.0,
     minReviewCount: 3,
-    minAccountAge: 60,
+    minAccountAge: 30,
     maxUnresolvedDisputes: 0
   },
   3: {
@@ -167,7 +167,7 @@ export const LEVEL_ADVANCEMENT_REQUIREMENTS: Record<SellerLevel, SellerLevelRequ
     maxChargebackRate: 1,
     minRating: 4.5,
     minReviewCount: 50,
-    minAccountAge: 180,
+    minAccountAge: 0,
     maxUnresolvedDisputes: 0
   },
   4: {
@@ -175,7 +175,7 @@ export const LEVEL_ADVANCEMENT_REQUIREMENTS: Record<SellerLevel, SellerLevelRequ
     maxChargebackRate: 0.5,
     minRating: 4.7,
     minReviewCount: 150,
-    minAccountAge: 365,
+    minAccountAge: 0,
     maxUnresolvedDisputes: 0
   },
   5: null // Max level
