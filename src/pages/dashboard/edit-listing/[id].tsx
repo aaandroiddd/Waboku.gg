@@ -4,13 +4,15 @@ import dynamic from 'next/dynamic';
 import { validateTextContent } from "@/util/string";
 import { useAuth } from '@/contexts/AuthContext';
 import { useListings } from '@/hooks/useListings';
+import { useSellerLevel } from '@/hooks/useSellerLevel';
+import { useStripeConnectAccount } from '@/hooks/useStripeConnectAccount';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, ArrowLeft, ArrowRight, AlertCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { MobileSelect } from '@/components/ui/mobile-select';
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +25,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 import { HelpCircle } from "lucide-react";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { useAccount } from "@/contexts/AccountContext";
+import { Progress } from '@/components/ui/progress';
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
@@ -32,9 +35,17 @@ const EditListingPage = () => {
   const { id } = router.query;
   const { user } = useAuth();
   const { toast } = useToast();
+  const { accountTier } = useAccount();
+  const { sellerLevelData, isLoading: sellerLevelLoading, checkListingLimits, getTotalActiveListingValue } = useSellerLevel();
+  const { accountData: stripeConnectData, isLoading: stripeLoading } = useStripeConnectAccount();
+  
   const [loading, setLoading] = useState(true);
   const [listing, setListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [totalActiveValue, setTotalActiveValue] = useState<number>(0);
+  const [sellerLevelError, setSellerLevelError] = useState<string | null>(null);
+  const [stripeConnectRequired, setStripeConnectRequired] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -53,6 +64,9 @@ const EditListingPage = () => {
     cardName: '',
     offersOnly: false,
     finalSale: false,
+    language: 'English',
+    shippingCost: '',
+    disableBuyNow: false,
   });
 
   const [errors, setErrors] = useState<{
@@ -90,6 +104,19 @@ const EditListingPage = () => {
         newErrors.price = "Price is required";
       } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
         newErrors.price = "Please enter a valid price";
+      } else {
+        // Validate seller level limits for price changes
+        const price = parseFloat(formData.price);
+        const originalPrice = listing?.price || 0;
+        
+        // Only check limits if the price is being increased
+        if (price > originalPrice && sellerLevelData && checkListingLimits) {
+          const priceDifference = price - originalPrice;
+          const limitCheck = checkListingLimits(priceDifference, totalActiveValue);
+          if (!limitCheck.allowed) {
+            newErrors.price = limitCheck.reason;
+          }
+        }
       }
     }
 
@@ -253,6 +280,9 @@ const EditListingPage = () => {
           cardName: listing.cardName || '',
           offersOnly: Boolean(listing.offersOnly),
           finalSale: Boolean(listing.finalSale),
+          language: listing.language || 'English',
+          shippingCost: listing.shippingCost?.toString() || '',
+          disableBuyNow: Boolean(listing.disableBuyNow),
         });
         
         console.log('Form data initialized successfully');
@@ -293,6 +323,49 @@ const EditListingPage = () => {
   // Use the useListings hook at the component level
   const { updateListing } = useListings();
 
+  // Fetch total active listing value for seller level checks
+  useEffect(() => {
+    if (user?.uid && getTotalActiveListingValue) {
+      getTotalActiveListingValue(user.uid).then(setTotalActiveValue);
+    }
+  }, [user?.uid, getTotalActiveListingValue]);
+
+  // Check seller level restrictions
+  useEffect(() => {
+    if (!formData.offersOnly && !formData.disableBuyNow && formData.price && sellerLevelData && checkListingLimits && listing) {
+      const price = parseFloat(formData.price);
+      const originalPrice = listing.price || 0;
+      
+      // Only check limits if the price is being increased
+      if (price > originalPrice) {
+        const priceDifference = price - originalPrice;
+        const limitCheck = checkListingLimits(priceDifference, totalActiveValue);
+        if (!limitCheck.allowed) {
+          setSellerLevelError(limitCheck.reason);
+        } else {
+          setSellerLevelError(null);
+        }
+      } else {
+        setSellerLevelError(null);
+      }
+    } else {
+      setSellerLevelError(null);
+    }
+  }, [formData.price, formData.offersOnly, formData.disableBuyNow, sellerLevelData, checkListingLimits, totalActiveValue, listing]);
+
+  // Check Stripe Connect requirements
+  useEffect(() => {
+    if (stripeConnectData && !formData.offersOnly && !formData.disableBuyNow) {
+      // Require Stripe Connect for Buy Now functionality
+      const isStripeActive = stripeConnectData.status === 'active' && 
+                            stripeConnectData.chargesEnabled && 
+                            stripeConnectData.payoutsEnabled;
+      setStripeConnectRequired(!isStripeActive);
+    } else {
+      setStripeConnectRequired(false);
+    }
+  }, [stripeConnectData, formData.offersOnly, formData.disableBuyNow]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !user) return;
@@ -323,6 +396,9 @@ const EditListingPage = () => {
         cardName: formData.cardName,
         offersOnly: formData.offersOnly,
         finalSale: formData.finalSale,
+        disableBuyNow: formData.disableBuyNow,
+        language: formData.language,
+        shippingCost: formData.shippingCost ? parseFloat(formData.shippingCost) : 0,
       };
       
       console.log("Updating listing with cover image index:", formData.coverImageIndex);
@@ -381,6 +457,60 @@ const EditListingPage = () => {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Edit Listing</h1>
         </div>
+
+        {/* Seller Level Information */}
+        {sellerLevelData && (
+          <div className={`p-4 border rounded-lg ${
+            sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`font-medium ${
+                  sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+                    ? 'text-yellow-900 dark:text-yellow-100'
+                    : 'text-blue-900 dark:text-blue-100'
+                }`}>
+                  {sellerLevelData.level === 1 ? 'Level 1 Seller' : 
+                   sellerLevelData.level === 2 ? 'Level 2 Seller' : 
+                   sellerLevelData.level === 3 ? 'Level 3 Seller' : 
+                   sellerLevelData.level === 4 ? 'Level 4 Seller' : 
+                   'Level 5 Seller'}
+                </h3>
+                <p className={`text-sm ${
+                  sellerLevelError && !formData.offersOnly && !formData.disableBuyNow
+                    ? 'text-yellow-700 dark:text-yellow-300'
+                    : 'text-blue-700 dark:text-blue-300'
+                }`}>
+                  Current active listings value: ${totalActiveValue.toLocaleString()} / 
+                  {sellerLevelData.currentLimits.maxTotalListingValue === null 
+                    ? ' Unlimited' 
+                    : ` $${sellerLevelData.currentLimits.maxTotalListingValue.toLocaleString()}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stripe Connect Warning */}
+        {stripeConnectRequired && !formData.offersOnly && !formData.disableBuyNow && (
+          <Alert className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Stripe Connect Required</AlertTitle>
+            <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+              <p className="mb-2">To enable the Buy Now button, you need to complete your Stripe Connect setup. Without it, buyers can only make offers.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/50"
+                onClick={() => router.push('/dashboard/seller-account')}
+              >
+                Complete Stripe Setup
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="transition-all duration-300 hover:shadow-lg">
           <CardContent className="pt-6">
@@ -507,6 +637,55 @@ const EditListingPage = () => {
                       className={errors.price ? "border-red-500" : ""}
                     />
                     {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                    {sellerLevelError && !formData.offersOnly && (
+                      <div className="flex items-start space-x-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                        <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">{sellerLevelError}</p>
+                      </div>
+                    )}
+                    
+                    {/* Disable Buy Now Option - show when there's a seller level error OR Stripe Connect required OR when disableBuyNow is already checked */}
+                    {((sellerLevelError || stripeConnectRequired) || formData.disableBuyNow) && !formData.offersOnly && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="disableBuyNow" 
+                            checked={formData.disableBuyNow}
+                            onCheckedChange={(checked) => {
+                              if (typeof checked === 'boolean') {
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  disableBuyNow: checked
+                                }));
+                                if (checked) {
+                                  setSellerLevelError(null);
+                                } else {
+                                  // Re-check limits when unchecking
+                                  if (formData.price && sellerLevelData && checkListingLimits && listing) {
+                                    const price = parseFloat(formData.price);
+                                    const originalPrice = listing.price || 0;
+                                    if (price > originalPrice) {
+                                      const priceDifference = price - originalPrice;
+                                      const limitCheck = checkListingLimits(priceDifference, totalActiveValue);
+                                      if (!limitCheck.allowed) {
+                                        setSellerLevelError(limitCheck.reason);
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                          <div className="space-y-1">
+                            <Label htmlFor="disableBuyNow" className="cursor-pointer">Disable Buy Now</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Disable the Buy Now button to proceed. Buyers will only be able to make offers on this listing.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     {formData.offersOnly && (
                       <p className="text-xs text-muted-foreground">
                         Buyers will be able to make offers, but won't be able to purchase directly.
