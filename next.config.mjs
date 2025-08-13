@@ -103,8 +103,19 @@ const nextConfig = {
   experimental: {
     optimizeCss: false,
     largePageDataBytes: 256 * 1000,
+    esmExternals: 'loose',
   },
   outputFileTracing: false,
+  webpack: (config, { isServer }) => {
+    // Handle styled-jsx module resolution
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'styled-jsx/style': false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
