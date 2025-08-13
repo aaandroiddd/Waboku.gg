@@ -105,15 +105,6 @@ const nextConfig = {
     esmExternals: 'loose',
   },
   outputFileTracing: false,
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        'styled-jsx/style': false,
-      };
-    }
-    return config;
-  }
 };
 
 export default nextConfig;
