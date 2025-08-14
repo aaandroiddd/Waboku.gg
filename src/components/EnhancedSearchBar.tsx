@@ -20,6 +20,7 @@ interface ListingSuggestion {
   imageUrl?: string;
   type: 'listing';
   score: number;
+  url: string; // Add URL field for new short URL format
 }
 
 interface SearchSuggestion {
@@ -40,6 +41,7 @@ interface SearchSuggestion {
     city?: string;
     state?: string;
     imageUrl?: string;
+    url?: string; // Add URL field for new short URL format
   };
 }
 
@@ -136,7 +138,8 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
           condition: listing.condition,
           city: listing.city,
           state: listing.state,
-          imageUrl: listing.imageUrl
+          imageUrl: listing.imageUrl,
+          url: listing.url // Include the new short URL format
         }
       }));
 
@@ -254,8 +257,11 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   };
 
   const handleSuggestionClick = async (suggestion: SearchSuggestion) => {
-    if (suggestion.type === 'listing' && suggestion.metadata?.id) {
-      // Navigate directly to the listing
+    if (suggestion.type === 'listing' && suggestion.metadata?.url) {
+      // Navigate directly to the listing using the new short URL format
+      router.push(suggestion.metadata.url);
+    } else if (suggestion.type === 'listing' && suggestion.metadata?.id) {
+      // Fallback to old format if URL is not available
       router.push(`/listings/${suggestion.metadata.id}`);
     } else {
       // Handle as regular search

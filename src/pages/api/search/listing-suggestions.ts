@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getTypesenseSearchClient, LISTINGS_COLLECTION_NAME } from '@/lib/typesense';
+import { generateListingUrl } from '@/lib/listing-slug';
 
 interface ListingSuggestion {
   id: string;
@@ -14,6 +15,7 @@ interface ListingSuggestion {
   imageUrl?: string;
   type: 'listing';
   score: number;
+  url: string; // Add URL field for the new short URL format
 }
 
 const CACHE_DURATION = 30 * 1000; // 30 seconds cache for real-time feel
@@ -115,6 +117,9 @@ async function getTypesenseSuggestions(client: any, query: string, limit: number
   for (const hit of searchResults.hits) {
     const doc = hit.document;
     
+    // Generate the new short URL format
+    const url = generateListingUrl(doc.title || 'Untitled', doc.game || 'other', doc.id);
+    
     suggestions.push({
       id: doc.id,
       title: doc.title || 'Untitled',
@@ -126,6 +131,7 @@ async function getTypesenseSuggestions(client: any, query: string, limit: number
       imageUrl: doc.imageUrl,
       type: 'listing',
       score: hit.text_match_info?.score || 0,
+      url: url,
     });
   }
 
@@ -241,6 +247,9 @@ async function getFirestoreSuggestions(db: any, query: string, limit: number): P
             score += 5;
           }
           
+          // Generate the new short URL format
+          const url = generateListingUrl(data.title || 'Untitled', data.game || 'other', doc.id);
+          
           suggestions.push({
             id: doc.id,
             title: data.title || 'Untitled',
@@ -253,7 +262,8 @@ async function getFirestoreSuggestions(db: any, query: string, limit: number): P
               ? data.imageUrls[data.coverImageIndex || 0] || data.imageUrls[0]
               : undefined,
             type: 'listing',
-            score
+            score,
+            url: url,
           });
         }
       });
