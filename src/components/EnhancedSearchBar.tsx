@@ -301,7 +301,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 z-50 mt-2 bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-xl max-h-80 overflow-y-auto"
+          className="absolute top-full left-0 right-0 z-50 mt-2 bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-xl max-h-80 overflow-y-auto text-left"
         >
           {suggestions.map((suggestion, index) => (
             <div
@@ -312,14 +312,14 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
               onClick={() => handleSuggestionClick(suggestion)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 <img
                   src={suggestion.metadata?.imageUrl || '/images/rect.png'}
                   alt={suggestion.text}
                   className="h-10 w-10 rounded-md object-cover border border-border/50 bg-muted"
                   loading="lazy"
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 text-left">
                   <div className="text-sm font-medium truncate">{suggestion.text}</div>
                   {suggestion.metadata?.game ? (
                     <div className="text-xs text-muted-foreground truncate">
