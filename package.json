@@ -91,7 +91,8 @@
     "tailwindcss-animate": "^1.0.7",
 
     "resend": "^4.0.0",
-    "styled-jsx": "^5.1.1"
+    "styled-jsx": "^5.1.1",
+    "typesense": "^1.8.2"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.6",

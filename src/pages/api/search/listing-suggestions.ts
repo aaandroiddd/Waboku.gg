@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getTypesenseSearchClient, LISTINGS_COLLECTION_NAME } from '@/lib/typesense';
 
 interface ListingSuggestion {
   id: string;
@@ -76,6 +77,62 @@ export default async function handler(
 }
 
 async function getListingSuggestions(db: any, query: string, limit: number): Promise<ListingSuggestion[]> {
+  // Try Typesense first if available
+  const typesenseClient = getTypesenseSearchClient();
+  if (typesenseClient) {
+    try {
+      console.log(`[ListingSuggestions] Using Typesense for query: ${query}`);
+      return await getTypesenseSuggestions(typesenseClient, query, limit);
+    } catch (error) {
+      console.error('Typesense search failed, falling back to Firestore:', error);
+    }
+  }
+
+  // Fallback to Firestore
+  console.log(`[ListingSuggestions] Using Firestore fallback for query: ${query}`);
+  return await getFirestoreSuggestions(db, query, limit);
+}
+
+async function getTypesenseSuggestions(client: any, query: string, limit: number): Promise<ListingSuggestion[]> {
+  const now = Math.floor(Date.now() / 1000); // Unix timestamp
+
+  const searchParameters = {
+    q: query,
+    query_by: 'title,cardName,description,game',
+    filter_by: `status:active && expiresAt:>${now}`,
+    sort_by: '_text_match:desc,createdAt:desc',
+    per_page: limit,
+    page: 1,
+  };
+
+  const searchResults = await client
+    .collections(LISTINGS_COLLECTION_NAME)
+    .documents()
+    .search(searchParameters);
+
+  const suggestions: ListingSuggestion[] = [];
+
+  for (const hit of searchResults.hits) {
+    const doc = hit.document;
+    
+    suggestions.push({
+      id: doc.id,
+      title: doc.title || 'Untitled',
+      price: Number(doc.price) || 0,
+      game: doc.game || 'Unknown',
+      condition: doc.condition || 'Not specified',
+      city: doc.city || 'Unknown',
+      state: doc.state || 'Unknown',
+      imageUrl: doc.imageUrl,
+      type: 'listing',
+      score: hit.text_match_info?.score || 0,
+    });
+  }
+
+  return suggestions;
+}
+
+async function getFirestoreSuggestions(db: any, query: string, limit: number): Promise<ListingSuggestion[]> {
   try {
     const suggestions: ListingSuggestion[] = [];
     const now = new Date();
@@ -208,7 +265,7 @@ async function getListingSuggestions(db: any, query: string, limit: number): Pro
       .slice(0, limit);
 
   } catch (error) {
-    console.error('Error getting listing suggestions:', error);
+    console.error('Error getting Firestore listing suggestions:', error);
     return [];
   }
 }
