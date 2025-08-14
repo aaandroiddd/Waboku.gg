@@ -171,6 +171,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
   const { user } = useAuth();
   const { trackSearchClick } = useSearchAnalytics();
   const { sellerLevelData } = useSellerLevel(listing.userId);
+  const router = useRouter();
 
   // Log listing details in development mode
   useEffect(() => {
@@ -308,6 +309,9 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
       <Card className="relative overflow-hidden group h-full">
         <Link 
           href={getListingUrl(listing)}
+          prefetch={true}
+          onMouseEnter={() => router.prefetch(getListingUrl(listing))}
+          onFocus={() => router.prefetch(getListingUrl(listing))}
           onClick={() => {
             // Track search click if this is from a search result
             if (searchTerm && resultPosition !== undefined) {
