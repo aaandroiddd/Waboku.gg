@@ -26,6 +26,8 @@ import { ContentLoader } from "@/components/ContentLoader";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useLoading } from "@/contexts/LoadingContext";
 import { getWantedPostUrl } from "@/lib/wanted-posts-slug";
+import EnhancedSearchBar from "@/components/EnhancedSearchBar";
+import { useTrendingSearches } from "@/hooks/useTrendingSearches";
 
 // Helper function to get the display name for a game category
 const getGameDisplayName = (gameKey: string): string => {
@@ -42,14 +44,22 @@ export default function AllWantedPostsPage() {
   const { user } = useAuth();
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const { setLoading } = useLoading();
+  const { recordSearch } = useTrendingSearches();
   
-  const { game } = router.query;
+  const { game, query: searchQuery } = router.query as { game?: string; query?: string };
   
   // Use our custom hook to fetch all wanted posts
   const { posts: wantedPosts, isLoading, error } = useWantedPosts({
     game: game as string | undefined,
     state: selectedState || undefined
   });
+  
+  // Apply client-side title filtering when query param is present
+  const filteredWantedPosts = (Array.isArray(wantedPosts)
+    ? (typeof searchQuery === 'string' && searchQuery.trim().length > 0
+        ? wantedPosts.filter(p => (p.title || '').toLowerCase().includes(searchQuery.toLowerCase()))
+        : wantedPosts)
+    : []) as WantedPost[];
   
   // Set global loading state when data is being fetched
   useEffect(() => {
@@ -141,6 +151,29 @@ export default function AllWantedPostsPage() {
               <PlusCircle className="h-4 w-4" />
               <span className="whitespace-nowrap">Create Wanted Post</span>
             </Button>
+          </div>
+
+          <div className="mb-6">
+            <EnhancedSearchBar
+              placeholder="Search wanted posts..."
+              initialValue={typeof searchQuery === 'string' ? searchQuery : ''}
+              suggestionsEndpoint="/api/wanted/suggestions"
+              showSearchButton
+              onSearch={async (term) => {
+                try {
+                  if (term) {
+                    await recordSearch(term);
+                  }
+                } catch (e) {
+                  // ignore logging errors
+                }
+                const newQuery: any = {};
+                if (term && term.trim()) newQuery.query = term.trim();
+                if (game) newQuery.game = game as string;
+                if (selectedState) newQuery.state = selectedState;
+                router.push({ pathname: '/wanted/posts', query: newQuery });
+              }}
+            />
           </div>
 
           <div className="flex flex-col md:flex-row gap-6 mb-8">
@@ -245,9 +278,9 @@ export default function AllWantedPostsPage() {
                       </div>
                     }
                   >
-                    {wantedPosts.length > 0 ? (
+                    {filteredWantedPosts.length > 0 ? (
                       <div className="space-y-4">
-                        {wantedPosts.map((post) => (
+                        {filteredWantedPosts.map((post) => (
                           <WantedPostCard key={post.id} post={post} />
                         ))}
                       </div>
@@ -296,7 +329,7 @@ export default function AllWantedPostsPage() {
       </main>
       <Footer />
       {/* Add LoadingScreen for initial page load */}
-      <LoadingScreen isLoading={isLoading && wantedPosts.length === 0} message="Loading Wanted Posts..." />
+      <LoadingScreen isLoading={isLoading && filteredWantedPosts.length === 0} message="Loading Wanted Posts..." />
     </PageTransition>
   );
 }

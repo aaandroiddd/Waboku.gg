@@ -25,7 +25,7 @@ interface ListingSuggestion {
 
 interface SearchSuggestion {
   text: string;
-  type: 'search' | 'card' | 'set' | 'history' | 'listing';
+  type: 'search' | 'card' | 'set' | 'history' | 'listing' | 'wanted';
   score?: number;
   metadata?: {
     clickRate?: number;
@@ -53,6 +53,8 @@ interface EnhancedSearchBarProps {
   isLoading?: boolean;
   selectedState?: string;
   onSelect?: (cardName: string) => void;
+  suggestionsEndpoint?: string; // configurable suggestions API
+  suggestionsLimit?: number; // configurable limit
 }
 
 const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({ 
@@ -62,7 +64,9 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   initialValue = "",
   isLoading = false,
   selectedState = "all",
-  onSelect
+  onSelect,
+  suggestionsEndpoint = "/api/search/listing-suggestions",
+  suggestionsLimit = 8
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialValue);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -80,8 +84,8 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   // Prefetch cache to avoid duplicate prefetches
   const prefetched = useRef<Set<string>>(new Set());
 
-  const prefetchListingRoute = (s: SearchSuggestion) => {
-    const href = s.metadata?.url || (s.metadata?.id ? `/listings/${s.metadata.id}` : null);
+  const prefetchSuggestionRoute = (s: SearchSuggestion) => {
+    const href = s.metadata?.url;
     if (!href) return;
     if (prefetched.current.has(href)) return;
     prefetched.current.add(href);
@@ -110,24 +114,24 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
 
   const fetchSuggestions = async (query: string) => {
     try {
-      const listingSuggestions = await fetch(`/api/search/listing-suggestions?q=${encodeURIComponent(query)}&limit=8`)
+      const items = await fetch(`${suggestionsEndpoint}?q=${encodeURIComponent(query)}&limit=${suggestionsLimit}`)
         .then(r => r.json())
         .catch(() => []);
 
-      const listingItems: SearchSuggestion[] = listingSuggestions.map((listing: ListingSuggestion) => ({
-        text: listing.title,
-        type: 'listing',
-        score: listing.score,
+      const mapped: SearchSuggestion[] = items.map((item: any) => ({
+        text: item.title,
+        type: (item.type as any) || 'listing',
+        score: item.score,
         metadata: {
-          id: listing.id,
-          url: listing.url,
-          imageUrl: listing.imageUrl,
-          game: listing.game
+          id: item.id,
+          url: item.url,
+          imageUrl: item.imageUrl,
+          game: item.game
         }
       }));
 
-      setSuggestions(listingItems);
-      setShowSuggestions(listingItems.length > 0);
+      setSuggestions(mapped);
+      setShowSuggestions(mapped.length > 0);
     } catch (error) {
       console.error('Error fetching suggestions:', error);
       setSuggestions([]);
@@ -207,20 +211,22 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   };
 
   const handleSuggestionClick = async (suggestion: SearchSuggestion) => {
-    if (suggestion.type === 'listing' && suggestion.metadata?.url) {
-      // Navigate directly to the listing using the new short URL format
+    if (suggestion.metadata?.url) {
+      // Navigate directly if a URL is provided (works for listings and wanted posts)
       router.push(suggestion.metadata.url);
-    } else if (suggestion.type === 'listing' && suggestion.metadata?.id) {
-      // Fallback to old format if URL is not available
+      return;
+    } 
+    if (suggestion.type === 'listing' && suggestion.metadata?.id) {
+      // Fallback to old listing format if URL is not available
       router.push(`/listings/${suggestion.metadata.id}`);
+      return;
+    }
+    // Handle as regular search
+    setSearchTerm(suggestion.text);
+    if (onSelect && suggestion.type === 'card') {
+      onSelect(suggestion.text);
     } else {
-      // Handle as regular search
-      setSearchTerm(suggestion.text);
-      if (onSelect && suggestion.type === 'card') {
-        onSelect(suggestion.text);
-      } else {
-        await handleSearch(suggestion.text);
-      }
+      await handleSearch(suggestion.text);
     }
   };
 
@@ -322,8 +328,8 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
                 index === selectedIndex ? 'bg-accent/80' : ''
               } ${index === 0 ? 'rounded-t-lg' : ''} ${index === suggestions.length - 1 ? 'rounded-b-lg' : ''}`}
               onClick={() => handleSuggestionClick(suggestion)}
-              onMouseEnter={() => { setSelectedIndex(index); prefetchListingRoute(suggestion); }}
-              onFocus={() => prefetchListingRoute(suggestion)}
+              onMouseEnter={() => { setSelectedIndex(index); prefetchSuggestionRoute(suggestion); }}
+              onFocus={() => prefetchSuggestionRoute(suggestion)}
             >
               <div className="flex items-start gap-3">
                 <img
