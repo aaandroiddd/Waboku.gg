@@ -120,21 +120,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Build URL
         const url = getWantedPostUrl({ id, title: title || 'Untitled', game: game || 'other' });
 
-        // Best-effort preview image if available
-        const imageUrl = (value && (
-          (typeof value.imageUrl === 'string' && value.imageUrl) ||
-          (Array.isArray(value.images) && typeof value.images[0] === 'string' && value.images[0]) ||
-          (value.images && typeof value.images === 'object' && (value.images['0'] || value.images[0])) ||
-          (typeof value.image === 'string' && value.image) ||
-          (typeof value.photoUrl === 'string' && value.photoUrl) ||
-          (typeof value.userAvatar === 'string' && value.userAvatar)
-        )) || undefined;
-
         suggestions.push({
           id,
           title: title || 'Untitled',
           game: game || 'other',
-          imageUrl,
+          imageUrl: undefined, // No images for wanted post suggestions
           type: 'wanted',
           score,
           url,
