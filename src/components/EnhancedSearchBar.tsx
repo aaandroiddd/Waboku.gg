@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, ShoppingBag, Clock, MapPin } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { addSearchTerm, getHistorySuggestions } from '@/lib/search-history';
+import { addSearchTerm } from '@/lib/search-history';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
@@ -98,90 +98,26 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
 
   const fetchSuggestions = async (query: string) => {
     try {
-      // Get local search history first (fast)
-      const historySuggestions = getHistorySuggestions(query, user?.uid, 2);
-      const historyItems: SearchSuggestion[] = historySuggestions.map(item => ({
-        text: item.term,
-        type: 'history',
-        score: item.count * 10,
-        metadata: { count: item.count }
-      }));
+      const listingSuggestions = await fetch(`/api/search/listing-suggestions?q=${encodeURIComponent(query)}&limit=8`)
+        .then(r => r.json())
+        .catch(() => []);
 
-      // Fetch both card suggestions and listing suggestions in parallel
-      const [cardSuggestions, listingSuggestions] = await Promise.all([
-        // Get card suggestions (existing API)
-        fetch(`/api/search/card-suggestions?q=${encodeURIComponent(query)}&limit=4`)
-          .then(r => r.json())
-          .catch(() => []),
-        // Get real-time listing suggestions (new API)
-        fetch(`/api/search/listing-suggestions?q=${encodeURIComponent(query)}&limit=6`)
-          .then(r => r.json())
-          .catch(() => [])
-      ]);
-
-      // Convert card suggestions to SearchSuggestion format
-      const cardItems: SearchSuggestion[] = cardSuggestions.map((text: string) => ({
-        text,
-        type: 'card',
-        score: 50
-      }));
-
-      // Convert listing suggestions to SearchSuggestion format
       const listingItems: SearchSuggestion[] = listingSuggestions.map((listing: ListingSuggestion) => ({
         text: listing.title,
         type: 'listing',
         score: listing.score,
         metadata: {
           id: listing.id,
-          price: listing.price,
-          game: listing.game,
-          condition: listing.condition,
-          city: listing.city,
-          state: listing.state,
-          imageUrl: listing.imageUrl,
-          url: listing.url // Include the new short URL format
+          url: listing.url
         }
       }));
 
-      // Combine all suggestions
-      const allSuggestions = [...historyItems, ...cardItems, ...listingItems];
-      
-      // Remove duplicates and sort by score
-      const uniqueSuggestions = allSuggestions.filter((suggestion, index, self) => 
-        index === self.findIndex(s => s.text.toLowerCase() === suggestion.text.toLowerCase())
-      );
-
-      const sortedSuggestions = uniqueSuggestions
-        .sort((a, b) => {
-          // Prioritize listings, then history, then cards
-          const typeOrder = { listing: 3, history: 2, card: 1, search: 1, set: 1 };
-          const aTypeScore = typeOrder[a.type] || 0;
-          const bTypeScore = typeOrder[b.type] || 0;
-          
-          if (aTypeScore !== bTypeScore) {
-            return bTypeScore - aTypeScore;
-          }
-          
-          return (b.score || 0) - (a.score || 0);
-        })
-        .slice(0, 8);
-
-      setSuggestions(sortedSuggestions);
-      setShowSuggestions(sortedSuggestions.length > 0);
+      setSuggestions(listingItems);
+      setShowSuggestions(listingItems.length > 0);
     } catch (error) {
       console.error('Error fetching suggestions:', error);
-      
-      // Fallback to history only
-      const historySuggestions = getHistorySuggestions(query, user?.uid, 8);
-      const historyItems: SearchSuggestion[] = historySuggestions.map(item => ({
-        text: item.term,
-        type: 'history',
-        score: item.count * 10,
-        metadata: { count: item.count }
-      }));
-      
-      setSuggestions(historyItems);
-      setShowSuggestions(historyItems.length > 0);
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   };
 
@@ -325,30 +261,6 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
     }, 150);
   };
 
-  const getSuggestionIcon = (suggestion: SearchSuggestion) => {
-    switch (suggestion.type) {
-      case 'listing':
-        return <ShoppingBag className="h-4 w-4 text-green-600" />;
-      case 'history':
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
-      case 'card':
-        return '🃏';
-      case 'set':
-        return '📦';
-      default:
-        return <Search className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
   return (
     <div className="relative flex-1">
       <div className="relative flex items-center shadow-lg rounded-lg bg-background/95 backdrop-blur-sm border border-border/50 hover:shadow-xl transition-shadow duration-300">
@@ -383,7 +295,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
         )}
       </div>
 
-      {/* Enhanced suggestions dropdown */}
+      {/* Simplified suggestions dropdown: only listing titles */}
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
@@ -392,60 +304,13 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
           {suggestions.map((suggestion, index) => (
             <div
               key={`${suggestion.type}-${suggestion.text}-${suggestion.metadata?.id || index}`}
-              className={`px-4 py-3 cursor-pointer hover:bg-accent/80 flex items-center gap-3 transition-colors duration-150 ${
+              className={`px-4 py-3 cursor-pointer hover:bg-accent/80 transition-colors duration-150 ${
                 index === selectedIndex ? 'bg-accent/80' : ''
               } ${index === 0 ? 'rounded-t-lg' : ''} ${index === suggestions.length - 1 ? 'rounded-b-lg' : ''}`}
               onClick={() => handleSuggestionClick(suggestion)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <div className="flex-shrink-0">
-                {suggestion.metadata?.imageUrl ? (
-                  <img 
-                    src={suggestion.metadata.imageUrl} 
-                    alt={suggestion.text}
-                    className="w-8 h-8 rounded object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  getSuggestionIcon(suggestion)
-                )}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium truncate">{suggestion.text}</span>
-                  {suggestion.metadata?.price && (
-                    <span className="text-sm font-bold text-green-600 ml-2">
-                      {formatPrice(suggestion.metadata.price)}
-                    </span>
-                  )}
-                </div>
-                
-                {suggestion.type === 'listing' && suggestion.metadata && (
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <span className="capitalize">{suggestion.metadata.condition}</span>
-                    <span>•</span>
-                    <span>{suggestion.metadata.game}</span>
-                    {suggestion.metadata.city && suggestion.metadata.state && (
-                      <>
-                        <span>•</span>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>{suggestion.metadata.city}, {suggestion.metadata.state}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex-shrink-0">
-                <span className="text-xs text-muted-foreground/70 capitalize font-medium">
-                  {suggestion.type === 'listing' ? 'listing' : suggestion.type}
-                </span>
-              </div>
+              <span className="text-sm font-medium truncate">{suggestion.text}</span>
             </div>
           ))}
         </div>
