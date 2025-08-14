@@ -99,14 +99,9 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   swcMinify: true,
-  // Ensure problematic packages are bundled correctly under pnpm
-  transpilePackages: ['styled-jsx', '@next/env'],
   experimental: {
     optimizeCss: false,
-    largePageDataBytes: 256 * 1000,
-    outputFileTracingIncludes: {
-      '/**': ['node_modules/@next/env/**']
-    }
+    largePageDataBytes: 256 * 1000
   },
 };
 
