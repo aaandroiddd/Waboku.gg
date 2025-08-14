@@ -332,12 +332,14 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
               onFocus={() => prefetchSuggestionRoute(suggestion)}
             >
               <div className="flex items-start gap-3">
-                <img
-                  src={suggestion.metadata?.imageUrl || '/images/rect.png'}
-                  alt={suggestion.text}
-                  className="h-10 w-10 rounded-md object-cover border border-border/50 bg-muted"
-                  loading="lazy"
-                />
+                {suggestion.metadata?.imageUrl ? (
+                  <img
+                    src={suggestion.metadata!.imageUrl as string}
+                    alt={suggestion.text}
+                    className="h-10 w-10 rounded-md object-cover border border-border/50 bg-muted"
+                    loading="lazy"
+                  />
+                ) : null}
                 <div className="min-w-0 text-left">
                   <div className="text-sm font-medium truncate">{suggestion.text}</div>
                   {suggestion.metadata?.game ? (
