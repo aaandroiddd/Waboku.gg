@@ -103,7 +103,10 @@ const nextConfig = {
   transpilePackages: ['styled-jsx', '@next/env'],
   experimental: {
     optimizeCss: false,
-    largePageDataBytes: 256 * 1000
+    largePageDataBytes: 256 * 1000,
+    outputFileTracingIncludes: {
+      '/**': ['node_modules/@next/env/**']
+    }
   },
 };
 
