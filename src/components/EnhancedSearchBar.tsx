@@ -108,7 +108,9 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
         score: listing.score,
         metadata: {
           id: listing.id,
-          url: listing.url
+          url: listing.url,
+          imageUrl: listing.imageUrl,
+          game: listing.game
         }
       }));
 
@@ -310,7 +312,22 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
               onClick={() => handleSuggestionClick(suggestion)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <span className="text-sm font-medium truncate">{suggestion.text}</span>
+              <div className="flex items-center gap-3">
+                <img
+                  src={suggestion.metadata?.imageUrl || '/images/rect.png'}
+                  alt={suggestion.text}
+                  className="h-10 w-10 rounded-md object-cover border border-border/50 bg-muted"
+                  loading="lazy"
+                />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{suggestion.text}</div>
+                  {suggestion.metadata?.game ? (
+                    <div className="text-xs text-muted-foreground truncate">
+                      {suggestion.metadata.game.charAt(0).toUpperCase() + suggestion.metadata.game.slice(1)}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           ))}
         </div>
