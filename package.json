@@ -14,22 +14,11 @@
   },
   "dependencies": {
     "@next/env": "14.2.6",
-    "@next/swc-darwin-arm64": "14.2.6",
-    "@next/swc-darwin-x64": "14.2.6",
-    "@next/swc-linux-arm64-gnu": "14.2.6",
-    "@next/swc-linux-arm64-musl": "14.2.6",
-    "@next/swc-linux-x64-gnu": "14.2.6",
-    "@next/swc-linux-x64-musl": "14.2.6",
-    "@next/swc-win32-arm64-msvc": "14.2.6",
-    "@next/swc-win32-ia32-msvc": "14.2.6",
-    "@next/swc-win32-x64-msvc": "14.2.6",
     "keen-slider": "^6.8.6",
     "ldrs": "^1.0.1",
     "bad-words": "^3.0.4",
     "@stripe/stripe-js": "^2.4.0",
     "stripe": "^14.14.0",
-
-
     "micro": "^10.0.1",
     "react-markdown": "^9.0.1",
     "xlsx": "^0.18.5",
@@ -37,7 +26,6 @@
     "node-cache": "^5.1.2",
     "@emoji-mart/data": "^1.1.2",
     "@emoji-mart/react": "^1.1.1",
-
     "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
@@ -48,7 +36,6 @@
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-hover-card": "^1.1.2",
-
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-menubar": "^1.1.2",
     "@radix-ui/react-navigation-menu": "^1.2.1",
@@ -89,7 +76,6 @@
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
-
     "resend": "^4.0.0",
     "styled-jsx": "^5.1.1",
     "typesense": "^1.8.2"
