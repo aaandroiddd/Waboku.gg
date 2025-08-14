@@ -1,10 +1,6 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile --prefer-offline",
-  "functions": {
-    "src/pages/api/**/*.ts": {
-      "externalNodeModules": ["styled-jsx"]
-    }
-  },
+
   "crons": [
     {
       "path": "/api/listings/archive-expired",
