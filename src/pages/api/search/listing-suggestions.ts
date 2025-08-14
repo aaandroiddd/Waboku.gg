@@ -44,7 +44,9 @@ export default async function handler(
   }
 
   // CDN caching for fast suggestions: cache at the edge for 60s, allow SWR for 5m
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  // Explicitly instruct Vercel CDN to cache even if cookies are present
+  res.setHeader('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   const { q, limit = 8 } = req.query;
   const query = (q as string)?.toLowerCase().trim();

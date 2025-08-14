@@ -26,7 +26,8 @@ export default async function handler(
   }
 
   // CDN caching: edge cache for 60s, allow serving stale for 5m while revalidating
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  res.setHeader('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   const { q } = req.query;
   const query = (q as string)?.toLowerCase().trim();
