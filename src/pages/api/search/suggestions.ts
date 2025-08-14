@@ -25,6 +25,9 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // CDN caching: edge cache for 60s, allow serving stale for 5m while revalidating
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+
   const { q } = req.query;
   const query = (q as string)?.toLowerCase().trim();
 

@@ -24,6 +24,9 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // CDN caching for faster suggestions at the edge
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+
   const { q, limit = 8 } = req.query;
   const query = (q as string)?.toLowerCase().trim();
 

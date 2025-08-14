@@ -16,6 +16,15 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { useProfile } from "@/hooks/useProfile"
 import { Footer } from "@/components/Footer"
+import { GetStaticProps } from "next"
+
+export const getStaticProps: GetStaticProps = async () => {
+  return {
+    props: {},
+    // Trending content can refresh periodically without full SSR
+    revalidate: 300, // 5 minutes
+  }
+}
 
 export default function TrendingPage() {
   const router = useRouter()

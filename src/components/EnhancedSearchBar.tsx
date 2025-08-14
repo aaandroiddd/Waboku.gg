@@ -77,6 +77,18 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   const router = useRouter();
   const { recordSearch } = useTrendingSearches();
 
+  // Prefetch cache to avoid duplicate prefetches
+  const prefetched = useRef<Set<string>>(new Set());
+
+  const prefetchListingRoute = (s: SearchSuggestion) => {
+    const href = s.metadata?.url || (s.metadata?.id ? `/listings/${s.metadata.id}` : null);
+    if (!href) return;
+    if (prefetched.current.has(href)) return;
+    prefetched.current.add(href);
+    // Best-effort prefetch; ignore errors
+    router.prefetch(href).catch(() => {});
+  };
+
   // Update searchTerm when initialValue changes
   useEffect(() => {
     setSearchTerm(initialValue);
@@ -310,7 +322,8 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
                 index === selectedIndex ? 'bg-accent/80' : ''
               } ${index === 0 ? 'rounded-t-lg' : ''} ${index === suggestions.length - 1 ? 'rounded-b-lg' : ''}`}
               onClick={() => handleSuggestionClick(suggestion)}
-              onMouseEnter={() => setSelectedIndex(index)}
+              onMouseEnter={() => { setSelectedIndex(index); prefetchListingRoute(suggestion); }}
+              onFocus={() => prefetchListingRoute(suggestion)}
             >
               <div className="flex items-start gap-3">
                 <img

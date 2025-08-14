@@ -25,6 +25,14 @@ import { fixClientFirestoreConnection, initializeFirestoreWithRetry } from "@/li
 import { StateSelect } from "@/components/StateSelect";
 import { useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
 import ScrollIndicator from "@/components/ScrollIndicator";
+import { GetStaticProps } from "next";
+
+export const getStaticProps: GetStaticProps = async () => {
+  return {
+    props: {},
+    revalidate: 60,
+  };
+};
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
