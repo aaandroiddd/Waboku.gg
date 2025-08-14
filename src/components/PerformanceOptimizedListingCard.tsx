@@ -159,16 +159,6 @@ const PerformanceOptimizedListingCard = memo<PerformanceOptimizedListingCardProp
               {listing.status}
             </Badge>
           )}
-
-          {/* Graded Badge */}
-          {listing.isGraded && listing.gradeLevel && (
-            <Badge 
-              variant="outline" 
-              className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm"
-            >
-              {listing.gradingCompany} {listing.gradeLevel}
-            </Badge>
-          )}
         </div>
 
         {/* Content */}
@@ -194,6 +184,13 @@ const PerformanceOptimizedListingCard = memo<PerformanceOptimizedListingCardProp
           {listing.game && (
             <Badge variant="secondary" className="text-xs">
               {listing.game}
+            </Badge>
+          )}
+
+          {/* Graded Badge (below image) */}
+          {listing.isGraded && listing.gradeLevel && (
+            <Badge variant="outline" className="text-xs">
+              {listing.gradingCompany} {listing.gradeLevel}
             </Badge>
           )}
 

@@ -507,24 +507,7 @@ export const OptimizedListingCard = memo(({
                       </OptimizedMotion>
                     )}
                     
-                    {listing.isGraded && (
-                      <OptimizedMotion 
-                        className="flex-shrink-0"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                      >
-                        <span className="px-2 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap">
-                          <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 2L2 7L12 12L22 7L12 2Z" />
-                            <path d="M2 17L12 22L22 17" />
-                            <path d="M2 12L12 17L22 12" />
-                          </svg>
-                          <span className="hidden sm:inline">{listing.gradingCompany}</span>
-                          <span className="font-bold">{listing.gradeLevel}</span>
-                        </span>
-                      </OptimizedMotion>
-                    )}
+
 
                     {/* Final Sale Badge */}
                     {listing.finalSale && listing.status === 'active' && (
