@@ -20,8 +20,6 @@ import { useListings } from "@/hooks/useListings";
 import { useTrendingSearches } from "@/hooks/useTrendingSearches";
 import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
-import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
-import { fixClientFirestoreConnection, initializeFirestoreWithRetry } from "@/lib/firebase-client-fix";
 import { StateSelect } from "@/components/StateSelect";
 import { useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
 import ScrollIndicator from "@/components/ScrollIndicator";
@@ -624,67 +622,12 @@ export default function Home() {
                       <div className="text-center space-y-2">
                         <h3 className="text-lg font-semibold">Connection Issue Detected</h3>
                         <p className="text-sm text-muted-foreground">
-                          We're having trouble loading the latest listings. This might be due to a temporary connection issue.
+                          We're having trouble loading the latest listings. Please try refreshing the page.
                         </p>
                       </div>
                       <Button 
-                        onClick={async () => {
-                          setIsRecovering(true);
-                          try {
-                            console.log('Starting comprehensive connection recovery...');
-                            
-                            // Step 1: Try client-side Firestore fix first
-                            const clientFixResult = await fixClientFirestoreConnection();
-                            console.log('Client fix result:', clientFixResult);
-                            
-                            if (!clientFixResult.success) {
-                              // Step 2: If client fix fails, try the listen channel fix
-                              await clearFirestoreCaches();
-                              console.log('Cleared all Firestore caches');
-                              
-                              Object.keys(localStorage).forEach(key => {
-                                if (key.startsWith('listings_')) {
-                                  localStorage.removeItem(key);
-                                }
-                              });
-                              
-                              await fixFirestoreListenChannel();
-                              console.log('Fixed Firestore Listen channel');
-                            }
-                            
-                            // Step 3: Try to reinitialize Firestore with retry
-                            const initResult = await initializeFirestoreWithRetry(2);
-                            console.log('Firestore reinit result:', initResult);
-                            
-                            if (initResult.success) {
-                              setConnectionError(false);
-                              window.location.reload();
-                            } else {
-                              throw new Error(initResult.message);
-                            }
-                          } catch (error) {
-                            console.error('Error recovering connection:', error);
-                            alert('Unable to automatically fix the connection. Please try refreshing the page manually or check your internet connection.');
-                          } finally {
-                            setIsRecovering(false);
-                          }
-                        }}
-                        disabled={isRecovering}
-                        className="flex items-center gap-2"
-                      >
-                        {isRecovering ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Fixing Connection...
-                          </>
-                        ) : (
-                          <>Fix Connection</>
-                        )}
-                      </Button>
-                      <Button 
-                        variant="outline" 
                         onClick={() => window.location.reload()}
-                        className="mt-2"
+                        className="flex items-center gap-2"
                       >
                         Refresh Page
                       </Button>
