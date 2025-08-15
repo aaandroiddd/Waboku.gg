@@ -292,7 +292,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           </div>
           
           {type === 'received' && offer.status === 'pending' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col md:items-end gap-2 mt-2 md:mt-0 w-full md:w-auto md:ml-auto md:[&>button]:w-auto">
               <Button 
                 variant="default" 
                 className="w-full bg-green-600 hover:bg-green-700"
@@ -333,7 +333,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           )}
           
           {type === 'sent' && offer.status === 'pending' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col md:items-end gap-2 mt-2 md:mt-0 w-full md:w-auto md:ml-auto md:[&>button]:w-auto">
               <Button 
                 variant="outline" 
                 className="w-full"
@@ -363,7 +363,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           )}
           
           {type === 'sent' && offer.status === 'countered' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col md:items-end gap-2 mt-2 md:mt-0 w-full md:w-auto md:ml-auto md:[&>button]:w-auto">
               <Button 
                 variant="default" 
                 className="w-full bg-green-600 hover:bg-green-700"
@@ -402,7 +402,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           )}
           
           {(offer.status === 'accepted' || offer.status === 'declined' || offer.status === 'expired' || offer.status === 'cancelled') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col md:items-end gap-2 mt-2 md:mt-0 w-full md:w-auto md:ml-auto md:[&>button]:w-auto">
               <Button 
                 variant="outline" 
                 className="w-full"
