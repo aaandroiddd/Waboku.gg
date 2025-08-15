@@ -299,7 +299,7 @@ export default function Home() {
     }
   }, [listingsError]);
   
-  // Memoize the processed listings to avoid recalculation on every render
+  // Memoize the processed listings to prioritize newest listings
   const processedListings = useMemo(() => {
     if (isLoading || allListings.length === 0) {
       return [];
@@ -323,34 +323,19 @@ export default function Home() {
         return { ...listing, distance, proximity };
       });
       
-      // Sort listings by distance if location is available
-      if (latitude && longitude) {
-        return [...withDistance].sort((a, b) => {
-          // Prioritize listings within 50km
-          const aWithin50 = (a.distance || Infinity) <= 50;
-          const bWithin50 = (b.distance || Infinity) <= 50;
-          
-          if (aWithin50 && !bWithin50) return -1;
-          if (!aWithin50 && bWithin50) return 1;
-          
-          // For listings within 50km, sort by distance
-          if (aWithin50 && bWithin50) {
-            return (a.distance || Infinity) - (b.distance || Infinity);
-          }
-          
-          // For listings beyond 50km, sort by recency
-          const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-          const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-          return bTime - aTime;
-        });
-      }
-      
-      return withDistance;
+      // Sort listings by newest first (creation date descending)
+      // This prioritizes showcasing the newest listings on the homepage
+      return [...withDistance].sort((a, b) => {
+        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime; // Newest first
+      });
     } catch (error) {
       console.error('Error processing listings:', error);
       return allListings; // Return unprocessed listings as fallback
     }
   }, [allListings, isLoading, latitude, longitude]);
+=======
 
   // Trending searches hook with error handling
   let recordSearch;
@@ -593,16 +578,21 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Listings Section */}
+          {/* Newest Listings Section */}
           <LazySection 
             className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0" 
             minHeight="400px"
             data-scroll-target="listings"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-foreground">
-                {latitude && longitude ? "Latest Listings Near You" : "Latest Listings"}
-              </h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="space-y-1">
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  Newest Listings
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Fresh cards just added to the marketplace
+                </p>
+              </div>
               <Link href="/listings">
                 <Button variant="outline" size="sm">View All</Button>
               </Link>

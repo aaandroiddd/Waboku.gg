@@ -924,7 +924,7 @@ export function useListings({
           queryConstraints.push(where('status', '==', 'active'));
         }
 
-        // Always add sorting by creation date
+        // Always add sorting by creation date (newest first)
         queryConstraints.push(orderBy('createdAt', 'desc'));
 
         // Add pagination constraints if enabled
