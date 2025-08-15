@@ -8,10 +8,11 @@ import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
 import Head from "next/head";
 import Header from "@/components/Header";
-import { GameCategories } from "@/components/GameCategories";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { LogIn, UserPlus, Clock, MapPin, Sparkles } from "lucide-react";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
 import StaticBackground from "@/components/StaticBackground";
@@ -23,7 +24,14 @@ import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandle
 import { StateSelect } from "@/components/StateSelect";
 import { useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
 import ScrollIndicator from "@/components/ScrollIndicator";
-
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  GAME_MAPPING, 
+  OTHER_GAME_MAPPING, 
+  MAIN_GAME_CATEGORIES, 
+  OTHER_GAME_CATEGORIES,
+  GameCategory
+} from "@/lib/game-mappings";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -194,7 +202,48 @@ const LazySection = ({ children, className, threshold = 0.1, minHeight = "200px"
   );
 };
 
+// Sidebar Game Categories Component
+const SidebarGameCategories = ({ onCategoryClick, currentGame }: any) => {
+  return (
+    <div className="space-y-2">
+      <Button
+        variant={!currentGame ? "default" : "ghost"}
+        size="sm"
+        className="w-full justify-start text-sm"
+        onClick={() => onCategoryClick()}
+      >
+        All Categories
+      </Button>
+      {MAIN_GAME_CATEGORIES.map((category) => (
+        <Button
+          key={category}
+          variant={currentGame === GAME_MAPPING[category] ? "default" : "ghost"}
+          size="sm"
+          className="w-full justify-start text-sm"
+          onClick={() => onCategoryClick(category)}
+        >
+          {category}
+        </Button>
+      ))}
+      <Separator className="my-2" />
+      <div className="text-xs font-medium text-muted-foreground px-2 py-1">More Games</div>
+      {OTHER_GAME_CATEGORIES.slice(0, 5).map((category) => (
+        <Button
+          key={category}
+          variant={currentGame === OTHER_GAME_MAPPING[category] ? "default" : "ghost"}
+          size="sm"
+          className="w-full justify-start text-sm"
+          onClick={() => onCategoryClick(category)}
+        >
+          {category}
+        </Button>
+      ))}
+    </div>
+  );
+};
+
 export default function Home() {
+  const { user, profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState<string>("all");
   const [displayCount, setDisplayCount] = useState(8);
@@ -243,6 +292,7 @@ export default function Home() {
   const listingsError = listingsResult?.error || null;
   
   const router = useRouter();
+  const currentGame = router.query.game as string | undefined;
 
   // Simplified initialization effect
   useEffect(() => {
@@ -345,6 +395,21 @@ export default function Home() {
     console.error('Error getting trending searches hook:', error);
     recordSearch = async () => {}; // No-op fallback
   }
+
+  // Handle category selection
+  const handleCategoryClick = useCallback((category?: GameCategory) => {
+    const query = category 
+      ? { game: category === "Magic: The Gathering" 
+          ? "mtg" 
+          : GAME_MAPPING[category as keyof typeof GAME_MAPPING] || 
+            OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING] } 
+      : {}
+    
+    router.push({
+      pathname: "/listings",
+      query,
+    })
+  }, [router]);
 
   // Memoize the search handler to prevent recreation on each render
   const handleSearch = useCallback(async () => {
@@ -459,194 +524,274 @@ export default function Home() {
         </ErrorBoundary>
         
         <main className="flex-1">
-          <ErrorBoundary fallback={<div className="h-16 bg-background" />}>
-            <GameCategories />
-          </ErrorBoundary>
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left Sidebar */}
+              <div className="lg:w-80 flex-shrink-0">
+                <div className="sticky top-8 space-y-6">
+                  {/* Authentication Section */}
+                  {!user && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Card>
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-semibold mb-4">Get Started</h3>
+                          <div className="space-y-3">
+                            <Link href="/auth/sign-in" className="w-full">
+                              <Button variant="default" className="w-full flex items-center gap-2 bg-sky-400 hover:bg-sky-500">
+                                <LogIn className="h-4 w-4" />
+                                Sign In
+                              </Button>
+                            </Link>
+                            <Link href="/auth/sign-up" className="w-full">
+                              <Button variant="outline" className="w-full flex items-center gap-2">
+                                <UserPlus className="h-4 w-4" />
+                                Get Started
+                              </Button>
+                            </Link>
+                          </div>
+                          <Separator className="my-4" />
+                          <p className="text-sm text-muted-foreground">
+                            Join thousands of collectors buying, selling, and trading cards worldwide.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
 
-          {/* Hero Section with optimized animations */}
-          <div className="relative overflow-hidden min-h-screen pt-16 sm:pt-20 md:pt-24">
-            <ErrorBoundary fallback={<div className="absolute inset-0 bg-background" />}>
-              <OptimizedMotion 
-                className="hero-background absolute inset-0"
-                variants={animationVariants.heroBackground}
-                initial="hidden"
-                animate="visible"
-                shouldAnimate={shouldAnimate}
-                style={{ willChange: "transform, opacity" }}
-              >
-                <StaticBackground className="opacity-80" />
-              </OptimizedMotion>
-            </ErrorBoundary>
-            
-            <div className="relative container mx-auto px-6 sm:px-4 py-12 sm:py-10 md:py-12 lg:py-16">
-              <OptimizedMotion
-                className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-6"
-                variants={animationVariants.container}
-                initial="hidden"
-                animate="visible"
-                shouldAnimate={shouldAnimate}
-              >
-                <div className="space-y-4 sm:space-y-3">
-                  <div className="relative px-2 sm:px-0">
-                    <div className="invisible h-[4.5rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
-                      Your Local TCG Marketplace
-                    </div>
-                    <OptimizedMotion
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text absolute left-0 right-0 top-0 leading-tight"
-                      variants={animationVariants.item}
+                  {/* Game Categories */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  >
+                    <Card>
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-semibold mb-4">Browse Categories</h3>
+                        <SidebarGameCategories 
+                          onCategoryClick={handleCategoryClick}
+                          currentGame={currentGame}
+                        />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Location Info */}
+                  {latitude && longitude && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.6, delay: 0.4 }}
+                    >
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span>Showing listings near you</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+
+              {/* Main Content */}
+              <div className="flex-1 min-w-0">
+                {/* Hero Section */}
+                <div className="relative overflow-hidden mb-12 rounded-2xl">
+                  <ErrorBoundary fallback={<div className="absolute inset-0 bg-background" />}>
+                    <OptimizedMotion 
+                      className="hero-background absolute inset-0"
+                      variants={animationVariants.heroBackground}
+                      initial="hidden"
+                      animate="visible"
                       shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
                     >
-                      Your Local TCG Marketplace
+                      <StaticBackground className="opacity-30 rounded-2xl" />
                     </OptimizedMotion>
+                  </ErrorBoundary>
+                  
+                  <div className="relative px-8 py-16 text-center">
+                    <OptimizedMotion
+                      className="max-w-3xl mx-auto space-y-6"
+                      variants={animationVariants.container}
+                      initial="hidden"
+                      animate="visible"
+                      shouldAnimate={shouldAnimate}
+                    >
+                      <div className="space-y-4">
+                        <OptimizedMotion
+                          className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground"
+                          variants={animationVariants.item}
+                          shouldAnimate={shouldAnimate}
+                        >
+                          Your Local TCG Marketplace
+                        </OptimizedMotion>
+                        
+                        <OptimizedMotion
+                          className="text-lg md:text-xl text-muted-foreground"
+                          variants={animationVariants.item}
+                          shouldAnimate={shouldAnimate}
+                        >
+                          {randomSubtitle}
+                        </OptimizedMotion>
+                      </div>
+
+                      {/* Search Section */}
+                      <OptimizedMotion
+                        className="max-w-2xl mx-auto pt-6"
+                        variants={animationVariants.item}
+                        shouldAnimate={shouldAnimate}
+                      >
+                        {/* Mobile Search Controls */}
+                        <div className="flex sm:hidden flex-col gap-4 mb-4">
+                          <div className="relative w-full">
+                            <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                              <SearchBar
+                                onSelect={handleCardSelect}
+                                onSearch={handleSearchFromBar}
+                                initialValue={searchQuery}
+                                showSearchButton={true}
+                              />
+                            </ErrorBoundary>
+                          </div>
+                          <div className="relative w-full">
+                            <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                              <StateSelect 
+                                value={selectedState || "all"} 
+                                onValueChange={(value) => setSelectedState(value)}
+                              />
+                            </ErrorBoundary>
+                          </div>
+                        </div>
+
+                        {/* Desktop Search Controls */}
+                        <div className="hidden sm:flex gap-4">
+                          <div className="relative w-full">
+                            <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                              <SearchBar
+                                onSelect={handleCardSelect}
+                                onSearch={handleSearchFromBar}
+                                initialValue={searchQuery}
+                                showSearchButton={true}
+                              />
+                            </ErrorBoundary>
+                          </div>
+                          <div className="relative w-[200px]">
+                            <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                              <StateSelect 
+                                value={selectedState || "all"} 
+                                onValueChange={(value) => setSelectedState(value)}
+                              />
+                            </ErrorBoundary>
+                          </div>
+                        </div>
+
+                        {/* Trending Searches */}
+                        <LazySection className="mt-6 rounded-lg p-2 bg-transparent" threshold={0.3}>
+                          <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
+                            <TrendingSearches />
+                          </ErrorBoundary>
+                        </LazySection>
+                      </OptimizedMotion>
+                    </OptimizedMotion>
+                  </div>
+                </div>
+
+                {/* Newest Listings Section */}
+                <LazySection 
+                  className="relative z-10" 
+                  minHeight="400px"
+                  data-scroll-target="listings"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="space-y-1">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+                        <Clock className="h-6 w-6" />
+                        Newest Listings
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Fresh cards just added to the marketplace
+                      </p>
+                    </div>
+                    <Link href="/listings">
+                      <Button variant="outline" size="sm">View All</Button>
+                    </Link>
                   </div>
                   
-                  <div className="relative px-4 sm:px-0">
-                    <div className="invisible h-[2rem] sm:h-[1.75rem] md:h-[2rem]" aria-hidden="true">
-                      {randomSubtitle}
-                    </div>
-                    <OptimizedMotion
-                      className="text-base sm:text-lg md:text-xl glow-text-subtle absolute left-0 right-0 top-0 leading-relaxed"
-                      variants={animationVariants.item}
-                      shouldAnimate={shouldAnimate}
-                      style={{ willChange: "transform, opacity" }}
-                    >
-                      {randomSubtitle}
-                    </OptimizedMotion>
-                  </div>
-                </div>
-
-                {/* Search Section */}
-                <OptimizedMotion
-                  className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0"
-                  variants={animationVariants.item}
-                  shouldAnimate={shouldAnimate}
-                >
-                  {/* Mobile Search Controls */}
-                  <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
-                    <div className="relative w-full">
-                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                        <SearchBar
-                          onSelect={handleCardSelect}
-                          onSearch={handleSearchFromBar}
-                          initialValue={searchQuery}
-                          showSearchButton={true}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                    <div className="relative w-full">
-                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                        <StateSelect 
-                          value={selectedState || "all"} 
-                          onValueChange={(value) => setSelectedState(value)}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                  </div>
-
-                  {/* Desktop Search Controls */}
-                  <div className="hidden sm:flex gap-4">
-                    <div className="relative w-full">
-                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                        <SearchBar
-                          onSelect={handleCardSelect}
-                          onSearch={handleSearchFromBar}
-                          initialValue={searchQuery}
-                          showSearchButton={true}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                    <div className="relative w-[200px]">
-                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                        <StateSelect 
-                          value={selectedState || "all"} 
-                          onValueChange={(value) => setSelectedState(value)}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                  </div>
-
-                  {/* Trending Searches */}
-                  <LazySection className="mt-4 rounded-lg p-2 bg-transparent" threshold={0.3}>
-                    <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
-                      <TrendingSearches />
+                  <div className="max-w-[1400px] mx-auto">
+                    <ErrorBoundary fallback={
+                      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                        <h3 className="text-lg font-semibold">Unable to load listings</h3>
+                        <p className="text-sm text-muted-foreground">Please refresh the page to try again.</p>
+                        <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+                      </div>
+                    }>
+                      <FirebaseConnectionHandler>
+                        {connectionError ? (
+                          <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                            <div className="text-center space-y-2">
+                              <h3 className="text-lg font-semibold">Connection Issue Detected</h3>
+                              <p className="text-sm text-muted-foreground">
+                                We're having trouble loading the latest listings. Please try refreshing the page.
+                              </p>
+                            </div>
+                            <Button 
+                              onClick={() => window.location.reload()}
+                              className="flex items-center gap-2"
+                            >
+                              Refresh Page
+                            </Button>
+                          </div>
+                        ) : (
+                          <ContentLoader 
+                            isLoading={isLoading} 
+                            loadingMessage="Loading listings..."
+                            minHeight="400px"
+                            fallback={
+                              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {[...Array(8)].map((_, i) => (
+                                  <Skeleton key={i} className="h-64 w-full" />
+                                ))}
+                              </div>
+                            }
+                          >
+                            {processedListings && processedListings.length > 0 ? (
+                              <ListingGrid 
+                                listings={processedListings} 
+                                loading={false}
+                                displayCount={displayCount}
+                                hasMore={processedListings.length > displayCount}
+                                onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                              />
+                            ) : !isLoading && (
+                              <Card>
+                                <CardContent className="p-12 text-center">
+                                  <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                  <h3 className="text-xl font-semibold mb-2">No listings found</h3>
+                                  <p className="text-muted-foreground mb-6">
+                                    Be the first to list an item in your area!
+                                  </p>
+                                  <Link href="/dashboard/create-listing">
+                                    <Button>Create Your First Listing</Button>
+                                  </Link>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </ContentLoader>
+                        )}
+                      </FirebaseConnectionHandler>
                     </ErrorBoundary>
-                  </LazySection>
-                </OptimizedMotion>
-              </OptimizedMotion>
+                  </div>
+                </LazySection>
+              </div>
             </div>
           </div>
-
-          {/* Newest Listings Section */}
-          <LazySection 
-            className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0" 
-            minHeight="400px"
-            data-scroll-target="listings"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="space-y-1">
-                <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                  Newest Listings
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Fresh cards just added to the marketplace
-                </p>
-              </div>
-              <Link href="/listings">
-                <Button variant="outline" size="sm">View All</Button>
-              </Link>
-            </div>
-            
-            <div className="max-w-[1400px] mx-auto">
-              <ErrorBoundary fallback={
-                <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                  <h3 className="text-lg font-semibold">Unable to load listings</h3>
-                  <p className="text-sm text-muted-foreground">Please refresh the page to try again.</p>
-                  <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-                </div>
-              }>
-                <FirebaseConnectionHandler>
-                  {connectionError ? (
-                    <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                      <div className="text-center space-y-2">
-                        <h3 className="text-lg font-semibold">Connection Issue Detected</h3>
-                        <p className="text-sm text-muted-foreground">
-                          We're having trouble loading the latest listings. Please try refreshing the page.
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={() => window.location.reload()}
-                        className="flex items-center gap-2"
-                      >
-                        Refresh Page
-                      </Button>
-                    </div>
-                  ) : (
-                    <ContentLoader 
-                      isLoading={isLoading} 
-                      loadingMessage="Loading listings..."
-                      minHeight="400px"
-                      fallback={
-                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {[...Array(8)].map((_, i) => (
-                            <Skeleton key={i} className="h-64 w-full" />
-                          ))}
-                        </div>
-                      }
-                    >
-                      <ListingGrid 
-                        listings={processedListings} 
-                        loading={false}
-                        displayCount={displayCount}
-                        hasMore={processedListings.length > displayCount}
-                        onLoadMore={() => setDisplayCount(prev => prev + 8)}
-                      />
-                    </ContentLoader>
-                  )}
-                </FirebaseConnectionHandler>
-              </ErrorBoundary>
-            </div>
-          </LazySection>
         </main>
         
         <ErrorBoundary fallback={<div className="h-16 bg-background" />}>

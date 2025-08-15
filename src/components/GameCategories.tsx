@@ -39,7 +39,12 @@ const item = {
   }
 }
 
-export function GameCategories() {
+interface GameCategoriesProps {
+  variant?: 'horizontal' | 'sidebar';
+  onCategorySelect?: (category?: GameCategory) => void;
+}
+
+export function GameCategories({ variant = 'horizontal', onCategorySelect }: GameCategoriesProps) {
   const router = useRouter()
   const currentGame = router.query.game as string | undefined
 
@@ -51,10 +56,54 @@ export function GameCategories() {
             OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING] } 
       : {}
     
-    router.push({
-      pathname: "/listings",
-      query,
-    })
+    if (onCategorySelect) {
+      onCategorySelect(category);
+    } else {
+      router.push({
+        pathname: "/listings",
+        query,
+      })
+    }
+  }
+
+  if (variant === 'sidebar') {
+    return (
+      <div className="space-y-2">
+        <Button
+          variant={!currentGame ? "default" : "ghost"}
+          size="sm"
+          className="w-full justify-start text-sm"
+          onClick={() => handleCategoryClick()}
+        >
+          All Categories
+        </Button>
+        {MAIN_GAME_CATEGORIES.map((category) => (
+          <Button
+            key={category}
+            variant={currentGame === GAME_MAPPING[category] ? "default" : "ghost"}
+            size="sm"
+            className="w-full justify-start text-sm"
+            onClick={() => handleCategoryClick(category)}
+          >
+            {category}
+          </Button>
+        ))}
+        <div className="pt-2 border-t">
+          <div className="text-xs font-medium text-muted-foreground px-2 py-1 mb-2">More Games</div>
+          {OTHER_GAME_CATEGORIES.slice(0, 5).map((category) => (
+            <Button
+              key={category}
+              variant={currentGame === OTHER_GAME_MAPPING[category] ? "default" : "ghost"}
+              size="sm"
+              className="w-full justify-start text-sm"
+              onClick={() => handleCategoryClick(category)}
+            >
+              {category}
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
