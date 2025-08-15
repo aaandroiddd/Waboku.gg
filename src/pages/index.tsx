@@ -335,7 +335,6 @@ export default function Home() {
       return allListings; // Return unprocessed listings as fallback
     }
   }, [allListings, isLoading, latitude, longitude]);
-=======
 
   // Trending searches hook with error handling
   let recordSearch;
