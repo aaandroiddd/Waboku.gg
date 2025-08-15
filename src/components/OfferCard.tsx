@@ -292,10 +292,10 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           </div>
           
           {type === 'received' && offer.status === 'pending' && (
-            <div className="flex flex-row md:flex-col gap-2 mt-2 md:mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
               <Button 
                 variant="default" 
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="w-full bg-green-600 hover:bg-green-700"
                 onClick={handleAccept}
                 disabled={isUpdating}
               >
@@ -304,7 +304,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-1 border-red-500 text-red-500 hover:bg-red-500/10"
+                className="w-full border-red-500 text-red-500 hover:bg-red-500/10"
                 onClick={handleDecline}
                 disabled={isUpdating}
               >
@@ -313,7 +313,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-1"
+                className="w-full"
                 onClick={onCounterOffer}
                 disabled={isUpdating}
               >
@@ -322,7 +322,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-1"
+                className="w-full"
                 onClick={() => setMessageDialogOpen(true)}
                 disabled={isUpdating}
               >
@@ -333,15 +333,17 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           )}
           
           {type === 'sent' && offer.status === 'pending' && (
-            <div className="flex flex-col gap-2 mt-2 md:mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={handleViewListing}
               >
                 View Listing
               </Button>
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={() => setMessageDialogOpen(true)}
                 disabled={isUpdating}
               >
@@ -350,7 +352,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               </Button>
               <Button 
                 variant="outline" 
-                className="border-red-500 text-red-500 hover:bg-red-500/10"
+                className="w-full sm:col-span-2 md:col-span-1 border-red-500 text-red-500 hover:bg-red-500/10"
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={isUpdating}
               >
@@ -361,10 +363,10 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           )}
           
           {type === 'sent' && offer.status === 'countered' && (
-            <div className="flex flex-col gap-2 mt-2 md:mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
               <Button 
                 variant="default" 
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="w-full bg-green-600 hover:bg-green-700"
                 onClick={handleAccept}
                 disabled={isUpdating}
               >
@@ -373,7 +375,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-1 border-red-500 text-red-500 hover:bg-red-500/10"
+                className="w-full border-red-500 text-red-500 hover:bg-red-500/10"
                 onClick={handleDecline}
                 disabled={isUpdating}
               >
@@ -382,12 +384,14 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               </Button>
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={handleViewListing}
               >
                 View Listing
               </Button>
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={() => setMessageDialogOpen(true)}
                 disabled={isUpdating}
               >
@@ -398,9 +402,10 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           )}
           
           {(offer.status === 'accepted' || offer.status === 'declined' || offer.status === 'expired' || offer.status === 'cancelled') && (
-            <div className="flex flex-col gap-2 mt-2 md:mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 mt-2 md:mt-0 w-full">
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={handleViewListing}
               >
                 View Listing
@@ -409,6 +414,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               {/* Message button for all completed offers */}
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={() => setMessageDialogOpen(true)}
                 disabled={isUpdating}
               >
@@ -423,7 +429,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                !offer.shippingInfoProvided && (
                 <Button 
                   variant="default"
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
                   onClick={() => setShippingInfoDialogOpen(true)}
                 >
                   <Truck className="mr-2 h-4 w-4" />
@@ -437,7 +443,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                offer.isPickup && (
                 <Button 
                   variant="outline"
-                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                  className="w-full border-amber-500 text-amber-500 hover:bg-amber-500/10"
                 >
                   <MapPin className="mr-2 h-4 w-4" />
                   Arrange Pickup
@@ -446,7 +452,8 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               
               {type === 'sent' && offer.status === 'declined' && (
                 <Button 
-                  variant="outline"
+                  variant="outline" 
+                  className="w-full"
                   onClick={handleViewListing}
                 >
                   <Send className="mr-2 h-4 w-4" />
@@ -455,7 +462,8 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               )}
               {type === 'sent' && (
                 <Button 
-                  variant="outline"
+                  variant="outline" 
+                  className="w-full"
                   onClick={() => setClearDialogOpen(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -465,7 +473,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               {type === 'received' && offer.status === 'accepted' && (
                 <Button 
                   variant="default"
-                  className="bg-green-600 hover:bg-green-700"
+                  className="w-full bg-green-600 hover:bg-green-700"
                   onClick={() => setMarkAsSoldDialogOpen(true)}
                   disabled={isUpdating}
                 >
@@ -475,7 +483,8 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               )}
               {type === 'received' && (offer.status === 'declined' || offer.status === 'expired' || offer.status === 'cancelled') && (
                 <Button 
-                  variant="outline"
+                  variant="outline" 
+                  className="w-full"
                   onClick={() => setClearDialogOpen(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />

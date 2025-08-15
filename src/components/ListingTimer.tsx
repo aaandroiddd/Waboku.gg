@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Progress } from "@/components/ui/progress"
 import { ACCOUNT_TIERS } from '@/types/account';
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { Clock, AlertTriangle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from 'next/router';
 import { useAccount } from '@/contexts/AccountContext';
+import { format } from 'date-fns';
 
 interface ListingTimerProps {
   createdAt: Date | number | string;
@@ -106,6 +106,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
 
   // Add a state to track if we've initialized the timer
   const [isInitialized, setIsInitialized] = useState(false);
+  const [expiresAtState, setExpiresAtState] = useState<Date | null>(null);
 
   useEffect(() => {
     // Set a longer delay before initializing the timer to prevent showing expired state on initial load
@@ -285,6 +286,11 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
                      
           duration = endTime - startTime;
         }
+
+        // Track the computed expiration for display
+        if (isMounted && endTime) {
+          setExpiresAtState(new Date(endTime));
+        }
         
         const elapsed = now - startTime;
         const remaining = Math.max(0, duration - elapsed);
@@ -363,7 +369,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     return (
       <div className="flex flex-col gap-2">
         <Alert>
-          <AlertCircle className="h-4 w-4" />
+          <Clock className="h-4 w-4" />
           <AlertDescription>
             Loading listing status...
           </AlertDescription>
@@ -378,14 +384,16 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   // Add a 5-minute buffer to prevent premature expiration display
   const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
   const isExpiredWithBuffer = isExpired && timeLeft <= bufferTime;
+  const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+  const isExpiringSoon = hoursLeft <= 24 && timeLeft > 0;
 
   if (isExpiredWithBuffer && status === 'active') {
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            {isProcessing ? "Processing..." : "Listing expired"}
+            {isProcessing ? "Processing..." : "This listing has expired and will be updated automatically"}
           </AlertDescription>
         </Alert>
         <div className="h-2 w-full bg-red-500 rounded-full" />
@@ -404,18 +412,28 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   return (
     <div className="flex flex-col gap-2">
       {status === 'active' && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
+        <Alert variant={isExpiringSoon ? "destructive" : "default"}>
+          <Clock className="h-4 w-4" />
           <AlertDescription>
-            {effectiveAccountTier === 'free' ? 
-              `Free plan: Listing expires in ${formatTimeLeft()}` :
-              `Listing expires in ${formatTimeLeft()}`}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {isExpiringSoon ? 'Listing expires soon!' : 'Listing expires in:'}
+                </span>
+                <span className="font-mono text-sm">{formatTimeLeft()}</span>
+              </div>
+              {expiresAtState && (
+                <div className="text-xs text-muted-foreground">
+                  Expires on {format(expiresAtState, 'PPP')} at {format(expiresAtState, 'p')}
+                </div>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
       )}
       {status === 'archived' && archivedAt && (
         <Alert variant="warning">
-          <AlertCircle className="h-4 w-4" />
+          <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             {timeLeft > 0
               ? `Archived: Will be automatically deleted in ${formatTimeLeft()}`
@@ -431,12 +449,23 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           Click to refresh status
         </button>
       )}
-      <div className="h-2 w-full bg-red-100 rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div 
-          className="h-full bg-blue-500 transition-all duration-1000 ease-linear rounded-full"
-          style={{ width: `${100 - progress}%` }}
+          className={`h-full transition-all duration-1000 ease-linear rounded-full ${
+            isExpiringSoon 
+              ? 'bg-red-500' 
+              : progress > 75 
+                ? 'bg-orange-500' 
+                : 'bg-blue-500'
+          }`}
+          style={{ width: `${progress}%` }}
         />
       </div>
+      {isExpiringSoon && (
+        <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+          ⚠️ This listing will expire automatically if not updated
+        </div>
+      )}
     </div>
   );
 }
