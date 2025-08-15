@@ -32,6 +32,8 @@ interface FormData {
   quantity: string;
   cardName: string;
   disableBuyNow: boolean;
+  minOfferAmount: string;
+  showOffers: boolean;
   
   // Part 2
   description: string;
@@ -77,6 +79,8 @@ export const CreateListingWizard = () => {
     quantity: '',
     cardName: '',
     disableBuyNow: false,
+    minOfferAmount: '',
+    showOffers: false,
     
     // Part 2
     description: '',
@@ -371,6 +375,44 @@ export const CreateListingWizard = () => {
                   <p className="text-xs text-muted-foreground">
                     Enable this option to allow buyers to only provide offers instead of setting a fixed price
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Minimum Offer and Show Offers */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="minOfferAmount">Minimum Offer (optional)</Label>
+                <Input
+                  id="minOfferAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.minOfferAmount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, minOfferAmount: e.target.value }))}
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Buyers cannot offer below this value. The amount will not be displayed publicly.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 mt-6 md:mt-0">
+                  <Checkbox 
+                    id="showOffers" 
+                    checked={formData.showOffers}
+                    onCheckedChange={(checked) => {
+                      if (typeof checked === 'boolean') {
+                        setFormData(prev => ({ ...prev, showOffers: checked }));
+                      }
+                    }}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="showOffers" className="cursor-pointer">Display current offers</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Show the count of current offers on the listing page.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

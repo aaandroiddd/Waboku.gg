@@ -27,6 +27,8 @@ export interface Listing {
   distance?: number;
   offersOnly?: boolean;
   finalSale?: boolean;
+  minOfferAmount?: number;
+  showOffers?: boolean;
   language?: string;
   shippingCost?: number;
   location?: {
@@ -63,6 +65,8 @@ export interface CreateListingData {
   state: string;
   offersOnly?: boolean;
   finalSale?: boolean;
+  minOfferAmount?: string;
+  showOffers?: boolean;
   language?: string;
   shippingCost?: string;
 }

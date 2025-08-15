@@ -737,7 +737,9 @@ export function useListings({
         ...(cleanListingData.quantity && { quantity: Number(cleanListingData.quantity) }),
         ...(cleanListingData.language && { language: String(cleanListingData.language) }),
         ...(typeof cleanListingData.finalSale === 'boolean' && { finalSale: cleanListingData.finalSale }),
-        ...(typeof cleanListingData.offersOnly === 'boolean' && { offersOnly: cleanListingData.offersOnly })
+        ...(typeof cleanListingData.offersOnly === 'boolean' && { offersOnly: cleanListingData.offersOnly }),
+        ...(cleanListingData.minOfferAmount && { minOfferAmount: Number(cleanListingData.minOfferAmount) }),
+        ...(typeof cleanListingData.showOffers === 'boolean' && { showOffers: cleanListingData.showOffers })
       };
 
       // Only add grading fields if the card is graded

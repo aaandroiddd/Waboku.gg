@@ -84,6 +84,7 @@ export default function ListingPage() {
   // Dialog state is now handled by Radix UI
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [sellerHasActiveStripeAccount, setSellerHasActiveStripeAccount] = useState(false);
+  const [offerStats, setOfferStats] = useState<{offerCount: number; pending: number; countered: number} | null>(null);
   
   // Import the useMediaQuery hook at the top to avoid initialization issues
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -677,7 +678,9 @@ export default function ListingPage() {
                   // Explicitly include offersOnly property with default value
                   offersOnly: updatedData.offersOnly === true,
                   // Explicitly include finalSale property with default value
-                  finalSale: updatedData.finalSale === true
+                  finalSale: updatedData.finalSale === true,
+                  minOfferAmount: typeof updatedData.minOfferAmount === 'number' ? updatedData.minOfferAmount : (updatedData.minOfferAmount ? Number(updatedData.minOfferAmount) : undefined),
+                  showOffers: updatedData.showOffers === true
                 };
                 
                 // Update the listing state
@@ -784,7 +787,9 @@ export default function ListingPage() {
           // Explicitly include offersOnly property with default value
           offersOnly: data.offersOnly === true,
           // Explicitly include finalSale property with default value
-          finalSale: data.finalSale === true
+          finalSale: data.finalSale === true,
+          minOfferAmount: typeof data.minOfferAmount === 'number' ? data.minOfferAmount : (data.minOfferAmount ? Number(data.minOfferAmount) : undefined),
+          showOffers: data.showOffers === true
         };
         
         // Make expiresAt available to the client-side code
@@ -813,6 +818,28 @@ export default function ListingPage() {
       isMounted = false;
     };
   }, [listingId, user, startLoading, stopLoading]);
+
+  // Load offer stats when enabled on listing
+  useEffect(() => {
+    if (listing?.showOffers && listing?.id) {
+      let aborted = false;
+      fetch(`/api/offers/listing-offer-stats?listingId=${listing.id}`)
+        .then(res => (res.ok ? res.json() : Promise.reject(new Error('Failed to load offer stats'))))
+        .then((data) => {
+          if (!aborted && data?.success) {
+            setOfferStats({ offerCount: data.offerCount, pending: data.pending, countered: data.countered });
+          }
+        })
+        .catch((err) => {
+          console.warn('Offer stats fetch failed', err);
+        });
+      return () => {
+        aborted = true;
+      };
+    } else {
+      setOfferStats(null);
+    }
+  }, [listing?.id, listing?.showOffers]);
   
 
 
@@ -1574,6 +1601,24 @@ export default function ListingPage() {
                       </>
                     )}
                   </div>
+
+                  {/* Minimum offer notice */}
+                  {typeof listing.minOfferAmount === 'number' && listing.minOfferAmount > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Seller has set a minimum offer
+                    </div>
+                  )}
+                  {/* Current offers */}
+                  {listing.showOffers && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Current offers: {offerStats ? offerStats.offerCount : 'Loading...'}
+                      {offerStats && offerStats.offerCount > 0 && (
+                        <span className="ml-2">
+                          ({offerStats.pending} pending{offerStats.countered ? `, ${offerStats.countered} countered` : ''})
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

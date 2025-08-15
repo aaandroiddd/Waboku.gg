@@ -111,13 +111,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Offer amount is unreasonably high' });
     }
     
+    // Enforce seller-set minimum offer amount if provided on the listing
+    const minOfferAmount = typeof listingData.minOfferAmount === 'string'
+      ? parseFloat(listingData.minOfferAmount)
+      : listingData.minOfferAmount;
+
+    if (typeof minOfferAmount === 'number' && !isNaN(minOfferAmount)) {
+      if (numericAmount < minOfferAmount) {
+        console.error(`Offer ${numericAmount} is below listing minimum ${minOfferAmount}`);
+        return res.status(400).json({
+          error: 'Offer is below the seller’s minimum',
+          message: 'This seller has set a minimum offer for this listing.'
+        });
+      }
+    }
+
     // Check if the user already has an active offer for this listing
     try {
       console.log(`Checking for existing offers from buyer ${userId} for listing ${listingId}`);
       const existingOffersQuery = await db.collection('offers')
         .where('buyerId', '==', userId)
         .where('listingId', '==', listingId)
-        .where('status', '==', 'pending')
+        .where('status', 'in', ['pending', 'countered'])
         .get();
       
       if (!existingOffersQuery.empty) {
@@ -132,6 +147,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Continue with offer creation even if check fails
     }
     
+    // Cooldown: block new offers if buyer had 2 failed attempts to the same seller in last 24h
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const offersBetweenPartiesSnap = await db.collection('offers')
+        .where('buyerId', '==', userId)
+        .where('sellerId', '==', sellerId)
+        .limit(50)
+        .get();
+
+      const recentFailed = offersBetweenPartiesSnap.docs
+        .map(d => ({ status: d.get('status') as string, updatedAt: d.get('updatedAt') || d.get('createdAt') }))
+        .filter(r => (r.status === 'declined' || r.status === 'cancelled') && r.updatedAt && r.updatedAt.toDate && r.updatedAt.toDate() >= since)
+        .sort((a, b) => b.updatedAt.toDate().getTime() - a.updatedAt.toDate().getTime());
+
+      if (recentFailed.length >= 2) {
+        const secondEventTime = recentFailed[1].updatedAt.toDate().getTime();
+        const cooldownUntilMs = secondEventTime + 24 * 60 * 60 * 1000;
+        const nowMs = Date.now();
+        if (nowMs < cooldownUntilMs) {
+          const msLeft = cooldownUntilMs - nowMs;
+          const hoursLeft = Math.ceil(msLeft / (60 * 60 * 1000));
+          console.log(`Buyer ${userId} is in cooldown for seller ${sellerId}. Hours left: ${hoursLeft}`);
+          return res.status(429).json({
+            error: 'Offer cooldown in effect',
+            message: `You’ve reached the offer limit with this seller. Try again in about ${hoursLeft} hour(s).`
+          });
+        }
+      }
+    } catch (cooldownErr) {
+      console.error('Error checking cooldown condition:', cooldownErr);
+      // do not block offer creation on cooldown check failure
+    }
+
     // SECURITY FIX: Use verified listing data instead of client-provided snapshot
     const verifiedListingSnapshot = {
       title: listingData.title || 'Unknown Listing',

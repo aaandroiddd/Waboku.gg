@@ -150,6 +150,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'You cannot make an offer on your own listing' });
     }
 
+    // Verify the listing exists and is available
+    console.log(`Verifying listing ${listingId} exists and is available`);
+    const listingDoc = await db.collection('listings').doc(listingId).get();
+    if (!listingDoc.exists) {
+      console.error(`Listing ${listingId} not found`);
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+    const listingData = listingDoc.data()!;
+    if (listingData.userId !== sellerId) {
+      console.error(`Seller ID mismatch: listing owner ${listingData.userId} vs provided ${sellerId}`);
+      return res.status(400).json({ error: 'Invalid seller ID' });
+    }
+    if (listingData.status !== 'active') {
+      console.error(`Listing ${listingId} is not active: ${listingData.status}`);
+      return res.status(400).json({ error: 'Listing is not available for offers' });
+    }
+    const listingPrice = typeof listingData.price === 'string' ? parseFloat(listingData.price) : listingData.price;
+
     // Determine expiration time based on user's premium status and provided expiration hours
     let offerExpirationHours = 24; // Default 24 hours for all users
     
@@ -189,6 +207,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Invalid amount value:', amount);
       return res.status(400).json({ error: 'Offer amount must be a positive number' });
     }
+
+    // Enforce seller-set minimum offer amount if provided on the listing
+    try {
+      const minOfferAmount = typeof listingData?.minOfferAmount === 'string'
+        ? parseFloat(listingData.minOfferAmount)
+        : listingData?.minOfferAmount;
+      if (typeof minOfferAmount === 'number' && !isNaN(minOfferAmount)) {
+        if (numericAmount < minOfferAmount) {
+          console.error(`Offer ${numericAmount} is below listing minimum ${minOfferAmount}`);
+          return res.status(400).json({
+            error: 'Offer is below the seller’s minimum',
+            message: 'This seller has set a minimum offer for this listing.'
+          });
+        }
+      }
+    } catch (minErr) {
+      console.error('Error enforcing minimum offer amount:', minErr);
+    }
     
     // Check if the user already has an active offer for this listing
     try {
@@ -196,7 +232,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const existingOffersQuery = await db.collection('offers')
         .where('buyerId', '==', userId)
         .where('listingId', '==', listingId)
-        .where('status', '==', 'pending')
+        .where('status', 'in', ['pending', 'countered'])
         .get();
       
       if (!existingOffersQuery.empty) {
@@ -215,6 +251,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Continue with offer creation even if check fails
     }
     
+    // Cooldown: block new offers if buyer had 2 failed attempts to the same seller in last 24h
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const offersBetweenPartiesSnap = await db.collection('offers')
+        .where('buyerId', '==', userId)
+        .where('sellerId', '==', sellerId)
+        .limit(50)
+        .get();
+
+      const recentFailed = offersBetweenPartiesSnap.docs
+        .map(d => ({ status: d.get('status') as string, updatedAt: d.get('updatedAt') || d.get('createdAt') }))
+        .filter(r => (r.status === 'declined' || r.status === 'cancelled') && r.updatedAt && r.updatedAt.toDate && r.updatedAt.toDate() >= since)
+        .sort((a, b) => b.updatedAt.toDate().getTime() - a.updatedAt.toDate().getTime());
+
+      if (recentFailed.length >= 2) {
+        const secondEventTime = recentFailed[1].updatedAt.toDate().getTime();
+        const cooldownUntilMs = secondEventTime + 24 * 60 * 60 * 1000;
+        const nowMs = Date.now();
+        if (nowMs < cooldownUntilMs) {
+          const msLeft = cooldownUntilMs - nowMs;
+          const hoursLeft = Math.ceil(msLeft / (60 * 60 * 1000));
+          console.log(`Buyer ${userId} is in cooldown for seller ${sellerId}. Hours left: ${hoursLeft}`);
+          return res.status(429).json({
+            error: 'Offer cooldown in effect',
+            message: `You’ve reached the offer limit with this seller. Try again in about ${hoursLeft} hour(s).`
+          });
+        }
+      }
+    } catch (cooldownErr) {
+      console.error('Error checking cooldown condition:', cooldownErr);
+      // do not block offer creation on cooldown check failure
+    }
+
     const offerData = {
       listingId,
       buyerId: userId,
@@ -225,9 +294,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updatedAt: FieldValue.serverTimestamp(),
       expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + offerExpirationHours * 60 * 60 * 1000)),
       listingSnapshot: {
-        title: listingSnapshot.title || 'Unknown Listing',
-        price: listingSnapshot.price || 0,
-        imageUrl: listingSnapshot.imageUrl || '',
+        title: listingData.title || 'Unknown Listing',
+        price: listingPrice || 0,
+        imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : '',
       },
       shippingAddress: shippingAddress || null,
       isPickup: isPickup || false,
