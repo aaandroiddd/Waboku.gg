@@ -81,6 +81,9 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   const router = useRouter();
   const { recordSearch } = useTrendingSearches();
 
+  // Track user interaction for suggestions
+  const hasUserInteracted = useRef(false);
+
   // Prefetch cache to avoid duplicate prefetches
   const prefetched = useRef<Set<string>>(new Set());
 
@@ -93,21 +96,34 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
     router.prefetch(href).catch(() => {});
   };
 
+  // Reset interaction state after route changes to prevent auto-opening suggestions
+  useEffect(() => {
+    const handleRouteDone = () => {
+      hasUserInteracted.current = false;
+      setShowSuggestions(false);
+      setSelectedIndex(-1);
+    };
+    router.events.on('routeChangeComplete', handleRouteDone);
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteDone);
+    };
+  }, [router.events]);
+
   // Update searchTerm when initialValue changes
   useEffect(() => {
     setSearchTerm(initialValue);
   }, [initialValue]);
 
-  // Debounced search for suggestions
+  // Debounced search for suggestions (user-initiated only)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchTerm.length >= 2) {
+      if (searchTerm.length >= 2 && hasUserInteracted.current) {
         fetchSuggestions(searchTerm);
       } else {
         setSuggestions([]);
         setShowSuggestions(false);
       }
-    }, 200); // Faster response for better UX
+    }, 400); // 400ms debounce to prevent immediate suggestions after navigation
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -231,6 +247,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    hasUserInteracted.current = true;
     setSearchTerm(e.target.value);
     setSelectedIndex(-1);
   };
@@ -295,7 +312,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           onFocus={() => {
-            if (suggestions.length > 0) {
+            if (suggestions.length > 0 && hasUserInteracted.current) {
               setShowSuggestions(true);
             }
           }}
