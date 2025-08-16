@@ -101,7 +101,19 @@ const nextConfig = {
   swcMinify: true,
   experimental: {
     optimizeCss: false,
-    largePageDataBytes: 256 * 1000
+    largePageDataBytes: 256 * 1000,
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/.cache/**',
+        '**/*.md',
+        '**/*.map',
+        '**/*.test.*',
+        '**/__tests__/**',
+        '**/docs/**',
+        'node_modules/firebase/**/package.json.map',
+        'node_modules/typescript/**'
+      ]
+    }
   },
 };
 
