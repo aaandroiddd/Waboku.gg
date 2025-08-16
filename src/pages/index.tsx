@@ -227,7 +227,7 @@ const SidebarGameCategories = ({ onCategoryClick, currentGame }: any) => {
       ))}
       <Separator className="my-2" />
       <div className="text-xs font-medium text-muted-foreground px-2 py-1">More Games</div>
-      {OTHER_GAME_CATEGORIES.slice(0, 5).map((category) => (
+      {OTHER_GAME_CATEGORIES.map((category) => (
         <Button
           key={category}
           variant={currentGame === OTHER_GAME_MAPPING[category] ? "default" : "ghost"}
@@ -529,38 +529,7 @@ export default function Home() {
               {/* Left Sidebar */}
               <div className="lg:w-80 flex-shrink-0">
                 <div className="sticky top-8 space-y-6">
-                  {/* Authentication Section */}
-                  {!user && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <Card>
-                        <CardContent className="p-6">
-                          <h3 className="text-lg font-semibold mb-4">Get Started</h3>
-                          <div className="space-y-3">
-                            <Link href="/auth/sign-in" className="w-full">
-                              <Button variant="default" className="w-full flex items-center gap-2 bg-sky-400 hover:bg-sky-500">
-                                <LogIn className="h-4 w-4" />
-                                Sign In
-                              </Button>
-                            </Link>
-                            <Link href="/auth/sign-up" className="w-full">
-                              <Button variant="outline" className="w-full flex items-center gap-2">
-                                <UserPlus className="h-4 w-4" />
-                                Get Started
-                              </Button>
-                            </Link>
-                          </div>
-                          <Separator className="my-4" />
-                          <p className="text-sm text-muted-foreground">
-                            Join thousands of collectors buying, selling, and trading cards worldwide.
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  )}
+
 
                   {/* Game Categories */}
                   <motion.div
