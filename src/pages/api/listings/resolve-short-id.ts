@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { db } = await getFirebaseAdminInstance();
+    const { db, admin } = await getFirebaseAdminInstance();
     if (!db) {
       throw new Error('Database not initialized');
     }
@@ -74,28 +74,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const mappingDoc = await db.collection('shortIdMappings').doc(shortId).get();
       if (mappingDoc.exists) {
-        const data = mappingDoc.data();
-        
-        // Cache the result
-        shortIdCache.set(shortId, { fullId: data.fullId, timestamp: Date.now() });
-        
-        // Quick existence check without fetching full document
-        const listingRef = db.collection('listings').doc(data.fullId);
-        const listingDoc = await listingRef.get();
-        
-        if (listingDoc.exists) {
-          return res.status(200).json({ 
-            success: true, 
-            fullId: data.fullId,
-            shortId 
-          });
+        const data = mappingDoc.data() as { fullId?: string } | undefined;
+
+        if (data && typeof data.fullId === 'string' && data.fullId) {
+          // Cache the result
+          shortIdCache.set(shortId, { fullId: data.fullId, timestamp: Date.now() });
+
+          // Quick existence check without fetching full document
+          const listingRef = db.collection('listings').doc(data.fullId);
+          const listingDoc = await listingRef.get();
+
+          if (listingDoc.exists) {
+            return res.status(200).json({
+              success: true,
+              fullId: data.fullId,
+              shortId
+            });
+          } else {
+            // Clean up invalid mapping (points to non-existent doc)
+            try {
+              await db.collection('shortIdMappings').doc(shortId).delete();
+              shortIdCache.delete(shortId);
+            } catch (cleanupError) {
+              console.error('Failed to clean up invalid mapping:', cleanupError);
+            }
+          }
         } else {
-          // Clean up invalid mapping
+          // Malformed mapping document - clean it up
           try {
             await db.collection('shortIdMappings').doc(shortId).delete();
             shortIdCache.delete(shortId);
           } catch (cleanupError) {
-            console.error('Failed to clean up invalid mapping:', cleanupError);
+            console.error('Failed to clean up malformed mapping:', cleanupError);
           }
         }
       }
@@ -113,10 +123,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     while (!found && attempts < maxAttempts) {
       let query = db.collection('listings')
         .where('status', '==', 'active')
+        .orderBy(admin.firestore.FieldPath.documentId())
         .limit(batchSize);
       
       if (lastDoc) {
-        query = query.startAfter(lastDoc);
+        query = query.startAfter(lastDoc.id);
       }
 
       const snapshot = await query.get();
@@ -134,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           try {
             await db.collection('shortIdMappings').doc(shortId).set({
               fullId: docId,
-              createdAt: new Date(),
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
               listingTitle: listingDoc.data().title || 'Unknown'
             });
             
