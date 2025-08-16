@@ -150,9 +150,24 @@ if (typeof window !== 'undefined') {
   initializeFirebase();
 }
 
-// Export network control functions
-export const disableNetwork = disableFirestoreNetwork;
-export const enableNetwork = enableFirestoreNetwork;
+ // Export network control functions (wrapped to use initialized Firestore)
+export async function disableNetwork() {
+  const { db } = getFirebaseServices();
+  if (!db) {
+    console.warn('[Firebase] disableNetwork called before Firestore init');
+    return;
+  }
+  return disableFirestoreNetwork(db);
+}
+
+export async function enableNetwork() {
+  const { db } = getFirebaseServices();
+  if (!db) {
+    console.warn('[Firebase] enableNetwork called before Firestore init');
+    return;
+  }
+  return enableFirestoreNetwork(db);
+}
 
 // Listener registry
 interface ListenerEntry {
@@ -327,6 +342,26 @@ export function cleanupStaleListeners(maxAgeMs: number = 3600000): number {
 
   return count;
 }
+
+// Centralized connection manager export for backward compatibility
+export const connectionManager = {
+  getServices: getFirebaseServices,
+  enableNetwork,
+  disableNetwork,
+  registerListener,
+  removeListener,
+  removeListenersByPrefix,
+  removeAllListeners,
+  getActiveListenersCount,
+  cleanupStaleListeners,
+  getActiveListeners: () => {
+    return Array.from((activeListeners as Map<string, any>).values()).map((x: any) => ({
+      id: x.id,
+      path: x.path,
+      timestamp: x.timestamp,
+    }));
+  },
+};
 
 // Automatically clean up stale listeners every hour if in browser environment
 if (typeof window !== 'undefined') {
