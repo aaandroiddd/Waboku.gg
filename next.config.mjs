@@ -99,12 +99,17 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   swcMinify: true,
+  output: 'standalone',
   experimental: {
     optimizeCss: false,
     largePageDataBytes: 256 * 1000,
     outputFileTracingExcludes: {
       '*': [
         'node_modules/.cache/**',
+        'node_modules/.pnpm/**',
+        'node_modules/next/dist/compiled/**',
+        'node_modules/@next/**',
+        'node_modules/@swc/**',
         '**/*.md',
         '**/*.map',
         '**/*.test.*',
