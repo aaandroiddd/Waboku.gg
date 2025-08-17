@@ -30,28 +30,38 @@ export function removeWhitespace(str: string): string {
 }
 
 /**
-* Checks if a string contains any explicit or inappropriate words.
+* Checks if a string contains any explicit or inappropriate words and returns the found words.
 * @param text The input string to check.
-* @returns True if the text contains explicit content, false otherwise.
+* @returns An object with boolean indicating if explicit content was found and array of found words.
 */
-export function containsExplicitContent(text: string | null | undefined): boolean {
+export function containsExplicitContent(text: string | null | undefined): { hasExplicitContent: boolean; foundWords: string[] } {
   // Return false if text is null or undefined
   if (text === null || text === undefined) {
-    return false;
+    return { hasExplicitContent: false, foundWords: [] };
   }
   
   // List of explicit words to filter (can be expanded)
   const explicitWords = [
-    'fuck', 'shit', 'ass', 'bitch', 'dick', 'porn', 'nsfw',
+    'fuck', 'shit', 'ass', 'bitch', 'dick', 'porn', 'nsfw', 'sex', 'nude', 'naked',
+    'damn', 'hell', 'crap', 'piss', 'bastard', 'slut', 'whore', 'fag', 'retard',
     // Add more words as needed
   ];
 
   const normalizedText = String(text).toLowerCase();
-  return explicitWords.some(word => 
-    normalizedText.includes(word.toLowerCase()) ||
-    // Check for common letter substitutions
-    normalizedText.replace(/[^a-zA-Z0-9]/g, '').includes(word.toLowerCase())
-  );
+  const foundWords: string[] = [];
+  
+  explicitWords.forEach(word => {
+    const wordLower = word.toLowerCase();
+    if (normalizedText.includes(wordLower) || 
+        normalizedText.replace(/[^a-zA-Z0-9]/g, '').includes(wordLower)) {
+      foundWords.push(word);
+    }
+  });
+
+  return { 
+    hasExplicitContent: foundWords.length > 0, 
+    foundWords: foundWords 
+  };
 }
 
 /**
@@ -74,8 +84,13 @@ export function validateTextContent(text: string | null | undefined, maxLength: 
     return { isValid: false, error: `Text must be ${maxLength} characters or less` };
   }
 
-  if (containsExplicitContent(text)) {
-    return { isValid: false, error: 'Text contains inappropriate content' };
+  const explicitCheck = containsExplicitContent(text);
+  if (explicitCheck.hasExplicitContent) {
+    const wordList = explicitCheck.foundWords.map(word => `"${word}"`).join(', ');
+    return { 
+      isValid: false, 
+      error: `Text contains inappropriate content: ${wordList}. Please remove these words and try again.` 
+    };
   }
 
   return { isValid: true };

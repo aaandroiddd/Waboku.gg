@@ -21,7 +21,7 @@ import { validateTextContent } from '@/util/string';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TITLE_LENGTH = 100;
-const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_DESCRIPTION_LENGTH = 5000;
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 interface FormData {
@@ -379,43 +379,55 @@ export const CreateListingWizard = () => {
               </div>
             </div>
 
-            {/* Minimum Offer and Show Offers */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="minOfferAmount">Minimum Offer (optional)</Label>
-                <Input
-                  id="minOfferAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.minOfferAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, minOfferAmount: e.target.value }))}
-                  placeholder="0.00"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Buyers cannot offer below this value. The amount will not be displayed publicly.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 mt-6 md:mt-0">
-                  <Checkbox 
-                    id="showOffers" 
-                    checked={formData.showOffers}
-                    onCheckedChange={(checked) => {
-                      if (typeof checked === 'boolean') {
-                        setFormData(prev => ({ ...prev, showOffers: checked }));
-                      }
-                    }}
-                  />
-                  <div className="space-y-1">
-                    <Label htmlFor="showOffers" className="cursor-pointer">Display current offers</Label>
+            {/* Minimum Offer and Show Offers - only show when offers only is enabled */}
+            {formData.offersOnly && (
+              <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+                <h4 className="font-medium text-sm">Offer Settings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="minOfferAmount">Minimum Offer Amount</Label>
+                    <Input
+                      id="minOfferAmount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.minOfferAmount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, minOfferAmount: e.target.value }))}
+                      placeholder="0.00"
+                    />
                     <p className="text-xs text-muted-foreground">
-                      Show the count of current offers on the listing page.
+                      Set a minimum offer amount. This value will not be displayed publicly.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Display Current Offers</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={formData.showOffers ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFormData(prev => ({ ...prev, showOffers: true }))}
+                        className="flex-1"
+                      >
+                        Show Offers
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={!formData.showOffers ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFormData(prev => ({ ...prev, showOffers: false }))}
+                        className="flex-1"
+                      >
+                        Hide Offers
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Choose whether to display the count of current offers on your listing.
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Disable Buy Now Option - show when there's a seller level error OR when disableBuyNow is already checked */}
             {(sellerLevelError || formData.disableBuyNow) && !formData.offersOnly && (
