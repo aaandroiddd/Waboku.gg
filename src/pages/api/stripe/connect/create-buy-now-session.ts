@@ -68,29 +68,59 @@ export default async function handler(
         });
       }
 
-      // Calculate the platform fee (10% of the total amount)
-      const amount = Math.round((orderData.offerPrice || orderData.amount) * 100); // Convert to cents
+      // Get shipping cost from the original listing
+      let shippingCost = 0;
+      if (orderData.listingId) {
+        const listingDoc = await db.collection('listings').doc(orderData.listingId).get();
+        if (listingDoc.exists) {
+          const listingData = listingDoc.data();
+          shippingCost = listingData.shippingCost || 0;
+        }
+      }
+
+      // Calculate total amount including shipping
+      const offerPrice = orderData.offerPrice || orderData.amount;
+      const totalAmount = offerPrice + shippingCost;
+      const amount = Math.round(totalAmount * 100); // Convert to cents
       const platformFee = Math.round(amount * (PLATFORM_FEE_PERCENTAGE / 100));
+
+      // Create line items - separate offer and shipping if shipping cost exists
+      const lineItems = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: orderData.listingSnapshot?.title || `Order #${orderId.slice(0, 8)}`,
+              images: orderData.listingSnapshot?.imageUrl 
+                ? [orderData.listingSnapshot.imageUrl] 
+                : [],
+              description: `Accepted offer for ${orderData.listingSnapshot?.title || 'item'}`,
+            },
+            unit_amount: Math.round(offerPrice * 100),
+          },
+          quantity: 1,
+        },
+      ];
+
+      // Add shipping as a separate line item if there's a shipping cost
+      if (shippingCost > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Shipping',
+              description: 'Shipping and handling',
+            },
+            unit_amount: Math.round(shippingCost * 100),
+          },
+          quantity: 1,
+        });
+      }
 
       // Create Stripe checkout session with Connect
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: orderData.listingSnapshot?.title || `Order #${orderId.slice(0, 8)}`,
-                images: orderData.listingSnapshot?.imageUrl 
-                  ? [orderData.listingSnapshot.imageUrl] 
-                  : [],
-                description: `Accepted offer for ${orderData.listingSnapshot?.title || 'item'}`,
-              },
-              unit_amount: amount,
-            },
-            quantity: 1,
-          },
-        ],
+        line_items: lineItems,
         payment_intent_data: {
           application_fee_amount: platformFee,
           transfer_data: {
@@ -102,6 +132,9 @@ export default async function handler(
             buyerId: userId,
             sellerId: orderData.sellerId,
             platformFee,
+            shippingCost: shippingCost.toString(),
+            offerPrice: offerPrice.toString(),
+            totalAmount: totalAmount.toString(),
             isOfferPayment: 'true',
           },
         },
@@ -114,6 +147,9 @@ export default async function handler(
           buyerId: userId,
           sellerId: orderData.sellerId,
           platformFee,
+          shippingCost: shippingCost.toString(),
+          offerPrice: offerPrice.toString(),
+          totalAmount: totalAmount.toString(),
           isOfferPayment: 'true',
         },
         shipping_address_collection: shippingAddress ? undefined : {
@@ -166,29 +202,50 @@ export default async function handler(
         });
       }
 
-      // Calculate the platform fee (10% of the total amount)
-      const amount = Math.round(listingData.price * 100); // Convert to cents
+      // Calculate total amount including shipping
+      const itemPrice = listingData.price;
+      const shippingCost = listingData.shippingCost || 0;
+      const totalAmount = itemPrice + shippingCost;
+      const amount = Math.round(totalAmount * 100); // Convert to cents
       const platformFee = Math.round(amount * (PLATFORM_FEE_PERCENTAGE / 100));
+
+      // Create line items - separate item and shipping if shipping cost exists
+      const lineItems = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: listingData.title,
+              images: listingData.imageUrls && listingData.imageUrls.length > 0 
+                ? [listingData.imageUrls[0]] 
+                : [],
+              description: listingData.description || undefined,
+            },
+            unit_amount: Math.round(itemPrice * 100),
+          },
+          quantity: 1,
+        },
+      ];
+
+      // Add shipping as a separate line item if there's a shipping cost
+      if (shippingCost > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Shipping',
+              description: 'Shipping and handling',
+            },
+            unit_amount: Math.round(shippingCost * 100),
+          },
+          quantity: 1,
+        });
+      }
 
       // Create Stripe checkout session with Connect
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: listingData.title,
-                images: listingData.imageUrls && listingData.imageUrls.length > 0 
-                  ? [listingData.imageUrls[0]] 
-                  : [],
-                description: listingData.description || undefined,
-              },
-              unit_amount: amount,
-            },
-            quantity: 1,
-          },
-        ],
+        line_items: lineItems,
         payment_intent_data: {
           application_fee_amount: platformFee,
           transfer_data: {
@@ -199,6 +256,9 @@ export default async function handler(
             buyerId: userId,
             sellerId: listingData.userId,
             platformFee,
+            shippingCost: shippingCost.toString(),
+            itemPrice: itemPrice.toString(),
+            totalAmount: totalAmount.toString(),
           },
         },
         mode: 'payment',
@@ -209,6 +269,9 @@ export default async function handler(
           buyerId: userId,
           sellerId: listingData.userId,
           platformFee,
+          shippingCost: shippingCost.toString(),
+          itemPrice: itemPrice.toString(),
+          totalAmount: totalAmount.toString(),
         },
         // Always collect billing address for payment processing
         billing_address_collection: 'required',
