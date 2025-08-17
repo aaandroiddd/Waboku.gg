@@ -26,7 +26,7 @@ import { UserNameLink } from '@/components/UserNameLink';
 import { SellerLevelBadge } from '@/components/SellerLevelBadge';
 import { useSellerLevel } from '@/hooks/useSellerLevel';
 import { useRouter } from 'next/router';
-import { formatPrice } from '@/lib/price';
+import { ListingPrice } from '@/components/ListingPrice';
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -680,6 +680,7 @@ export default function ListingPage() {
                   // Explicitly include finalSale property with default value
                   finalSale: updatedData.finalSale === true,
                   minOfferAmount: typeof updatedData.minOfferAmount === 'number' ? updatedData.minOfferAmount : (updatedData.minOfferAmount ? Number(updatedData.minOfferAmount) : undefined),
+                  shippingCost: typeof updatedData.shippingCost === 'number' ? updatedData.shippingCost : (updatedData.shippingCost ? Number(updatedData.shippingCost) : undefined),
                   showOffers: updatedData.showOffers === true
                 };
                 
@@ -789,6 +790,7 @@ export default function ListingPage() {
           // Explicitly include finalSale property with default value
           finalSale: data.finalSale === true,
           minOfferAmount: typeof data.minOfferAmount === 'number' ? data.minOfferAmount : (data.minOfferAmount ? Number(data.minOfferAmount) : undefined),
+          shippingCost: typeof data.shippingCost === 'number' ? data.shippingCost : (data.shippingCost ? Number(data.shippingCost) : undefined),
           showOffers: data.showOffers === true
         };
         
@@ -1333,11 +1335,13 @@ export default function ListingPage() {
                 </div>
 
                 <div className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold text-foreground">
-                    {listing.offersOnly === true || (listing.price === 0 && listing.offersOnly !== false) ? (
-                      <span>Offers Only</span>
-                    ) : formatPrice(listing.price)}
-                  </div>
+                  <ListingPrice
+                    price={typeof listing.price === 'number' ? listing.price : Number(listing.price) || 0}
+                    offersOnly={listing.offersOnly === true || (listing.price === 0 && listing.offersOnly !== false)}
+                    shippingCost={typeof listing.shippingCost === 'number' ? listing.shippingCost : undefined}
+                    className="text-3xl md:text-4xl font-bold text-foreground"
+                    showShippingDetails={true}
+                  />
                 </div>
               </div>
 

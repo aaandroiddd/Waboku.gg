@@ -341,19 +341,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   {listing.offersOnly ? (
                     <span>Offers Only</span>
                   ) : (
-                    <div>
-                      <div>{formatPrice(listing.price)}</div>
-                      {listing.shippingCost && listing.shippingCost > 0 && (
-                        <div className="text-xs opacity-90">
-                          + {formatPrice(listing.shippingCost)} shipping
-                        </div>
-                      )}
-                      {(!listing.shippingCost || listing.shippingCost === 0) && (
-                        <div className="text-xs opacity-90">
-                          Free shipping
-                        </div>
-                      )}
-                    </div>
+                    <div>{formatPrice(listing.price)}</div>
                   )}
                 </div>
               </MobileAnimationWrapper>
