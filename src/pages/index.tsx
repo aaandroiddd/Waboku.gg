@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { LogIn, UserPlus, Clock, MapPin, Sparkles } from "lucide-react";
+import { LogIn, UserPlus, Clock, MapPin, Sparkles, LayoutGrid, Square, Image } from "lucide-react";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
 import StaticBackground from "@/components/StaticBackground";
@@ -251,6 +251,7 @@ export default function Home() {
   const [isRecovering, setIsRecovering] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'default' | 'single' | 'image-only'>('default');
 
   // Use useMemo to compute random subtitle only once on component mount
   const randomSubtitle = useMemo(() => 
@@ -689,9 +690,31 @@ export default function Home() {
                         Fresh cards just added to the marketplace
                       </p>
                     </div>
-                    <Link href="/listings">
-                      <Button variant="outline" size="sm">View All</Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href="/listings">
+                        <Button variant="outline" size="sm">View All</Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="sm:hidden"
+                        onClick={() =>
+                          setMobileViewMode((prev) =>
+                            prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
+                          )
+                        }
+                        aria-label="Toggle mobile view mode"
+                        title={`View: ${mobileViewMode}`}
+                      >
+                        {mobileViewMode === 'default' ? (
+                          <LayoutGrid className="h-4 w-4" />
+                        ) : mobileViewMode === 'single' ? (
+                          <Square className="h-4 w-4" />
+                        ) : (
+                          <Image className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="max-w-[1400px] mx-auto">
@@ -738,6 +761,7 @@ export default function Home() {
                                 displayCount={displayCount}
                                 hasMore={processedListings.length > displayCount}
                                 onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                                viewMode={mobileViewMode}
                               />
                             ) : !isLoading && (
                               <Card>

@@ -45,6 +45,7 @@ interface ListingCardProps {
   getConditionColor: (condition: string) => { base: string; hover: string };
   searchTerm?: string;
   resultPosition?: number;
+  imageOnly?: boolean;
 }
 
 const cardVariants = {
@@ -164,7 +165,7 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   );
 };
 
-const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
+const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition, imageOnly = false }: ListingCardProps) => {
   const { location } = useLocation({ autoRequest: false });
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
@@ -325,8 +326,10 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
             }
           }}
         >
-          <CardContent className="p-3 h-full flex flex-col" style={{ minHeight: '420px' }}>
+          <CardContent className="p-3 h-full flex flex-col" style={{ minHeight: imageOnly ? undefined : '420px' }}>
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
+              {!imageOnly && (
+              <>
               {/* Price Badge or Offers Only Badge */}
               <MobileAnimationWrapper 
                 className="absolute bottom-2 right-2 z-10"
@@ -478,6 +481,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 </div>
               </div>
               
+              </>)}
               {listing.imageUrls && listing.imageUrls.length > 0 ? (
                 <MobileAnimationWrapper 
                   className="relative w-full h-full bg-muted/50"
@@ -551,6 +555,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 </div>
               )}
             </div>
+            {!imageOnly && (
             <MobileAnimationWrapper 
               className="space-y-2"
               initial={{ opacity: 0 }}
@@ -628,6 +633,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 )}
               </div>
             </MobileAnimationWrapper>
+            )}
           </CardContent>
         </Link>
       </Card>
@@ -637,7 +643,7 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
 
 ListingCardContent.displayName = 'ListingCardContent';
 
-export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
+export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition, imageOnly = false }: ListingCardProps) => {
   return (
     <StringErrorBoundary fallback={
       <Card className="relative overflow-hidden group h-full">
@@ -656,6 +662,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
         getConditionColor={getConditionColor}
         searchTerm={searchTerm}
         resultPosition={resultPosition}
+        imageOnly={imageOnly}
       />
     </StringErrorBoundary>
   );

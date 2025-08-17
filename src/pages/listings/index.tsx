@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Filter, Check, LayoutGrid, List, X, ArrowUpDown } from 'lucide-react';
+import { Search, MapPin, Filter, Check, LayoutGrid, List, X, ArrowUpDown, Square, Image as ImageIcon } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
@@ -143,6 +143,7 @@ export default function ListingsPage() {
   const [showWantedBanner, setShowWantedBanner] = useState(true);
   const [displayCount, setDisplayCount] = useState(8);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const [mobileGridViewMode, setMobileGridViewMode] = useState<'default' | 'single' | 'image-only'>('default');
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -1167,6 +1168,26 @@ export default function ListingsPage() {
                               <List className="h-4 w-4" />
                             </Button>
                           </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="sm:hidden h-9"
+                            onClick={() =>
+                              setMobileGridViewMode((prev) =>
+                                prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
+                              )
+                            }
+                            aria-label="Toggle mobile grid view"
+                            title={`View: ${mobileGridViewMode}`}
+                          >
+                            {mobileGridViewMode === 'default' ? (
+                              <LayoutGrid className="h-4 w-4" />
+                            ) : mobileGridViewMode === 'single' ? (
+                              <Square className="h-4 w-4" />
+                            ) : (
+                              <ImageIcon className="h-4 w-4" />
+                            )}
+                          </Button>
                         </div>
                       </div>
 
@@ -1518,6 +1539,7 @@ export default function ListingsPage() {
                     displayCount={displayCount}
                     hasMore={filteredListings.length > displayCount}
                     onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                    viewMode={mobileGridViewMode}
                   />
                 ) : (
                   <SearchListingList listings={filteredListings} loading={isLoading} />
