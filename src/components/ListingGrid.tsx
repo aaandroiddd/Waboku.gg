@@ -1,14 +1,9 @@
 import { Card, CardContent } from '@/components/ui/card';
->>>>>>> REPLACE
-
-<<<<<<< SEARCH
-import { useGeolocation } from '@/hooks/useGeolocation';
-=======
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { Listing } from '@/types/database';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
@@ -97,7 +92,7 @@ const LoadingSkeleton = memo(function LoadingSkeleton() {
           animate={{ opacity: 1 }}
           transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : i * 0.1 }}
         >
-          <Card className="animate-pulse">
+          <Card className="animate-pulse transform-gpu">
             <CardContent className="p-4">
               <div className="aspect-square bg-secondary rounded-lg mb-2" />
               <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
@@ -119,7 +114,7 @@ const EmptyState = memo(function EmptyState({ isFavoritesPage }: { isFavoritesPa
       transition={{ duration: isMobile ? 0.3 : 0.5 }}
       className="text-center"
     >
-      <Card>
+      <Card className="transform-gpu">
         <CardContent className="p-8">
           <h3 className="text-lg font-semibold mb-2">No Listings Available</h3>
           {isFavoritesPage ? (
@@ -148,30 +143,6 @@ export function ListingGrid({
   isFavoritesPage = false,
   viewMode = 'default'
 }: ListingGridProps) {
->>>>>>> REPLACE
-
-<<<<<<< SEARCH
-    console.log('Listings received:', {
-      total: listings.length,
-      sample: listings.slice(0, 3).map(l => ({
-        id: l.id,
-        title: l.title,
-        status: l.status,
-        expiresAt: l.expiresAt
-      }))
-    });
-=======
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Listings received:', {
-        total: listings.length,
-        sample: listings.slice(0, 3).map(l => ({
-          id: l.id,
-          title: l.title,
-          status: l.status,
-          expiresAt: l.expiresAt
-        }))
-      });
-    }
   // Only use useListings if no listings are provided via props
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 
@@ -315,15 +286,17 @@ export function ListingGrid({
 
   const displayedListings = useMemo(() => {
     // Only apply display count limit if specified
-    console.log('Listings received:', {
-      total: listings.length,
-      sample: listings.slice(0, 3).map(l => ({
-        id: l.id,
-        title: l.title,
-        status: l.status,
-        expiresAt: l.expiresAt
-      }))
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Listings received:', {
+        total: listings.length,
+        sample: listings.slice(0, 3).map(l => ({
+          id: l.id,
+          title: l.title,
+          status: l.status,
+          expiresAt: l.expiresAt
+        }))
+      });
+    }
     
     return displayCount ? listings.slice(0, displayCount) : listings;
   }, [listings, displayCount]);
@@ -357,11 +330,7 @@ export function ListingGrid({
             <div
               className={`${viewMode === 'single' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} ${viewMode === 'image-only' ? 'gap-2' : 'gap-3'} auto-rows-fr transform-gpu`}
             >
->>>>>>> REPLACE
-
-<<<<<<< SEARCH
-              </AnimatePresence>
-=======
+              <AnimatePresence mode="popLayout">
                 {displayedListings.map((listing) => (
                   <ListingCard
                     key={listing.id}
