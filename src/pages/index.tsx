@@ -278,7 +278,7 @@ export default function Home() {
   }, [mobileViewMode]);
   const cycleGridViewMode = useCallback(() => {
     setMobileViewMode((prev) =>
-      prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
+      prev === 'default' ? 'image-only' : 'default'
     );
   }, []);
 
@@ -734,8 +734,6 @@ export default function Home() {
                       >
                         {mobileViewMode === 'default' ? (
                           <LayoutGrid className="h-4 w-4" />
-                        ) : mobileViewMode === 'single' ? (
-                          <Square className="h-4 w-4" />
                         ) : (
                           <Image className="h-4 w-4" />
                         )}

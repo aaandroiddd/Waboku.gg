@@ -170,7 +170,7 @@ export default function ListingsPage() {
   }, [mobileGridViewMode]);
   const cycleGridViewMode = useCallback(() => {
     setMobileGridViewMode((prev) =>
-      prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
+      prev === 'default' ? 'image-only' : 'default'
     );
   }, []);
 
@@ -1470,8 +1470,6 @@ export default function ListingsPage() {
                         >
                           {mobileGridViewMode === 'default' ? (
                             <LayoutGrid className="h-4 w-4" />
-                          ) : mobileGridViewMode === 'single' ? (
-                            <Square className="h-4 w-4" />
                           ) : (
                             <ImageIcon className="h-4 w-4" />
                           )}
