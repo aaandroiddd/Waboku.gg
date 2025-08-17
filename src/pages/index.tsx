@@ -253,6 +253,35 @@ export default function Home() {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [mobileViewMode, setMobileViewMode] = useState<'default' | 'single' | 'image-only'>('default');
 
+  // Persist grid view mode across pages (mobile + desktop share same preference)
+  const GRID_VIEW_MODE_STORAGE_KEY = 'listingGridViewMode';
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(GRID_VIEW_MODE_STORAGE_KEY);
+        if (saved === 'default' || saved === 'single' || saved === 'image-only') {
+          setMobileViewMode(saved as 'default' | 'single' | 'image-only');
+        }
+      } catch (e) {
+        console.warn('Failed to read grid view mode from storage', e);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(GRID_VIEW_MODE_STORAGE_KEY, mobileViewMode);
+      } catch (e) {
+        console.warn('Failed to persist grid view mode', e);
+      }
+    }
+  }, [mobileViewMode]);
+  const cycleGridViewMode = useCallback(() => {
+    setMobileViewMode((prev) =>
+      prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
+    );
+  }, []);
+
   // Use useMemo to compute random subtitle only once on component mount
   const randomSubtitle = useMemo(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)],
@@ -694,15 +723,29 @@ export default function Home() {
                       <Link href="/listings">
                         <Button variant="outline" size="sm">View All</Button>
                       </Link>
+                      {/* Desktop grid density toggle */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hidden sm:inline-flex"
+                        onClick={cycleGridViewMode}
+                        aria-label="Toggle grid view mode"
+                        title={`View: ${mobileViewMode}`}
+                      >
+                        {mobileViewMode === 'default' ? (
+                          <LayoutGrid className="h-4 w-4" />
+                        ) : mobileViewMode === 'single' ? (
+                          <Square className="h-4 w-4" />
+                        ) : (
+                          <Image className="h-4 w-4" />
+                        )}
+                      </Button>
+                      {/* Mobile grid density toggle */}
                       <Button
                         variant="outline"
                         size="sm"
                         className="sm:hidden"
-                        onClick={() =>
-                          setMobileViewMode((prev) =>
-                            prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
-                          )
-                        }
+                        onClick={cycleGridViewMode}
                         aria-label="Toggle mobile view mode"
                         title={`View: ${mobileViewMode}`}
                       >

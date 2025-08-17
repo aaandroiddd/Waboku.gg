@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import SearchBar from '@/components/SearchBar';
 import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
 import { Listing } from '@/types/database';
@@ -144,6 +144,35 @@ export default function ListingsPage() {
   const [displayCount, setDisplayCount] = useState(8);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [mobileGridViewMode, setMobileGridViewMode] = useState<'default' | 'single' | 'image-only'>('default');
+
+  // Persist grid density view mode across pages (desktop + mobile)
+  const GRID_VIEW_MODE_STORAGE_KEY = 'listingGridViewMode';
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(GRID_VIEW_MODE_STORAGE_KEY);
+        if (saved === 'default' || saved === 'single' || saved === 'image-only') {
+          setMobileGridViewMode(saved as 'default' | 'single' | 'image-only');
+        }
+      } catch (e) {
+        console.warn('Failed to read grid view mode from storage', e);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(GRID_VIEW_MODE_STORAGE_KEY, mobileGridViewMode);
+      } catch (e) {
+        console.warn('Failed to persist grid view mode', e);
+      }
+    }
+  }, [mobileGridViewMode]);
+  const cycleGridViewMode = useCallback(() => {
+    setMobileGridViewMode((prev) =>
+      prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
+    );
+  }, []);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -1172,11 +1201,7 @@ export default function ListingsPage() {
                             variant="outline"
                             size="sm"
                             className="sm:hidden h-9"
-                            onClick={() =>
-                              setMobileGridViewMode((prev) =>
-                                prev === 'default' ? 'single' : prev === 'single' ? 'image-only' : 'default'
-                              )
-                            }
+                            onClick={cycleGridViewMode}
                             aria-label="Toggle mobile grid view"
                             title={`View: ${mobileGridViewMode}`}
                           >
@@ -1435,6 +1460,22 @@ export default function ListingsPage() {
                             <span className="hidden sm:inline">List</span>
                           </Button>
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="hidden sm:inline-flex h-10"
+                          onClick={cycleGridViewMode}
+                          aria-label="Toggle grid view mode"
+                          title={`View: ${mobileGridViewMode}`}
+                        >
+                          {mobileGridViewMode === 'default' ? (
+                            <LayoutGrid className="h-4 w-4" />
+                          ) : mobileGridViewMode === 'single' ? (
+                            <Square className="h-4 w-4" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     </>
                   )}
