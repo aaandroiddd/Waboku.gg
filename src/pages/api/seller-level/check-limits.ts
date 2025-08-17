@@ -71,18 +71,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const config = SELLER_LEVEL_CONFIG[currentLevel];
     const limits = config.limits;
 
-    // Get current total active listing value
-    const listingsSnapshot = await db
+    // Get current active listings
+    const activeListingsSnapshot = await db
       .collection('listings')
       .where('userId', '==', userId)
       .where('status', '==', 'active')
       .get();
+    
+    // Get current archived listings (these can be restored)
+    const archivedListingsSnapshot = await db
+      .collection('listings')
+      .where('userId', '==', userId)
+      .where('status', '==', 'archived')
+      .get();
+    
     let totalActiveValue = 0;
-
-    listingsSnapshot.docs.forEach(doc => {
+    activeListingsSnapshot.docs.forEach(doc => {
       const data = doc.data();
       totalActiveValue += Number(data.price) || 0;
     });
+
+    const activeListingCount = activeListingsSnapshot.docs.length;
+    const archivedListingCount = archivedListingsSnapshot.docs.length;
+    const totalListingCount = activeListingCount + archivedListingCount;
 
     // Check individual item limit
     if (price > limits.maxIndividualItemValue) {
@@ -104,11 +115,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Check active listing count limit (if applicable)
-    if (limits.maxActiveListings && listingsSnapshot.docs.length >= limits.maxActiveListings) {
+    // Check active + archived listing count limit (if applicable)
+    // This prevents users from bypassing limits by archiving and restoring listings
+    if (limits.maxActiveListings && totalListingCount >= limits.maxActiveListings) {
       return res.status(400).json({
         allowed: false,
-        reason: `You have reached your level ${currentLevel} active listing limit of ${limits.maxActiveListings} listings`,
+        reason: `You have reached your level ${currentLevel} listing limit of ${limits.maxActiveListings} listings (${activeListingCount} active, ${archivedListingCount} archived). Archived listings count toward your limit since they can be restored. Please permanently delete some listings to create new ones.`,
         currentLevel,
         limits
       });
@@ -120,7 +132,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       limits,
       currentStats: {
         totalActiveValue,
-        activeListingCount: listingsSnapshot.docs.length,
+        activeListingCount,
+        archivedListingCount,
+        totalListingCount,
         completedSales,
         rating,
         reviewCount,

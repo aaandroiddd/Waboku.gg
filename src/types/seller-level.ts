@@ -54,7 +54,8 @@ export const SELLER_LEVEL_CONFIG: Record<SellerLevel, SellerLevelConfig> = {
       maxUnresolvedDisputes: 0
     },
     limits: {
-      maxTotalListingValue: 1000
+      maxTotalListingValue: 1000,
+      maxActiveListings: 2
     },
     badge: {
       icon: '',

@@ -227,8 +227,35 @@ export function useListings({
   };
 
   const restoreListing = async (listingId: string) => {
+    if (!user) throw new Error('Must be logged in to restore a listing');
+
     try {
       console.log(`Starting restoration of listing ${listingId}`);
+      
+      // Get user data to determine account tier
+      const { db } = await getFirebaseServices();
+      let accountTier = 'free'; // Default to free tier
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          accountTier = userData.accountTier || 'free';
+        }
+      } catch (error) {
+        console.error('Error getting user account tier:', error);
+        // Continue with free tier as fallback
+      }
+      
+      // Check listing limits for free users before restoring
+      if (accountTier === 'free') {
+        const activeListingCount = await checkActiveListingCount();
+        const maxListings = ACCOUNT_TIERS.free.maxActiveListings;
+        
+        if (activeListingCount >= maxListings) {
+          throw new Error(`Cannot restore listing: Free users can only have ${maxListings} active listings. You currently have ${activeListingCount} active listings. Please upgrade to Premium for unlimited listings, or delete/archive an existing listing first.`);
+        }
+      }
       
       // First, clear all listing-related caches to ensure fresh data
       if (typeof window !== 'undefined') {
@@ -655,10 +682,22 @@ export function useListings({
       // Check listing limits for free users
       if (accountTier === 'free') {
         const activeListingCount = await checkActiveListingCount();
+        
+        // Also check archived listings since they can be restored
+        const archivedListingsRef = collection(db, 'listings');
+        const archivedQuery = query(
+          archivedListingsRef,
+          where('userId', '==', user.uid),
+          where('status', '==', 'archived')
+        );
+        const archivedSnapshot = await getDocs(archivedQuery);
+        const archivedListingCount = archivedSnapshot.docs.length;
+        
+        const totalListingCount = activeListingCount + archivedListingCount;
         const maxListings = ACCOUNT_TIERS.free.maxActiveListings;
         
-        if (activeListingCount >= maxListings) {
-          throw new Error(`Free users can only have ${maxListings} active listings. You currently have ${activeListingCount} active listings. Please upgrade to Premium for unlimited listings, or delete/archive an existing listing first.`);
+        if (totalListingCount >= maxListings) {
+          throw new Error(`Free users can only have ${maxListings} listings total (active + archived). You currently have ${activeListingCount} active and ${archivedListingCount} archived listings. Archived listings count toward your limit since they can be restored. Please permanently delete some listings to create new ones, or upgrade to Premium for unlimited listings.`);
         }
       }
       
