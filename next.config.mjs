@@ -109,7 +109,6 @@ const nextConfig = {
         'node_modules/.pnpm/**',
         'node_modules/next/dist/compiled/**',
         'node_modules/@next/**',
-        'node_modules/@swc/**',
         '**/*.md',
         '**/*.map',
         '**/*.test.*',
