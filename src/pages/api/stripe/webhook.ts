@@ -675,6 +675,11 @@ export default async function handler(
               }
             }
             
+            // Calculate auto-completion dates
+            const now = new Date();
+            const autoCompletionEligibleAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+            const autoCompletionScheduledAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
+
             // Create an order record
             const orderData = {
               listingId,
@@ -687,6 +692,8 @@ export default async function handler(
               paymentIntentId: paymentIntentId,
               paymentStatus: 'paid',
               ...(paymentMethod && { paymentMethod }),
+              autoCompletionEligibleAt: autoCompletionEligibleAt,
+              autoCompletionScheduledAt: autoCompletionScheduledAt,
               createdAt: new Date(),
               updatedAt: new Date(),
               // Include offer price if available

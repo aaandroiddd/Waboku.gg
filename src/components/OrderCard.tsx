@@ -21,6 +21,7 @@ import { RefundRequestDialog } from '@/components/RefundRequestDialog';
 import { RefundManagementDialog } from '@/components/RefundManagementDialog';
 import { PickupQRCode } from '@/components/PickupQRCode';
 import { getOrderAttentionInfo } from '@/lib/order-utils';
+import { BuyerCompleteOrderButton } from '@/components/BuyerCompleteOrderButton';
 
 interface OrderCardProps {
   order: Order;
@@ -534,6 +535,16 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </AcceptedOfferCheckout>
             )}
             
+            {/* Buyer Complete Order Button - Only visible for buyers with eligible orders */}
+            {!isSale && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <BuyerCompleteOrderButton 
+                  order={safeOrder}
+                  onOrderCompleted={() => router.reload()}
+                />
+              </div>
+            )}
+
             {/* Leave Review Button - Only visible for buyers with completed orders that don't have a review yet */}
             {!isSale && safeOrder.status === 'completed' && !safeOrder.reviewSubmitted && (
               <Button 

@@ -78,6 +78,17 @@ export interface Order {
   refundNotes?: string; // Admin/seller notes about the refund
   isRefundEligible?: boolean; // Whether the order is eligible for refund
   refundDeadline?: Date; // Deadline for requesting refund
+  // Buyer completion fields
+  buyerCanComplete?: boolean; // Flag to indicate if buyer can complete the order
+  buyerCompletedAt?: Date; // When the buyer manually completed the order
+  buyerCompletedBy?: string; // User ID of buyer who completed the order
+  // Auto-completion fields
+  autoCompletionEligibleAt?: Date; // When the order becomes eligible for auto-completion (24h after payment)
+  autoCompletionScheduledAt?: Date; // When the order is scheduled for auto-completion (14 days after payment)
+  autoCompletedAt?: Date; // When the order was auto-completed
+  // Completion prevention flags
+  hasDispute?: boolean; // Flag to indicate if there's an active dispute
+  hasRefundRequest?: boolean; // Flag to indicate if there's an active refund request
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot?: {

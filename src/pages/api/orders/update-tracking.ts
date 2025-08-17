@@ -144,6 +144,102 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Log the successful update
     console.log(`Updated tracking for order ${orderId}: ${carrier} ${trackingNumber}`);
 
+    // If order was marked as completed due to delivery, send delivery confirmation notifications
+    if (orderStatus === 'completed') {
+      try {
+        // Get buyer and seller data for delivery notifications
+        const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+        const { db: adminDb } = getFirebaseAdmin();
+        
+        const [buyerDoc, sellerDoc] = await Promise.all([
+          adminDb.collection('users').doc(orderData.buyerId).get(),
+          adminDb.collection('users').doc(orderData.sellerId).get()
+        ]);
+
+        const buyerData = buyerDoc.data();
+        const sellerData = sellerDoc.data();
+
+        if (buyerData && sellerData) {
+          const orderNumber = orderId.substring(0, 8).toUpperCase();
+          const itemTitle = orderData.listingSnapshot?.title || 'item';
+
+          // Create in-app notification for buyer about delivery
+          const { notificationService } = await import('@/lib/notification-service');
+          await notificationService.createNotification({
+            userId: orderData.buyerId,
+            type: 'order_update',
+            title: '📦 Package Delivered!',
+            message: `Your order for "${itemTitle}" has been delivered! The order has been automatically marked as completed.`,
+            data: {
+              orderId: orderId,
+              actionUrl: `/dashboard/orders/${orderId}`
+            }
+          });
+          console.log('[update-tracking] Delivery notification created for buyer:', orderData.buyerId);
+
+          // Create in-app notification for seller about delivery
+          await notificationService.createNotification({
+            userId: orderData.sellerId,
+            type: 'order_update',
+            title: '✅ Package Delivered!',
+            message: `Your package for "${itemTitle}" has been delivered to the buyer. The order has been automatically completed.`,
+            data: {
+              orderId: orderId,
+              actionUrl: `/dashboard/orders/${orderId}`
+            }
+          });
+          console.log('[update-tracking] Delivery notification created for seller:', orderData.sellerId);
+
+          // Send delivery confirmation email to buyer
+          if (buyerData.email) {
+            const { emailService } = await import('@/lib/email-service');
+            await emailService.sendEmailNotification({
+              userId: orderData.buyerId,
+              userEmail: buyerData.email,
+              userName: buyerData.displayName || buyerData.username || 'User',
+              type: 'order_update',
+              title: '📦 Package Delivered!',
+              message: `Great news! Your order #${orderNumber} for "${itemTitle}" has been delivered and automatically marked as completed. We hope you're satisfied with your purchase!`,
+              actionUrl: `/dashboard/orders/${orderId}`,
+              data: {
+                orderId: orderId,
+                sellerName: sellerData.displayName || sellerData.username || 'Seller',
+                itemTitle: itemTitle,
+                orderNumber: orderNumber,
+                trackingNumber: trackingNumber
+              }
+            });
+            console.log('[update-tracking] Delivery confirmation email sent to buyer:', buyerData.email);
+          }
+
+          // Send delivery confirmation email to seller
+          if (sellerData.email) {
+            const { emailService } = await import('@/lib/email-service');
+            await emailService.sendEmailNotification({
+              userId: orderData.sellerId,
+              userEmail: sellerData.email,
+              userName: sellerData.displayName || sellerData.username || 'User',
+              type: 'order_update',
+              title: '✅ Package Delivered Successfully!',
+              message: `Excellent! Your package for order #${orderNumber} "${itemTitle}" has been delivered to ${buyerData.displayName || buyerData.username || 'the buyer'}. The order has been automatically completed.`,
+              actionUrl: `/dashboard/orders/${orderId}`,
+              data: {
+                orderId: orderId,
+                buyerName: buyerData.displayName || buyerData.username || 'Buyer',
+                itemTitle: itemTitle,
+                orderNumber: orderNumber,
+                trackingNumber: trackingNumber
+              }
+            });
+            console.log('[update-tracking] Delivery confirmation email sent to seller:', sellerData.email);
+          }
+        }
+      } catch (deliveryNotificationError) {
+        console.error('[update-tracking] Error sending delivery notifications:', deliveryNotificationError);
+        // Don't throw error - tracking was updated successfully, notifications are secondary
+      }
+    }
+
     // Send shipping notification emails and create in-app notifications
     try {
       // Get buyer and seller data for notifications
