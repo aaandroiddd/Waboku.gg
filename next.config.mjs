@@ -107,8 +107,6 @@ const nextConfig = {
       '*': [
         'node_modules/.cache/**',
         'node_modules/.pnpm/**',
-        'node_modules/next/dist/compiled/**',
-        'node_modules/@next/**',
         '**/*.md',
         '**/*.map',
         '**/*.test.*',
