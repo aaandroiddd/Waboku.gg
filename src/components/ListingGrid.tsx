@@ -1,10 +1,14 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { useLocation } from '@/hooks/useLocation';
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+import { useGeolocation } from '@/hooks/useGeolocation';
+=======
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { Listing } from '@/types/database';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
@@ -144,8 +148,30 @@ export function ListingGrid({
   isFavoritesPage = false,
   viewMode = 'default'
 }: ListingGridProps) {
-  // Don't automatically request location
-  const location = { latitude: null, longitude: null };
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+    console.log('Listings received:', {
+      total: listings.length,
+      sample: listings.slice(0, 3).map(l => ({
+        id: l.id,
+        title: l.title,
+        status: l.status,
+        expiresAt: l.expiresAt
+      }))
+    });
+=======
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Listings received:', {
+        total: listings.length,
+        sample: listings.slice(0, 3).map(l => ({
+          id: l.id,
+          title: l.title,
+          status: l.status,
+          expiresAt: l.expiresAt
+        }))
+      });
+    }
   // Only use useListings if no listings are provided via props
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 
@@ -329,9 +355,13 @@ export function ListingGrid({
         ) : (
           <>
             <div
-              className={`${viewMode === 'single' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} ${viewMode === 'image-only' ? 'gap-2' : 'gap-3'} auto-rows-fr`}
+              className={`${viewMode === 'single' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} ${viewMode === 'image-only' ? 'gap-2' : 'gap-3'} auto-rows-fr transform-gpu`}
             >
-              <AnimatePresence>
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+              </AnimatePresence>
+=======
                 {displayedListings.map((listing) => (
                   <ListingCard
                     key={listing.id}
@@ -340,7 +370,6 @@ export function ListingGrid({
                     onFavoriteClick={handleFavoriteClick}
                     getConditionColor={memoizedGetConditionColor}
                     imageOnly={viewMode === 'image-only'}
-                    distance={(listing as any).distance}
                   />
                 ))}
               </AnimatePresence>
