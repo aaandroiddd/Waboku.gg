@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { notificationService } from '@/lib/notification-service';
@@ -25,9 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verify the token using Firebase Admin
     let decodedToken;
     try {
-      const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
       const { auth } = getFirebaseAdmin();
       decodedToken = await auth.verifyIdToken(token);
+      console.log('Token verified successfully for user:', decodedToken.uid);
     } catch (error) {
       console.error('Error verifying auth token:', error);
       return res.status(401).json({ 
@@ -103,7 +104,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Send notifications
     try {
       // Get buyer and seller data for notifications
-      const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
       const { db: adminDb } = getFirebaseAdmin();
       
       const [buyerDoc, sellerDoc] = await Promise.all([
