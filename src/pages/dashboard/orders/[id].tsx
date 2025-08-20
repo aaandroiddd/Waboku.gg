@@ -811,7 +811,367 @@ export default function OrderDetailsPage() {
                   {/* Tracking requirement warnings based on order value */}
                   {order.amount >= 99.99 && (
                     <div className="mb-4 p-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
-                      <div className="flex items-start gap-2">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Info className="h-4 w-4" />
+                        <p>Shipping information will appear here once the order is processed.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            
+            {/* Buyer and Seller actions */}
+            <div className="flex gap-2">
+              {isUserBuyer && (
+                <div className="w-full sm:w-auto">
+                  <BuyerCompleteOrderButton
+                    order={order}
+                    onOrderCompleted={() => router.reload()}
+                  />
+                </div>
+              )}
+              {/* Buyer actions */}
+              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowReviewDialog(true)}
+                >
+                  <Star className="mr-2 h-4 w-4" /> Leave Review
+                </Button>
+              )}
+              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
+                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
+                  <Package className="mr-2 h-4 w-4" /> Report Issue
+                </Button>
+              )}
+
+              {/* Relist Button - Only visible for sellers with completed refunds */}
+              {isRelistEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  onClick={handleRelistItem}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Relist Item
+                </Button>
+              )}
+              
+              {/* Request Refund Button - Only visible for buyers with eligible orders */}
+              {isRefundEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  onClick={handleRefundRequest}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Request Refund
+                </Button>
+              )}
+
+              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
+              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <Button 
+                  variant="outline" 
+                  className={
+                    order.refundStatus === 'failed'
+                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  }
+                  onClick={handleManageRefund}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact & Support */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Contact & Support
+          </h3>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Contact the other party */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Contact {isUserBuyer ? 'Seller' : 'Buyer'}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Need to discuss order details, pickup arrangements, or have questions about this transaction?
+                  </p>
+                  {order && (
+                    <MessageDialog
+                      recipientId={isUserBuyer ? order.sellerId : order.buyerId}
+                      recipientName={isUserBuyer ? (sellerName || 'Seller') : (buyerName || 'Buyer')}
+                      listingId={order.listingId}
+                      listingTitle={order.listingSnapshot?.title}
+                    />
+                  )}
+                </div>
+
+                {/* Contact Support */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    Contact Support
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Having issues with your order, payment problems, or need help with disputes?
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => router.push('/support')}
+                  >
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Get Support
+                  </Button>
+                </div>
+              </div>
+
+              {/* Additional contact info for specific situations */}
+              {order.isPickup && (
+                <div className="mt-4 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Local Pickup Coordination</p>
+                      <p className="mt-1 text-sm">
+                        Use the message feature above to coordinate pickup times, locations, and any special instructions with the {isUserBuyer ? 'seller' : 'buyer'}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <div className="mt-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Refund in Progress</p>
+                      <p className="mt-1 text-sm">
+                        If you need assistance with the refund process or have questions about the refund status, please contact support.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Back to Orders Button */}
+        <div className="flex justify-center">
+          <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
+          </Button>
+        </div>
+      </div>
+
+      {/* Add Tracking Information Dialog */}
+      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Tracking Information</DialogTitle>
+            <DialogDescription>
+              Enter the shipping carrier and tracking number for this order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="carrier">Shipping Carrier (Optional)</Label>
+                <span className="text-xs text-muted-foreground">Will be auto-detected if left empty</span>
+              </div>
+              <Input
+                id="carrier"
+                placeholder="USPS, FedEx, UPS, etc."
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+              />
+              {trackingNumber && !carrier && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Carrier will be auto-detected from tracking number
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNumber">Tracking Number</Label>
+              <Input
+                id="trackingNumber"
+                placeholder="Enter tracking number"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNotes">Additional Notes (Optional)</Label>
+              <Textarea
+                id="trackingNotes"
+                placeholder="Any additional information about the shipment"
+                value={trackingNotes}
+                onChange={(e) => setTrackingNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTrackingDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddTracking} 
+              disabled={!trackingNumber || isUpdatingShipping}
+            >
+              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Tracking Information
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Shipped Without Tracking Dialog */}
+      <AlertDialog open={showNoTrackingDialog} onOpenChange={setShowNoTrackingDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Order Without Tracking?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              {order && order.amount >= 49.99 && (
+                <div className="p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Warning: High-Value Order</p>
+                      <p className="mt-1 text-sm">
+                        For orders over $49.99, you are responsible for any shipping issues without tracking. 
+                        You will have no proof of delivery in case of disputes or lost packages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <p>
+                You are about to mark this order as completed without providing tracking information. 
+                {order && order.amount < 49.99 && 'This means you will have no proof of delivery in case of disputes.'}
+                The order status will be changed to "Completed" immediately.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleMarkAsShipped}
+              disabled={isUpdatingShipping}
+              className={order && order.amount >= 49.99 ? "bg-red-600 hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}
+            >
+              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {order && order.amount >= 49.99 ? 'Accept Risk & Complete Order' : 'Complete Order'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Buyer Pickup Confirmation Dialog */}
+      <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                By confirming pickup, you acknowledge that you have received the item from the seller.
+              </p>
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">What happens next?</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+                    <li>Your pickup confirmation will be recorded</li>
+                    <li>The seller will also need to confirm pickup</li>
+                    <li>Once both parties confirm, the order will be completed</li>
+                    <li>You'll then be able to leave a review for this transaction</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmBuyerPickup}
+              disabled={isConfirmingBuyerPickup}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isConfirmingBuyerPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Pickup
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Review Dialog - Only show the ReviewForm component which handles mobile/desktop internally */}
+      {showReviewDialog && order && (
+        <ReviewForm 
+          orderId={order.id} 
+          onSuccess={() => {
+            setShowReviewDialog(false);
+            // Update local state to reflect that a review has been submitted
+            setOrder({
+              ...order,
+              reviewSubmitted: true
+            });
+          }}
+          onCancel={() => setShowReviewDialog(false)}
+        />
+      )}
+
+      {/* Shipping Info Dialog */}
+      {order && (
+        <OrderShippingInfoDialog
+          open={showShippingInfoDialog}
+          onOpenChange={setShowShippingInfoDialog}
+          orderId={order.id}
+          onComplete={(shippingAddress) => {
+            // Update local state with the new shipping address
+            setOrder({
+              ...order,
+              shippingAddress
+            });
+            toast.success('Shipping information updated successfully');
+          }}
+        />
+      )}
+
+      {/* Refund Request Dialog */}
+      {order && (
+        <RefundRequestDialog
+          open={showRefundDialog}
+          onOpenChange={setShowRefundDialog}
+          order={order}
+          onRefundRequested={handleRefundRequested}
+        />
+      )}
+
+      {/* Refund Management Dialog */}
+      {order && (
+        <RefundManagementDialog
+          open={showRefundManagementDialog}
+          onOpenChange={setShowRefundManagementDialog}
+          order={order}
+          onRefundProcessed={handleRefundProcessed}
+        />
+      )}
+    </DashboardLayout>
+  );
+} className="flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="font-medium">Tracking Required</p>
@@ -1260,137 +1620,6 @@ export default function OrderDetailsPage() {
               </div>
             )}
 
-            {/* Payment Information - hidden */}
-            {false && (
-            <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payment Information
-              </h3>
-              <Card>
-                <CardContent className="pt-6">
-                  {order.isPickup && (
-                    <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mb-4">
-                      <Info className="h-4 w-4 flex-shrink-0" />
-                      <p>For local pickup orders, payment details are handled directly between buyer and seller at the time of pickup.</p>
-                    </div>
-                  )}
-                  
-                  {/* Payment button for pending orders with Stripe Connect sellers - NOT for pickup orders */}
-                  {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && order.shippingAddress && order.status === 'pending' && (
-                    <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                        <p className="font-medium">Payment Required</p>
-                      </div>
-                      <p>
-                        This seller requires payment before shipping. Please complete your payment to proceed with the order.
-                      </p>
-                      <div className="mt-1">
-                        <Button 
-                          variant="default" 
-                          className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700 text-white"
-                          onClick={handlePayForPendingOrder}
-                          disabled={isProcessingPayment}
-                        >
-                          {isProcessingPayment ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="mr-2 h-4 w-4" /> Pay Now
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Payment button for orders that need shipping info first - NOT for pickup orders */}
-                  {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && !order.shippingAddress && (
-                    <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                        <p className="font-medium">Payment Required</p>
-                      </div>
-                      <p>
-                        This seller requires payment before shipping. Please provide shipping information to proceed with payment.
-                      </p>
-                      <div className="mt-1">
-                        <Button 
-                          variant="default" 
-                          className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700 text-white"
-                          onClick={() => setShowShippingInfoDialog(true)}
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" /> Provide Shipping Info
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {!order.isPickup && !order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && (
-                    <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mb-4">
-                      <Info className="h-4 w-4 flex-shrink-0" />
-                      <p>Payment will be arranged directly with the seller for this order.</p>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    {order.paymentSessionId && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Payment Session:</span>
-                        <span className="font-mono">{order.paymentSessionId.slice(0, 12)}...</span>
-                      </div>
-                    )}
-                    {order.paymentIntentId && typeof order.paymentIntentId === 'string' && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Payment Intent:</span>
-                        <span className="font-mono">{order.paymentIntentId.slice(0, 12)}...</span>
-                      </div>
-                    )}
-                    {isUserBuyer && order.transferId && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Transfer ID:</span>
-                        <span className="font-mono">{order.transferId.slice(0, 12)}...</span>
-                      </div>
-                    )}
-                    {isUserBuyer && order.transferAmount !== undefined && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Transfer Amount:</span>
-                        <span>{formatPrice(order.transferAmount)}</span>
-                      </div>
-                    )}
-                    {order.paymentStatus && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Payment Status:</span>
-                        <Badge variant={order.paymentStatus === 'paid' || order.paymentStatus === 'succeeded' ? 'success' : 'warning'}>
-                          {order.paymentStatus === 'paid' || order.paymentStatus === 'succeeded' ? 'Payment Successful' : 
-                           order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-                        </Badge>
-                      </div>
-                    )}
-                    {/* Display payment method details for buyers only */}
-                    {isUserBuyer && order.paymentMethod && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Payment Method:</span>
-                        <span>
-                          {order.paymentMethod.brand && order.paymentMethod.last4 && 
-                            `${order.paymentMethod.brand.charAt(0).toUpperCase() + order.paymentMethod.brand.slice(1)} •••• ${order.paymentMethod.last4}`}
-                        </span>
-                      </div>
-                    )}
-                    {order.isPickup && !order.paymentSessionId && !order.paymentIntentId && (
-                      <div className="text-center text-muted-foreground py-2">
-                        No online payment information available for local pickup orders.
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            )}
-
             {/* Refund Status Section - Show when there's refund activity */}
             {order.refundStatus && order.refundStatus !== 'none' && (
               <div>
@@ -1493,88 +1722,6 @@ export default function OrderDetailsPage() {
               </div>
             )}
 
-            {/* Contact Section - moved to bottom */}
-            {false && (
-            <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Contact & Support
-              </h3>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Contact the other party */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Contact {isUserBuyer ? 'Seller' : 'Buyer'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Need to discuss order details, pickup arrangements, or have questions about this transaction?
-                      </p>
-                      {order && (
-                        <MessageDialog
-                          recipientId={isUserBuyer ? order.sellerId : order.buyerId}
-                          recipientName={isUserBuyer ? (sellerName || 'Seller') : (buyerName || 'Buyer')}
-                          listingId={order.listingId}
-                          listingTitle={order.listingSnapshot?.title}
-                        />
-                      )}
-                    </div>
-
-                    {/* Contact Support */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <HelpCircle className="h-4 w-4" />
-                        Contact Support
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Having issues with your order, payment problems, or need help with disputes?
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => router.push('/support')}
-                      >
-                        <HelpCircle className="mr-2 h-4 w-4" />
-                        Get Support
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Additional contact info for specific situations */}
-                  {order.isPickup && (
-                    <div className="mt-4 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                      <div className="flex items-start gap-2">
-                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-medium">Local Pickup Coordination</p>
-                          <p className="mt-1 text-sm">
-                            Use the message feature above to coordinate pickup times, locations, and any special instructions with the {isUserBuyer ? 'seller' : 'buyer'}.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                    <div className="mt-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-medium">Refund in Progress</p>
-                          <p className="mt-1 text-sm">
-                            If you need assistance with the refund process or have questions about the refund status, please contact support.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-            )}
-
             {/* Shipping Status Section - Only for non-pickup orders */}
             {!order.isPickup && (
               <div>
@@ -1591,743 +1738,4 @@ export default function OrderDetailsPage() {
                             variant={order.status === 'completed' ? 'success' : 'info'} 
                             className={`px-2 py-1 ${
                               order.status === 'completed' 
-                                ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
-                                : 'bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40 border-blue-200 dark:border-blue-800'
-                            }`}
-                          >
-                            {order.status === 'completed' ? 'Delivered' : 'Shipped'}
-                          </Badge>
-                          <span>
-                            {order.status === 'completed' 
-                              ? 'This order has been delivered.' 
-                              : 'This order has been shipped.'}
-                          </span>
-                        </div>
-                        
-                        {/* Tracking Information */}
-                        {order.trackingInfo ? (
-                          <div className="space-y-4 mt-4">
-                            <div className="border rounded-lg p-4 bg-card">
-                              <div className="space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground font-medium">Carrier:</span>
-                                    <Badge variant="outline" className="font-semibold">
-                                      {order.trackingInfo.carrier}
-                                    </Badge>
-                                  </div>
-                                  
-                                  <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-                                    {/* Update Tracking Button - Only visible to seller */}
-                                    {!isUserBuyer && order.status !== 'completed' && (
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => {
-                                          setCarrier(order.trackingInfo?.carrier || '');
-                                          setTrackingNumber(order.trackingInfo?.trackingNumber || '');
-                                          setTrackingNotes(order.trackingInfo?.notes || '');
-                                          setShowTrackingDialog(true);
-                                        }}
-                                      >
-                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                        Update Tracking
-                                      </Button>
-                                    )}
-                                    
-                                    {/* Removed redundant 'track package' button as requested */}
-                                  </div>
-                                </div>
-                                
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-3">
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                    <span className="text-muted-foreground font-medium">Tracking Number:</span>
-                                    <code className="bg-muted px-2 py-1 rounded font-mono text-foreground text-sm break-all">
-                                      {order.trackingInfo.trackingNumber}
-                                    </code>
-                                  </div>
-                                  
-                                  {/* Copy Tracking Button with Tooltip */}
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          className="mt-1 sm:mt-0 self-start sm:self-auto"
-                                          onClick={() => {
-                                            try {
-                                              const trackingNumber = order.trackingInfo?.trackingNumber || '';
-                                              navigator.clipboard.writeText(trackingNumber)
-                                                .then(() => {
-                                                  // Show a toast notification to confirm the copy action
-                                                  toast.success('Tracking number copied to clipboard', {
-                                                    duration: 3000,
-                                                    position: 'bottom-center',
-                                                    icon: <Copy className="h-4 w-4" />
-                                                  });
-                                                })
-                                                .catch((err) => {
-                                                  console.error('Failed to copy tracking number:', err);
-                                                  toast.error('Failed to copy tracking number');
-                                                });
-                                            } catch (error) {
-                                              console.error('Error copying tracking number:', error);
-                                              toast.error('Failed to copy tracking number');
-                                            }
-                                          }}
-                                        >
-                                          <Copy className="mr-2 h-4 w-4" />
-                                          Copy
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Copy tracking number to clipboard</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </div>
-                                
-                                {order.trackingInfo.notes && (
-                                  <div className="mt-2">
-                                    <span className="text-muted-foreground font-medium">Notes:</span>
-                                    <p className="mt-1 text-sm p-2 bg-muted rounded text-foreground">
-                                      {order.trackingInfo.notes}
-                                    </p>
-                                  </div>
-                                )}
-                                
-                                <div className="text-sm text-muted-foreground mt-2">
-                                  Tracking added on {order.trackingInfo.addedAt && 
-                                    (typeof order.trackingInfo.addedAt === 'object' && 'seconds' in order.trackingInfo.addedAt
-                                      ? format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')
-                                      : format(new Date(order.trackingInfo.addedAt), 'PPP')
-                                    )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Live Tracking Status */}
-                            {order.trackingInfo.carrier && order.trackingInfo.trackingNumber && (
-                              <div className="mt-4">
-                                <h4 className="text-sm font-medium mb-2">Live Tracking Status</h4>
-                                <TrackingStatusComponent 
-                                  carrier={order.trackingInfo.carrier} 
-                                  trackingNumber={order.trackingInfo.trackingNumber} 
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ) : order.noTrackingConfirmed ? (
-                          <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mt-2">
-                            <AlertTriangle className="h-4 w-4" />
-                            <p>This order was marked as shipped without tracking information.</p>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : order.status === 'awaiting_shipping' || order.status === 'paid' ? (
-                      <div className="flex items-center gap-2 text-yellow-600">
-                        <Clock className="h-4 w-4" />
-                        <p>This order is awaiting shipment.</p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Info className="h-4 w-4" />
-                        <p>Shipping information will appear here once the order is processed.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-            
-            {/* Seller shipping actions for regular orders */}
-            {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    if (isMobile) {
-                      handleAddTracking();
-                    } else {
-                      setShowTrackingDialog(true);
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Truck className="mr-2 h-4 w-4" /> Add Tracking
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => {
-                    if (isMobile) {
-                      handleMarkAsShipped();
-                    } else {
-                      setShowNoTrackingDialog(true);
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
-                </Button>
-              </div>
-            )}
-            
-
-            
-            {/* Buyer and Seller actions */}
-            <div className="flex gap-2">
-              {isUserBuyer && (
-                <div className="w-full sm:w-auto">
-                  <BuyerCompleteOrderButton
-                    order={order}
-                    onOrderCompleted={() => router.reload()}
-                  />
-                </div>
-              )}
-              {/* Buyer actions */}
-              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
-                <Button 
-                  variant="primary" 
-                  onClick={() => setShowReviewDialog(true)}
-                >
-                  <Star className="mr-2 h-4 w-4" /> Leave Review
-                </Button>
-              )}
-              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
-                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
-                  <Package className="mr-2 h-4 w-4" /> Report Issue
-                </Button>
-              )}
-
-              {/* Relist Button - Only visible for buyers with completed refunds */}
-              {isRelistEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                  onClick={handleRelistItem}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Relist Item
-                </Button>
-              )}
-              
-              {/* Request Refund Button - Only visible for buyers with eligible orders */}
-              {isRefundEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                  onClick={handleRefundRequest}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Request Refund
-                </Button>
-              )}
-
-              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
-              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                <Button 
-                  variant="outline" 
-                  className={
-                    order.refundStatus === 'failed'
-                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  }
-                  onClick={handleManageRefund}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
-                </Button>
-              )}
-            </div>
-=======
-          </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row gap-4 sm:justify-between">
-            {/* Seller shipping actions for regular orders */}
-            {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    if (isMobile) {
-                      handleAddTracking();
-                    } else {
-                      setShowTrackingDialog(true);
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Truck className="mr-2 h-4 w-4" /> Add Tracking
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => {
-                    if (isMobile) {
-                      handleMarkAsShipped();
-                    } else {
-                      setShowNoTrackingDialog(true);
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
-                </Button>
-              </div>
-            )}
-
-            {/* Buyer and Seller actions */}
-            <div className="flex gap-2">
-              {isUserBuyer && (
-                <div className="w-full sm:w-auto">
-                  <BuyerCompleteOrderButton
-                    order={order}
-                    onOrderCompleted={() => router.reload()}
-                  />
-                </div>
-              )}
-              {/* Buyer actions */}
-              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
-                <Button 
-                  variant="primary" 
-                  onClick={() => setShowReviewDialog(true)}
-                >
-                  <Star className="mr-2 h-4 w-4" /> Leave Review
-                </Button>
-              )}
-              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
-                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
-                  <Package className="mr-2 h-4 w-4" /> Report Issue
-                </Button>
-              )}
-
-              {/* Relist Button - Only visible for buyers with completed refunds */}
-              {isRelistEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                  onClick={handleRelistItem}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Relist Item
-                </Button>
-              )}
-              
-              {/* Request Refund Button - Only visible for buyers with eligible orders */}
-              {isRefundEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                  onClick={handleRefundRequest}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Request Refund
-                </Button>
-              )}
-
-              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
-              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                <Button 
-                  variant="outline" 
-                  className={
-                    order.refundStatus === 'failed'
-                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  }
-                  onClick={handleManageRefund}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
-                </Button>
-              )}
-            </div>
-=======
-            
-            {/* Seller shipping actions for regular orders */}
-            {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    if (isMobile) {
-                      handleAddTracking();
-                    } else {
-                      setShowTrackingDialog(true);
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Truck className="mr-2 h-4 w-4" /> Add Tracking
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => {
-                    if (isMobile) {
-                      handleMarkAsShipped();
-                    } else {
-                      setShowNoTrackingDialog(true);
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
-                </Button>
-              </div>
-            )}
-            
-
-            
-            {/* Buyer and Seller actions */}
-            <div className="flex gap-2">
-              {isUserBuyer && (
-                <div className="w-full sm:w-auto">
-                  <BuyerCompleteOrderButton
-                    order={order}
-                    onOrderCompleted={() => router.reload()}
-                  />
-                </div>
-              )}
-              {/* Buyer actions */}
-              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
-                <Button 
-                  variant="primary" 
-                  onClick={() => setShowReviewDialog(true)}
-                >
-                  <Star className="mr-2 h-4 w-4" /> Leave Review
-                </Button>
-              )}
-              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
-                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
-                  <Package className="mr-2 h-4 w-4" /> Report Issue
-                </Button>
-              )}
-
-              {/* Relist Button - Only visible for buyers with completed refunds */}
-              {isRelistEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                  onClick={handleRelistItem}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Relist Item
-                </Button>
-              )}
-              
-              {/* Request Refund Button - Only visible for buyers with eligible orders */}
-              {isRefundEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                  onClick={handleRefundRequest}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Request Refund
-                </Button>
-              )}
-
-              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
-              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                <Button 
-                  variant="outline" 
-                  className={
-                    order.refundStatus === 'failed'
-                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  }
-                  onClick={handleManageRefund}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
-                </Button>
-              )}
-            </div>
-          </CardFooter>
-        </Card>
-
-        {/* Contact & Support (moved above back button) */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Contact & Support
-          </h3>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Contact the other party */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Contact {isUserBuyer ? 'Seller' : 'Buyer'}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Need to discuss order details, pickup arrangements, or have questions about this transaction?
-                  </p>
-                  {order && (
-                    <MessageDialog
-                      recipientId={isUserBuyer ? order.sellerId : order.buyerId}
-                      recipientName={isUserBuyer ? (sellerName || 'Seller') : (buyerName || 'Buyer')}
-                      listingId={order.listingId}
-                      listingTitle={order.listingSnapshot?.title}
-                    />
-                  )}
-                </div>
-
-                {/* Contact Support */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <HelpCircle className="h-4 w-4" />
-                    Contact Support
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Having issues with your order, payment problems, or need help with disputes?
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => router.push('/support')}
-                  >
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    Get Support
-                  </Button>
-                </div>
-              </div>
-
-              {/* Additional contact info for specific situations */}
-              {order.isPickup && (
-                <div className="mt-4 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Local Pickup Coordination</p>
-                      <p className="mt-1 text-sm">
-                        Use the message feature above to coordinate pickup times, locations, and any special instructions with the {isUserBuyer ? 'seller' : 'buyer'}.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {(order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                <div className="mt-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Refund in Progress</p>
-                      <p className="mt-1 text-sm">
-                        If you need assistance with the refund process or have questions about the refund status, please contact support.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Back to Orders Button */}
-        <div className="flex justify-center">
-          <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
-          </Button>
-        </div>
-      </div>
-
-      {/* Add Tracking Information Dialog */}
-      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Tracking Information</DialogTitle>
-            <DialogDescription>
-              Enter the shipping carrier and tracking number for this order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="carrier">Shipping Carrier (Optional)</Label>
-                <span className="text-xs text-muted-foreground">Will be auto-detected if left empty</span>
-              </div>
-              <Input
-                id="carrier"
-                placeholder="USPS, FedEx, UPS, etc."
-                value={carrier}
-                onChange={(e) => setCarrier(e.target.value)}
-              />
-              {trackingNumber && !carrier && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Carrier will be auto-detected from tracking number
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="trackingNumber">Tracking Number</Label>
-              <Input
-                id="trackingNumber"
-                placeholder="Enter tracking number"
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="trackingNotes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="trackingNotes"
-                placeholder="Any additional information about the shipment"
-                value={trackingNotes}
-                onChange={(e) => setTrackingNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTrackingDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleAddTracking} 
-              disabled={!trackingNumber || isUpdatingShipping}
-            >
-              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Tracking Information
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mark as Shipped Without Tracking Dialog */}
-      <AlertDialog open={showNoTrackingDialog} onOpenChange={setShowNoTrackingDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Complete Order Without Tracking?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              {order && order.amount >= 49.99 && (
-                <div className="p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Warning: High-Value Order</p>
-                      <p className="mt-1 text-sm">
-                        For orders over $49.99, you are responsible for any shipping issues without tracking. 
-                        You will have no proof of delivery in case of disputes or lost packages.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <p>
-                You are about to mark this order as completed without providing tracking information. 
-                {order && order.amount < 49.99 && 'This means you will have no proof of delivery in case of disputes.'}
-                The order status will be changed to "Completed" immediately.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleMarkAsShipped}
-              disabled={isUpdatingShipping}
-              className={order && order.amount >= 49.99 ? "bg-red-600 hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}
-            >
-              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {order && order.amount >= 49.99 ? 'Accept Risk & Complete Order' : 'Complete Order'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Confirm Delivery Dialog removed as it's no longer needed */}
-      
-
-
-      {/* Buyer Pickup Confirmation Dialog */}
-      <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                By confirming pickup, you acknowledge that you have received the item from the seller.
-              </p>
-              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">What happens next?</p>
-                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
-                    <li>Your pickup confirmation will be recorded</li>
-                    <li>The seller will also need to confirm pickup</li>
-                    <li>Once both parties confirm, the order will be completed</li>
-                    <li>You'll then be able to leave a review for this transaction</li>
-                  </ul>
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmBuyerPickup}
-              disabled={isConfirmingBuyerPickup}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isConfirmingBuyerPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Pickup
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Review Dialog - Only show the ReviewForm component which handles mobile/desktop internally */}
-      {showReviewDialog && order && (
-        <ReviewForm 
-          orderId={order.id} 
-          onSuccess={() => {
-            setShowReviewDialog(false);
-            // Update local state to reflect that a review has been submitted
-            setOrder({
-              ...order,
-              reviewSubmitted: true
-            });
-          }}
-          onCancel={() => setShowReviewDialog(false)}
-        />
-      )}
-
-      {/* Shipping Info Dialog */}
-      {order && (
-        <OrderShippingInfoDialog
-          open={showShippingInfoDialog}
-          onOpenChange={setShowShippingInfoDialog}
-          orderId={order.id}
-          onComplete={(shippingAddress) => {
-            // Update local state with the new shipping address
-            setOrder({
-              ...order,
-              shippingAddress
-            });
-            toast.success('Shipping information updated successfully');
-          }}
-        />
-      )}
-
-      {/* Refund Request Dialog */}
-      {order && (
-        <RefundRequestDialog
-          open={showRefundDialog}
-          onOpenChange={setShowRefundDialog}
-          order={order}
-          onRefundRequested={handleRefundRequested}
-        />
-      )}
-
-      {/* Refund Management Dialog */}
-      {order && (
-        <RefundManagementDialog
-          open={showRefundManagementDialog}
-          onOpenChange={setShowRefundManagementDialog}
-          order={order}
-          onRefundProcessed={handleRefundProcessed}
-        />
-      )}
-    </DashboardLayout>
-  );
-}
+                                ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40
