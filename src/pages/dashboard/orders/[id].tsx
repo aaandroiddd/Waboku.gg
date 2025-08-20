@@ -1740,8 +1740,206 @@ export default function OrderDetailsPage() {
                 </Card>
               </div>
             )}
+            
+            {/* Seller shipping actions for regular orders */}
+            {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if (isMobile) {
+                      handleAddTracking();
+                    } else {
+                      setShowTrackingDialog(true);
+                    }
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <Truck className="mr-2 h-4 w-4" /> Add Tracking
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    if (isMobile) {
+                      handleMarkAsShipped();
+                    } else {
+                      setShowNoTrackingDialog(true);
+                    }
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
+                </Button>
+              </div>
+            )}
+            
+
+            
+            {/* Buyer and Seller actions */}
+            <div className="flex gap-2">
+              {isUserBuyer && (
+                <div className="w-full sm:w-auto">
+                  <BuyerCompleteOrderButton
+                    order={order}
+                    onOrderCompleted={() => router.reload()}
+                  />
+                </div>
+              )}
+              {/* Buyer actions */}
+              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowReviewDialog(true)}
+                >
+                  <Star className="mr-2 h-4 w-4" /> Leave Review
+                </Button>
+              )}
+              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
+                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
+                  <Package className="mr-2 h-4 w-4" /> Report Issue
+                </Button>
+              )}
+
+              {/* Relist Button - Only visible for buyers with completed refunds */}
+              {isRelistEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  onClick={handleRelistItem}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Relist Item
+                </Button>
+              )}
+              
+              {/* Request Refund Button - Only visible for buyers with eligible orders */}
+              {isRefundEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  onClick={handleRefundRequest}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Request Refund
+                </Button>
+              )}
+
+              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
+              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <Button 
+                  variant="outline" 
+                  className={
+                    order.refundStatus === 'failed'
+                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  }
+                  onClick={handleManageRefund}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
+                </Button>
+              )}
+            </div>
+=======
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-4 sm:justify-between">
+            {/* Seller shipping actions for regular orders */}
+            {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if (isMobile) {
+                      handleAddTracking();
+                    } else {
+                      setShowTrackingDialog(true);
+                    }
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <Truck className="mr-2 h-4 w-4" /> Add Tracking
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    if (isMobile) {
+                      handleMarkAsShipped();
+                    } else {
+                      setShowNoTrackingDialog(true);
+                    }
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
+                </Button>
+              </div>
+            )}
+
+            {/* Buyer and Seller actions */}
+            <div className="flex gap-2">
+              {isUserBuyer && (
+                <div className="w-full sm:w-auto">
+                  <BuyerCompleteOrderButton
+                    order={order}
+                    onOrderCompleted={() => router.reload()}
+                  />
+                </div>
+              )}
+              {/* Buyer actions */}
+              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowReviewDialog(true)}
+                >
+                  <Star className="mr-2 h-4 w-4" /> Leave Review
+                </Button>
+              )}
+              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
+                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
+                  <Package className="mr-2 h-4 w-4" /> Report Issue
+                </Button>
+              )}
+
+              {/* Relist Button - Only visible for buyers with completed refunds */}
+              {isRelistEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  onClick={handleRelistItem}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Relist Item
+                </Button>
+              )}
+              
+              {/* Request Refund Button - Only visible for buyers with eligible orders */}
+              {isRefundEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  onClick={handleRefundRequest}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Request Refund
+                </Button>
+              )}
+
+              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
+              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <Button 
+                  variant="outline" 
+                  className={
+                    order.refundStatus === 'failed'
+                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  }
+                  onClick={handleManageRefund}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
+                </Button>
+              )}
+            </div>
 =======
             
             {/* Seller shipping actions for regular orders */}

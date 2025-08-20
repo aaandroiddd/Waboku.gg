@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase-admin/auth';
 import { Order } from '@/types/order';
 import { notificationService } from '@/lib/notification-service';
 
@@ -15,19 +14,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.error('Missing or invalid authorization header');
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ 
+        error: 'Missing or insufficient permissions.',
+        details: 'Authorization header is required'
+      });
     }
 
     const token = authHeader.split('Bearer ')[1];
     
-    // Verify the token
-    const { admin } = getFirebaseServices();
+    // Verify the token using Firebase Admin
     let decodedToken;
     try {
-      decodedToken = await getAuth().verifyIdToken(token);
+      const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+      const { auth } = getFirebaseAdmin();
+      decodedToken = await auth.verifyIdToken(token);
     } catch (error) {
       console.error('Error verifying auth token:', error);
-      return res.status(401).json({ error: 'Invalid authentication token' });
+      return res.status(401).json({ 
+        error: 'Missing or insufficient permissions.',
+        details: 'Invalid authentication token'
+      });
     }
 
     const userId = decodedToken.uid;
