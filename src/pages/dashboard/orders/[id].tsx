@@ -32,6 +32,7 @@ import { PickupQRCode } from '@/components/PickupQRCode';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { addDays } from 'date-fns';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import BuyerCompleteOrderButton from '@/components/BuyerCompleteOrderButton';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -553,6 +554,36 @@ export default function OrderDetailsPage() {
 
   const isUserBuyer = user?.uid === order.buyerId;
 
+  // Render payment status badge
+  const renderPaymentStatusBadge = () => {
+    const raw = (order.paymentStatus || 'unknown').toString().toLowerCase();
+    let colorClasses = 'bg-muted text-foreground';
+    switch (raw) {
+      case 'pending':
+        colorClasses = 'bg-yellow-500 text-white hover:bg-yellow-500/80';
+        break;
+      case 'paid':
+      case 'succeeded':
+        colorClasses = 'bg-green-600 text-white hover:bg-green-600/80';
+        break;
+      case 'failed':
+      case 'canceled':
+      case 'cancelled':
+        colorClasses = 'bg-red-600 text-white hover:bg-red-600/80';
+        break;
+      case 'refunded':
+        colorClasses = 'bg-blue-600 text-white hover:bg-blue-600/80';
+        break;
+      default:
+        colorClasses = 'bg-muted text-foreground';
+    }
+    const text =
+      raw === 'succeeded' ? 'Paid' : raw.charAt(0).toUpperCase() + raw.slice(1);
+    const base =
+      'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-nowrap max-w-full overflow-hidden border-transparent shadow';
+    return <div className={`${base} ${colorClasses}`}>{text}</div>;
+  };
+
   // Check if order is eligible for refund (for buyers only)
   const isRefundEligible = () => {
     if (!isUserBuyer) return false; // Only buyers can request refunds
@@ -951,9 +982,7 @@ export default function OrderDetailsPage() {
                   
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      Payment Status: {order.paymentStatus || 'Unknown'}
-                    </span>
+                    {renderPaymentStatusBadge()}
                   </div>
                 </div>
                 
@@ -1208,7 +1237,8 @@ export default function OrderDetailsPage() {
               </div>
             )}
 
-            {/* Payment Information */}
+            {/* Payment Information - hidden */}
+            {false && (
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
@@ -1336,7 +1366,8 @@ export default function OrderDetailsPage() {
                 </CardContent>
               </Card>
             </div>
-            
+            )}
+
             {/* Refund Status Section - Show when there's refund activity */}
             {order.refundStatus && order.refundStatus !== 'none' && (
               <div>
@@ -1439,7 +1470,8 @@ export default function OrderDetailsPage() {
               </div>
             )}
 
-            {/* Contact Section */}
+            {/* Contact Section - moved to bottom */}
+            {false && (
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
@@ -1518,6 +1550,7 @@ export default function OrderDetailsPage() {
                 </CardContent>
               </Card>
             </div>
+            )}
 
             {/* Shipping Status Section - Only for non-pickup orders */}
             {!order.isPickup && (
@@ -1726,6 +1759,14 @@ export default function OrderDetailsPage() {
             
             {/* Buyer and Seller actions */}
             <div className="flex gap-2">
+              {isUserBuyer && (
+                <div className="w-full sm:w-auto">
+                  <BuyerCompleteOrderButton
+                    order={order}
+                    onOrderCompleted={() => router.reload()}
+                  />
+                </div>
+              )}
               {/* Buyer actions */}
               {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
                 <Button 
@@ -1783,6 +1824,86 @@ export default function OrderDetailsPage() {
             </div>
           </CardFooter>
         </Card>
+
+        {/* Contact & Support (moved to bottom) */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Contact & Support
+          </h3>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Contact the other party */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Contact {isUserBuyer ? 'Seller' : 'Buyer'}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Need to discuss order details, pickup arrangements, or have questions about this transaction?
+                  </p>
+                  {order && (
+                    <MessageDialog
+                      recipientId={isUserBuyer ? order.sellerId : order.buyerId}
+                      recipientName={isUserBuyer ? (sellerName || 'Seller') : (buyerName || 'Buyer')}
+                      listingId={order.listingId}
+                      listingTitle={order.listingSnapshot?.title}
+                    />
+                  )}
+                </div>
+
+                {/* Contact Support */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    Contact Support
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Having issues with your order, payment problems, or need help with disputes?
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => router.push('/support')}
+                  >
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Get Support
+                  </Button>
+                </div>
+              </div>
+
+              {/* Additional contact info for specific situations */}
+              {order.isPickup && (
+                <div className="mt-4 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Local Pickup Coordination</p>
+                      <p className="mt-1 text-sm">
+                        Use the message feature above to coordinate pickup times, locations, and any special instructions with the {isUserBuyer ? 'seller' : 'buyer'}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <div className="mt-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Refund in Progress</p>
+                      <p className="mt-1 text-sm">
+                        If you need assistance with the refund process or have questions about the refund status, please contact support.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Add Tracking Information Dialog */}
