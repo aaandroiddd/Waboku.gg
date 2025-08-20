@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { notificationService } from '@/lib/notification-service';
 
@@ -44,11 +42,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Order ID is required' });
     }
 
-    // Get the order
-    const { db } = getFirebaseServices();
-    const orderDoc = await getDoc(doc(db, 'orders', orderId));
+    // Get the order using Firebase Admin SDK
+    const { db: adminDb } = getFirebaseAdmin();
+    const orderDoc = await adminDb.collection('orders').doc(orderId).get();
 
-    if (!orderDoc.exists()) {
+    if (!orderDoc.exists) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
@@ -90,8 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Cannot complete order while there is an active refund request' });
     }
 
-    // Update the order to completed status
-    await updateDoc(doc(db, 'orders', orderId), {
+    // Update the order to completed status using Firebase Admin SDK
+    await adminDb.collection('orders').doc(orderId).update({
       status: 'completed',
       deliveryConfirmed: true,
       buyerCompletedAt: now,
@@ -104,8 +102,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Send notifications
     try {
       // Get buyer and seller data for notifications
-      const { db: adminDb } = getFirebaseAdmin();
-      
       const [buyerDoc, sellerDoc] = await Promise.all([
         adminDb.collection('users').doc(orderData.buyerId).get(),
         adminDb.collection('users').doc(orderData.sellerId).get()
