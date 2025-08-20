@@ -811,367 +811,7 @@ export default function OrderDetailsPage() {
                   {/* Tracking requirement warnings based on order value */}
                   {order.amount >= 99.99 && (
                     <div className="mb-4 p-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Info className="h-4 w-4" />
-                        <p>Shipping information will appear here once the order is processed.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-            
-            {/* Buyer and Seller actions */}
-            <div className="flex gap-2">
-              {isUserBuyer && (
-                <div className="w-full sm:w-auto">
-                  <BuyerCompleteOrderButton
-                    order={order}
-                    onOrderCompleted={() => router.reload()}
-                  />
-                </div>
-              )}
-              {/* Buyer actions */}
-              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
-                <Button 
-                  variant="primary" 
-                  onClick={() => setShowReviewDialog(true)}
-                >
-                  <Star className="mr-2 h-4 w-4" /> Leave Review
-                </Button>
-              )}
-              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
-                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
-                  <Package className="mr-2 h-4 w-4" /> Report Issue
-                </Button>
-              )}
-
-              {/* Relist Button - Only visible for sellers with completed refunds */}
-              {isRelistEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                  onClick={handleRelistItem}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Relist Item
-                </Button>
-              )}
-              
-              {/* Request Refund Button - Only visible for buyers with eligible orders */}
-              {isRefundEligible() && (
-                <Button 
-                  variant="outline" 
-                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                  onClick={handleRefundRequest}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Request Refund
-                </Button>
-              )}
-
-              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
-              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                <Button 
-                  variant="outline" 
-                  className={
-                    order.refundStatus === 'failed'
-                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  }
-                  onClick={handleManageRefund}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contact & Support */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Contact & Support
-          </h3>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Contact the other party */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Contact {isUserBuyer ? 'Seller' : 'Buyer'}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Need to discuss order details, pickup arrangements, or have questions about this transaction?
-                  </p>
-                  {order && (
-                    <MessageDialog
-                      recipientId={isUserBuyer ? order.sellerId : order.buyerId}
-                      recipientName={isUserBuyer ? (sellerName || 'Seller') : (buyerName || 'Buyer')}
-                      listingId={order.listingId}
-                      listingTitle={order.listingSnapshot?.title}
-                    />
-                  )}
-                </div>
-
-                {/* Contact Support */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <HelpCircle className="h-4 w-4" />
-                    Contact Support
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Having issues with your order, payment problems, or need help with disputes?
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => router.push('/support')}
-                  >
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    Get Support
-                  </Button>
-                </div>
-              </div>
-
-              {/* Additional contact info for specific situations */}
-              {order.isPickup && (
-                <div className="mt-4 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Local Pickup Coordination</p>
-                      <p className="mt-1 text-sm">
-                        Use the message feature above to coordinate pickup times, locations, and any special instructions with the {isUserBuyer ? 'seller' : 'buyer'}.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {(order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
-                <div className="mt-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Refund in Progress</p>
-                      <p className="mt-1 text-sm">
-                        If you need assistance with the refund process or have questions about the refund status, please contact support.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Back to Orders Button */}
-        <div className="flex justify-center">
-          <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
-          </Button>
-        </div>
-      </div>
-
-      {/* Add Tracking Information Dialog */}
-      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Tracking Information</DialogTitle>
-            <DialogDescription>
-              Enter the shipping carrier and tracking number for this order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="carrier">Shipping Carrier (Optional)</Label>
-                <span className="text-xs text-muted-foreground">Will be auto-detected if left empty</span>
-              </div>
-              <Input
-                id="carrier"
-                placeholder="USPS, FedEx, UPS, etc."
-                value={carrier}
-                onChange={(e) => setCarrier(e.target.value)}
-              />
-              {trackingNumber && !carrier && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Carrier will be auto-detected from tracking number
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="trackingNumber">Tracking Number</Label>
-              <Input
-                id="trackingNumber"
-                placeholder="Enter tracking number"
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="trackingNotes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="trackingNotes"
-                placeholder="Any additional information about the shipment"
-                value={trackingNotes}
-                onChange={(e) => setTrackingNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTrackingDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleAddTracking} 
-              disabled={!trackingNumber || isUpdatingShipping}
-            >
-              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Tracking Information
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mark as Shipped Without Tracking Dialog */}
-      <AlertDialog open={showNoTrackingDialog} onOpenChange={setShowNoTrackingDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Complete Order Without Tracking?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              {order && order.amount >= 49.99 && (
-                <div className="p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Warning: High-Value Order</p>
-                      <p className="mt-1 text-sm">
-                        For orders over $49.99, you are responsible for any shipping issues without tracking. 
-                        You will have no proof of delivery in case of disputes or lost packages.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <p>
-                You are about to mark this order as completed without providing tracking information. 
-                {order && order.amount < 49.99 && 'This means you will have no proof of delivery in case of disputes.'}
-                The order status will be changed to "Completed" immediately.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleMarkAsShipped}
-              disabled={isUpdatingShipping}
-              className={order && order.amount >= 49.99 ? "bg-red-600 hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}
-            >
-              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {order && order.amount >= 49.99 ? 'Accept Risk & Complete Order' : 'Complete Order'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Buyer Pickup Confirmation Dialog */}
-      <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                By confirming pickup, you acknowledge that you have received the item from the seller.
-              </p>
-              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">What happens next?</p>
-                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
-                    <li>Your pickup confirmation will be recorded</li>
-                    <li>The seller will also need to confirm pickup</li>
-                    <li>Once both parties confirm, the order will be completed</li>
-                    <li>You'll then be able to leave a review for this transaction</li>
-                  </ul>
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmBuyerPickup}
-              disabled={isConfirmingBuyerPickup}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isConfirmingBuyerPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Pickup
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Review Dialog - Only show the ReviewForm component which handles mobile/desktop internally */}
-      {showReviewDialog && order && (
-        <ReviewForm 
-          orderId={order.id} 
-          onSuccess={() => {
-            setShowReviewDialog(false);
-            // Update local state to reflect that a review has been submitted
-            setOrder({
-              ...order,
-              reviewSubmitted: true
-            });
-          }}
-          onCancel={() => setShowReviewDialog(false)}
-        />
-      )}
-
-      {/* Shipping Info Dialog */}
-      {order && (
-        <OrderShippingInfoDialog
-          open={showShippingInfoDialog}
-          onOpenChange={setShowShippingInfoDialog}
-          orderId={order.id}
-          onComplete={(shippingAddress) => {
-            // Update local state with the new shipping address
-            setOrder({
-              ...order,
-              shippingAddress
-            });
-            toast.success('Shipping information updated successfully');
-          }}
-        />
-      )}
-
-      {/* Refund Request Dialog */}
-      {order && (
-        <RefundRequestDialog
-          open={showRefundDialog}
-          onOpenChange={setShowRefundDialog}
-          order={order}
-          onRefundRequested={handleRefundRequested}
-        />
-      )}
-
-      {/* Refund Management Dialog */}
-      {order && (
-        <RefundManagementDialog
-          open={showRefundManagementDialog}
-          onOpenChange={setShowRefundManagementDialog}
-          order={order}
-          onRefundProcessed={handleRefundProcessed}
-        />
-      )}
-    </DashboardLayout>
-  );
-} className="flex items-start gap-2">
+                      <div className="flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="font-medium">Tracking Required</p>
@@ -1738,4 +1378,379 @@ export default function OrderDetailsPage() {
                             variant={order.status === 'completed' ? 'success' : 'info'} 
                             className={`px-2 py-1 ${
                               order.status === 'completed' 
-                                ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40
+                                ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40' 
+                                : 'bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40'
+                            }`}
+                          >
+                            {order.status === 'completed' ? 'Delivered' : 'Shipped'}
+                          </Badge>
+                          <span className="flex-1">
+                            {order.status === 'completed' 
+                              ? 'This item has been delivered.' 
+                              : 'This item is on its way.'}
+                          </span>
+                        </div>
+                        <TrackingStatusComponent orderId={order.id} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Info className="h-4 w-4" />
+                        <p>Shipping information will appear here once the order is processed.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <div className="flex flex-wrap gap-2">
+              {isUserBuyer && (
+                <div className="w-full sm:w-auto">
+                  <BuyerCompleteOrderButton
+                    order={order}
+                    onOrderCompleted={() => router.reload()}
+                  />
+                </div>
+              )}
+              {/* Buyer actions */}
+              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowReviewDialog(true)}
+                >
+                  <Star className="mr-2 h-4 w-4" /> Leave Review
+                </Button>
+              )}
+              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
+                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
+                  <Package className="mr-2 h-4 w-4" /> Report Issue
+                </Button>
+              )}
+
+              {/* Relist Button - Only visible for sellers with completed refunds */}
+              {isRelistEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  onClick={handleRelistItem}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Relist Item
+                </Button>
+              )}
+              
+              {/* Request Refund Button - Only visible for buyers with eligible orders */}
+              {isRefundEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  onClick={handleRefundRequest}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Request Refund
+                </Button>
+              )}
+
+              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
+              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <Button 
+                  variant="outline" 
+                  className={
+                    order.refundStatus === 'failed'
+                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  }
+                  onClick={handleManageRefund}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
+                </Button>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+
+        {/* Contact & Support */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Contact & Support
+          </h3>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Contact the other party */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Contact {isUserBuyer ? 'Seller' : 'Buyer'}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Need to discuss order details, pickup arrangements, or have questions about this transaction?
+                  </p>
+                  {order && (
+                    <MessageDialog
+                      recipientId={isUserBuyer ? order.sellerId : order.buyerId}
+                      recipientName={isUserBuyer ? (sellerName || 'Seller') : (buyerName || 'Buyer')}
+                      listingId={order.listingId}
+                      listingTitle={order.listingSnapshot?.title}
+                    />
+                  )}
+                </div>
+
+                {/* Contact Support */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    Contact Support
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Having issues with your order, payment problems, or need help with disputes?
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => router.push('/support')}
+                  >
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Get Support
+                  </Button>
+                </div>
+              </div>
+
+              {/* Additional contact info for specific situations */}
+              {order.isPickup && (
+                <div className="mt-4 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Local Pickup Coordination</p>
+                      <p className="mt-1 text-sm">
+                        Use the message feature above to coordinate pickup times, locations, and any special instructions with the {isUserBuyer ? 'seller' : 'buyer'}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
+                <div className="mt-4 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Refund in Progress</p>
+                      <p className="mt-1 text-sm">
+                        If you need assistance with the refund process or have questions about the refund status, please contact support.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Back to Orders Button */}
+        <div className="flex justify-center">
+          <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
+          </Button>
+        </div>
+      </div>
+
+      {/* Add Tracking Information Dialog */}
+      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Tracking Information</DialogTitle>
+            <DialogDescription>
+              Enter the shipping carrier and tracking number for this order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="carrier">Shipping Carrier (Optional)</Label>
+                <span className="text-xs text-muted-foreground">Will be auto-detected if left empty</span>
+              </div>
+              <Input
+                id="carrier"
+                placeholder="USPS, FedEx, UPS, etc."
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+              />
+              {trackingNumber && !carrier && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Carrier will be auto-detected from tracking number
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNumber">Tracking Number</Label>
+              <Input
+                id="trackingNumber"
+                placeholder="Enter tracking number"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNotes">Additional Notes (Optional)</Label>
+              <Textarea
+                id="trackingNotes"
+                placeholder="Any additional information about the shipment"
+                value={trackingNotes}
+                onChange={(e) => setTrackingNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTrackingDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddTracking} 
+              disabled={!trackingNumber || isUpdatingShipping}
+            >
+              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Tracking Information
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Shipped Without Tracking Dialog */}
+      <AlertDialog open={showNoTrackingDialog} onOpenChange={setShowNoTrackingDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Order Without Tracking?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              {order && order.amount >= 49.99 && (
+                <div className="p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Warning: High-Value Order</p>
+                      <p className="mt-1 text-sm">
+                        For orders over $49.99, you are responsible for any shipping issues without tracking. 
+                        You will have no proof of delivery in case of disputes or lost packages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <p>
+                You are about to mark this order as completed without providing tracking information. 
+                {order && order.amount < 49.99 && 'This means you will have no proof of delivery in case of disputes.'}
+                The order status will be changed to "Completed" immediately.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleMarkAsShipped}
+              disabled={isUpdatingShipping}
+              className={order && order.amount >= 49.99 ? "bg-red-600 hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}
+            >
+              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {order && order.amount >= 49.99 ? 'Accept Risk & Complete Order' : 'Complete Order'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Buyer Pickup Confirmation Dialog */}
+      <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                By confirming pickup, you acknowledge that you have received the item from the seller.
+              </p>
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">What happens next?</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+                    <li>Your pickup confirmation will be recorded</li>
+                    <li>The seller will also need to confirm pickup</li>
+                    <li>Once both parties confirm, the order will be completed</li>
+                    <li>You'll then be able to leave a review for this transaction</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmBuyerPickup}
+              disabled={isConfirmingBuyerPickup}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isConfirmingBuyerPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Pickup
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Review Dialog - Only show the ReviewForm component which handles mobile/desktop internally */}
+      {showReviewDialog && order && (
+        <ReviewForm 
+          orderId={order.id} 
+          onSuccess={() => {
+            setShowReviewDialog(false);
+            // Update local state to reflect that a review has been submitted
+            setOrder({
+              ...order,
+              reviewSubmitted: true
+            });
+          }}
+          onCancel={() => setShowReviewDialog(false)}
+        />
+      )}
+
+      {/* Shipping Info Dialog */}
+      {order && (
+        <OrderShippingInfoDialog
+          open={showShippingInfoDialog}
+          onOpenChange={setShowShippingInfoDialog}
+          orderId={order.id}
+          onComplete={(shippingAddress) => {
+            // Update local state with the new shipping address
+            setOrder({
+              ...order,
+              shippingAddress
+            });
+            toast.success('Shipping information updated successfully');
+          }}
+        />
+      )}
+
+      {/* Refund Request Dialog */}
+      {order && (
+        <RefundRequestDialog
+          open={showRefundDialog}
+          onOpenChange={setShowRefundDialog}
+          order={order}
+          onRefundRequested={handleRefundRequested}
+        />
+      )}
+
+      {/* Refund Management Dialog */}
+      {order && (
+        <RefundManagementDialog
+          open={showRefundManagementDialog}
+          onOpenChange={setShowRefundManagementDialog}
+          order={order}
+          onRefundProcessed={handleRefundProcessed}
+        />
+      )}
+    </DashboardLayout>
+  );
+}
