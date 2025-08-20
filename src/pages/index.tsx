@@ -616,7 +616,7 @@ export default function Home() {
                     </OptimizedMotion>
                   </ErrorBoundary>
                   
-                  <div className="relative px-8 py-16 text-center">
+                  <div className="relative px-8 py-16 sm:text-center">
                     <OptimizedMotion
                       className="max-w-3xl mx-auto space-y-6"
                       variants={animationVariants.container}
@@ -624,7 +624,8 @@ export default function Home() {
                       animate="visible"
                       shouldAnimate={shouldAnimate}
                     >
-                      <div className="space-y-4">
+                      {/* Desktop Title and Subtitle */}
+                      <div className="space-y-4 hidden sm:block">
                         <OptimizedMotion
                           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground"
                           variants={animationVariants.item}
@@ -644,12 +645,12 @@ export default function Home() {
 
                       {/* Search Section */}
                       <OptimizedMotion
-                        className="max-w-2xl mx-auto pt-6"
+                        className="max-w-2xl mx-auto pt-6 sm:pt-6"
                         variants={animationVariants.item}
                         shouldAnimate={shouldAnimate}
                       >
-                        {/* Mobile Search Controls */}
-                        <div className="flex sm:hidden flex-col gap-4 mb-4">
+                        {/* Mobile Search Controls - Extended width with minimal margins */}
+                        <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
                           <div className="relative w-full">
                             <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
                               <SearchBar
