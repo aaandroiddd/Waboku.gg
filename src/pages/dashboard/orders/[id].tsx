@@ -878,9 +878,9 @@ export default function OrderDetailsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Order Details</CardTitle>
-            <CardDescription>
-              Order ID: <span className="font-mono">{order.id}</span>
+            <CardTitle className="text-2xl font-bold">Order Details</CardTitle>
+            <CardDescription className="text-lg">
+              Order ID: <span className="font-mono text-lg">{order.id}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1038,6 +1038,29 @@ export default function OrderDetailsPage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Buyer Order Completion Section */}
+                  {isUserBuyer && order.paymentStatus === 'paid' && order.status !== 'completed' && (
+                    <div className="mt-6 p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                      <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5" />
+                        Complete Your Order
+                      </h4>
+                      <p className="text-blue-700 dark:text-blue-300 mb-4 text-sm">
+                        Once you've received your item and are satisfied with your purchase, you can mark this order as complete. 
+                        This helps us ensure a smooth transaction process and allows you to leave a review.
+                      </p>
+                      <div className="space-y-3">
+                        <div className="text-sm text-blue-600 dark:text-blue-400">
+                          <strong>Note:</strong> You can complete your order 24 hours after payment to allow time for any shipping or delivery issues to be resolved.
+                        </div>
+                        <BuyerCompleteOrderButton
+                          order={order}
+                          onOrderCompleted={() => router.reload()}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1719,9 +1742,7 @@ export default function OrderDetailsPage() {
             )}
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-4 sm:justify-between">
-            <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
-            </Button>
+=======
             
             {/* Seller shipping actions for regular orders */}
             {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
@@ -1825,7 +1846,7 @@ export default function OrderDetailsPage() {
           </CardFooter>
         </Card>
 
-        {/* Contact & Support (moved to bottom) */}
+        {/* Contact & Support (moved above back button) */}
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />
@@ -1903,6 +1924,13 @@ export default function OrderDetailsPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Back to Orders Button */}
+        <div className="flex justify-center">
+          <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
+          </Button>
         </div>
       </div>
 
