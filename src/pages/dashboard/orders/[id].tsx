@@ -1404,8 +1404,9 @@ export default function OrderDetailsPage() {
             )}
           </CardContent>
           <CardFooter>
-            <div className="flex flex-wrap gap-2">
-              {isUserBuyer && (
+            <div className="flex flex-wrap gap-2 w-full">
+              {/* Buyer Complete Order Button - Always show for buyers with paid orders */}
+              {isUserBuyer && order.paymentStatus === 'paid' && order.status !== 'completed' && (
                 <div className="w-full sm:w-auto">
                   <BuyerCompleteOrderButton
                     order={order}
@@ -1413,17 +1414,23 @@ export default function OrderDetailsPage() {
                   />
                 </div>
               )}
+              
               {/* Buyer actions */}
               {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
                 <Button 
-                  variant="primary" 
+                  variant="default" 
                   onClick={() => setShowReviewDialog(true)}
+                  className="w-full sm:w-auto"
                 >
                   <Star className="mr-2 h-4 w-4" /> Leave Review
                 </Button>
               )}
               {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
-                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => toast.info('Contact support for any issues with this order')}
+                  className="w-full sm:w-auto"
+                >
                   <Package className="mr-2 h-4 w-4" /> Report Issue
                 </Button>
               )}
@@ -1432,7 +1439,7 @@ export default function OrderDetailsPage() {
               {isRelistEligible() && (
                 <Button 
                   variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 w-full sm:w-auto"
                   onClick={handleRelistItem}
                 >
                   <Plus className="mr-2 h-4 w-4" />
@@ -1444,7 +1451,7 @@ export default function OrderDetailsPage() {
               {isRefundEligible() && (
                 <Button 
                   variant="outline" 
-                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 w-full sm:w-auto"
                   onClick={handleRefundRequest}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -1456,11 +1463,11 @@ export default function OrderDetailsPage() {
               {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
                 <Button 
                   variant="outline" 
-                  className={
+                  className={`w-full sm:w-auto ${
                     order.refundStatus === 'failed'
                       ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                       : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  }
+                  }`}
                   onClick={handleManageRefund}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
