@@ -673,71 +673,30 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Mobile Welcome Cards */}
-                        <div className="md:hidden mt-4 space-y-4">
-                          {/* Welcome Card */}
-                          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                            <div className="text-center space-y-3">
-                              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                              </div>
-                              <h2 className="text-lg font-semibold text-foreground">Welcome to waboku.gg</h2>
-                              <p className="text-sm text-muted-foreground leading-relaxed">
-                                Discover, buy, and sell trading cards from your favorite games. Join thousands of collectors in the ultimate marketplace.
-                              </p>
-                            </div>
-                          </div>
+                        {/* Mobile Title and Subtitle */}
+                        <div className="md:hidden mt-4 space-y-4 text-center">
+                          <OptimizedMotion
+                            className="text-3xl font-bold tracking-tight text-foreground"
+                            variants={animationVariants.item}
+                            shouldAnimate={shouldAnimate}
+                          >
+                            Your Local TCG Marketplace
+                          </OptimizedMotion>
+                          
+                          <OptimizedMotion
+                            className="text-base text-muted-foreground"
+                            variants={animationVariants.item}
+                            shouldAnimate={shouldAnimate}
+                          >
+                            {randomSubtitle}
+                          </OptimizedMotion>
 
-                          {/* Trending Searches Card */}
-                          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-8 h-8 bg-sky-400/10 rounded-lg flex items-center justify-center">
-                                <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                </svg>
-                              </div>
-                              <h3 className="text-base font-medium text-foreground">Trending Searches</h3>
-                            </div>
+                          {/* Mobile Trending Searches */}
+                          <LazySection className="mt-6 rounded-lg p-1 bg-transparent" threshold={0.3}>
                             <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
                               <TrendingSearches />
                             </ErrorBoundary>
-                          </div>
-
-                          {/* Quick Actions Card */}
-                          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-8 h-8 bg-emerald-400/10 rounded-lg flex items-center justify-center">
-                                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                              </div>
-                              <h3 className="text-base font-medium text-foreground">Get Started</h3>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <Link href="/dashboard/create-listing" className="group">
-                                <div className="bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg p-4 text-center transition-colors">
-                                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                  </div>
-                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Sell Cards</span>
-                                </div>
-                              </Link>
-                              <Link href="/wanted/create" className="group">
-                                <div className="bg-sky-400/5 hover:bg-sky-400/10 border border-sky-400/20 rounded-lg p-4 text-center transition-colors">
-                                  <div className="w-8 h-8 bg-sky-400/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                  </div>
-                                  <span className="text-sm font-medium text-foreground group-hover:text-sky-400 transition-colors">Want Cards</span>
-                                </div>
-                              </Link>
-                            </div>
-                          </div>
+                          </LazySection>
                         </div>
 
                         {/* Desktop Trending Searches */}
