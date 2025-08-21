@@ -73,6 +73,8 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -122,6 +124,8 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
       } else {
         setSuggestions([]);
         setShowSuggestions(false);
+        setHasSearched(false);
+        setIsFetchingSuggestions(false);
       }
     }, 400); // 400ms debounce to prevent immediate suggestions after navigation
 
@@ -129,6 +133,10 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   }, [searchTerm]);
 
   const fetchSuggestions = async (query: string) => {
+    setIsFetchingSuggestions(true);
+    setHasSearched(true);
+    setShowSuggestions(true); // Show dropdown immediately to display loading state
+    
     try {
       const items = await fetch(`${suggestionsEndpoint}?q=${encodeURIComponent(query)}&limit=${suggestionsLimit}`)
         .then(r => r.json())
@@ -147,11 +155,13 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
       }));
 
       setSuggestions(mapped);
-      setShowSuggestions(mapped.length > 0);
+      setShowSuggestions(true); // Keep showing dropdown even if no results to show "no results" message
     } catch (error) {
       console.error('Error fetching suggestions:', error);
       setSuggestions([]);
-      setShowSuggestions(false);
+      setShowSuggestions(true); // Still show dropdown to display error/no results
+    } finally {
+      setIsFetchingSuggestions(false);
     }
   };
 
@@ -332,42 +342,61 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
         )}
       </div>
 
-      {/* Simplified suggestions dropdown: only listing titles */}
-      {showSuggestions && suggestions.length > 0 && (
+      {/* Suggestions dropdown with loading and no results states */}
+      {showSuggestions && (
         <div 
           ref={suggestionsRef}
           className="absolute top-full left-0 right-0 z-50 mt-2 bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-xl max-h-80 overflow-y-auto text-left"
         >
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={`${suggestion.type}-${suggestion.text}-${suggestion.metadata?.id || index}`}
-              className={`px-4 py-3 cursor-pointer hover:bg-accent/80 transition-colors duration-150 ${
-                index === selectedIndex ? 'bg-accent/80' : ''
-              } ${index === 0 ? 'rounded-t-lg' : ''} ${index === suggestions.length - 1 ? 'rounded-b-lg' : ''}`}
-              onClick={() => handleSuggestionClick(suggestion)}
-              onMouseEnter={() => { setSelectedIndex(index); prefetchSuggestionRoute(suggestion); }}
-              onFocus={() => prefetchSuggestionRoute(suggestion)}
-            >
-              <div className="flex items-start gap-3">
-                {suggestion.metadata?.imageUrl ? (
-                  <img
-                    src={suggestion.metadata!.imageUrl as string}
-                    alt={suggestion.text}
-                    className="h-10 w-10 rounded-md object-cover border border-border/50 bg-muted"
-                    loading="lazy"
-                  />
-                ) : null}
-                <div className="min-w-0 text-left">
-                  <div className="text-sm font-medium truncate">{suggestion.text}</div>
-                  {suggestion.metadata?.game ? (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {suggestion.metadata.game.charAt(0).toUpperCase() + suggestion.metadata.game.slice(1)}
-                    </div>
-                  ) : null}
-                </div>
+          {isFetchingSuggestions ? (
+            // Loading state
+            <div className="px-4 py-6 text-center">
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Searching...</span>
               </div>
             </div>
-          ))}
+          ) : suggestions.length > 0 ? (
+            // Show suggestions
+            suggestions.map((suggestion, index) => (
+              <div
+                key={`${suggestion.type}-${suggestion.text}-${suggestion.metadata?.id || index}`}
+                className={`px-4 py-3 cursor-pointer hover:bg-accent/80 transition-colors duration-150 ${
+                  index === selectedIndex ? 'bg-accent/80' : ''
+                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === suggestions.length - 1 ? 'rounded-b-lg' : ''}`}
+                onClick={() => handleSuggestionClick(suggestion)}
+                onMouseEnter={() => { setSelectedIndex(index); prefetchSuggestionRoute(suggestion); }}
+                onFocus={() => prefetchSuggestionRoute(suggestion)}
+              >
+                <div className="flex items-start gap-3">
+                  {suggestion.metadata?.imageUrl ? (
+                    <img
+                      src={suggestion.metadata!.imageUrl as string}
+                      alt={suggestion.text}
+                      className="h-10 w-10 rounded-md object-cover border border-border/50 bg-muted"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="min-w-0 text-left">
+                    <div className="text-sm font-medium truncate">{suggestion.text}</div>
+                    {suggestion.metadata?.game ? (
+                      <div className="text-xs text-muted-foreground truncate">
+                        {suggestion.metadata.game.charAt(0).toUpperCase() + suggestion.metadata.game.slice(1)}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : hasSearched ? (
+            // No results found
+            <div className="px-4 py-6 text-center">
+              <div className="text-sm text-muted-foreground">
+                <div className="font-medium mb-1">No listings found</div>
+                <div className="text-xs">Try a different search term or check your spelling</div>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
