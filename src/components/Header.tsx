@@ -565,6 +565,18 @@ export default function Header({ animate = true }: HeaderProps) {
           </div>
         </div>
 
+        {/* Desktop search bar row */}
+        <div className="hidden md:block pb-3 pt-2">
+          <div className="px-2">
+            <SearchBar
+              onSelect={handleMobileCardSelect}
+              onSearch={handleMobileSearch}
+              initialValue={searchQuery}
+              showSearchButton={false}
+            />
+          </div>
+        </div>
+
         {/* Mobile search bar row */}
         <div className="md:hidden pb-3 pt-2">
           <div className="px-2">
