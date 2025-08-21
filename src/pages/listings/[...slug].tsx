@@ -56,6 +56,7 @@ import { FirestoreRequestCounter } from '@/components/FirestoreRequestCounter';
 import { extractListingIdFromSlug } from '@/lib/listing-slug';
 import { getCleanImageUrl, getImageFilename } from '@/lib/image-utils';
 import { formatDate } from '@/lib/date-utils';
+import Head from 'next/head';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -73,21 +74,81 @@ const getConditionColor = (condition: string) => {
   return colors[condition?.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
 };
 
-export default function ListingPage() {
+export default function ListingPage({ initialListing, shouldNoIndex }: { initialListing?: Partial<Listing> & { id: string } | null; shouldNoIndex?: boolean; }) {
   const router = useRouter();
   const { slug } = router.query;
   
   const [listing, setListing] = useState<Listing | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialListing);
   const [error, setError] = useState<string | null>(null);
   const [listingId, setListingId] = useState<string | null>(null);
   // Dialog state is now handled by Radix UI
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [sellerHasActiveStripeAccount, setSellerHasActiveStripeAccount] = useState(false);
   const [offerStats, setOfferStats] = useState<{offerCount: number; pending: number; countered: number} | null>(null);
+
+  // Seed initial listing from SSR so we can render without client fetch for SEO
+  useEffect(() => {
+    if (initialListing && !listing) {
+      try {
+        setListing({
+          id: initialListing.id,
+          title: (initialListing as any).title || '',
+          description: (initialListing as any).description || '',
+          price: typeof initialListing.price === 'number' ? (initialListing.price as number) : 0,
+          condition: (initialListing as any).condition || 'unknown',
+          game: (initialListing as any).game || 'other',
+          imageUrls: Array.isArray(initialListing.imageUrls) ? (initialListing.imageUrls as string[]) : [],
+          coverImageIndex: typeof initialListing.coverImageIndex === 'number' ? (initialListing.coverImageIndex as number) : 0,
+          userId: (initialListing as any).userId || '',
+          username: (initialListing as any).username || 'Unknown User',
+          createdAt: initialListing.createdAt ? new Date(initialListing.createdAt as any) : new Date(),
+          expiresAt: initialListing.expiresAt ? new Date(initialListing.expiresAt as any) : new Date(),
+          status: (initialListing as any).status || 'active',
+          archivedAt: initialListing.archivedAt ? new Date(initialListing.archivedAt as any) : null,
+          soldTo: (initialListing as any).soldTo || null,
+          soldAt: initialListing.soldAt ? new Date(initialListing.soldAt as any) : null,
+          isGraded: !!initialListing.isGraded,
+          gradeLevel: typeof initialListing.gradeLevel === 'number' ? (initialListing.gradeLevel as number) : undefined,
+          gradingCompany: (initialListing as any).gradingCompany || undefined,
+          city: (initialListing as any).city || 'Unknown',
+          state: (initialListing as any).state || 'Unknown',
+          favoriteCount: typeof initialListing.favoriteCount === 'number' ? (initialListing.favoriteCount as number) : 0,
+          viewCount: typeof initialListing.viewCount === 'number' ? (initialListing.viewCount as number) : undefined,
+          cardName: (initialListing as any).cardName || undefined,
+          quantity: typeof initialListing.quantity === 'number' ? (initialListing.quantity as number) : undefined,
+          offersOnly: !!initialListing.offersOnly,
+          finalSale: !!initialListing.finalSale,
+          minOfferAmount: typeof initialListing.minOfferAmount === 'number' ? (initialListing.minOfferAmount as number) : undefined,
+          showOffers: !!initialListing.showOffers,
+          language: (initialListing as any).language || undefined,
+          shippingCost: typeof initialListing.shippingCost === 'number' ? (initialListing.shippingCost as number) : undefined,
+          location: initialListing.location as any,
+          needsReview: (initialListing as any).needsReview || undefined,
+          reviewReason: (initialListing as any).reviewReason || undefined,
+          reviewCategory: (initialListing as any).reviewCategory || undefined,
+          moderationStatus: (initialListing as any).moderationStatus || undefined,
+          moderatedAt: initialListing.moderatedAt ? new Date(initialListing.moderatedAt as any) : undefined,
+          hasBeenReviewed: (initialListing as any).hasBeenReviewed || undefined,
+          moderationDetails: initialListing.moderationDetails as any
+        });
+        setLoading(false);
+      } catch {
+        // ignore hydration errors
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialListing]);
   
   // Import the useMediaQuery hook at the top to avoid initialization issues
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  // SSR robots control for sold listings after 30 days
+  const RobotsHead = shouldNoIndex ? (
+    <Head>
+      <meta name="robots" content="noindex, nofollow" />
+    </Head>
+  ) : null;
   
   // Get seller level data
   const { sellerLevelData } = useSellerLevel(listing?.userId || '');
@@ -1183,6 +1244,7 @@ export default function ListingPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {RobotsHead}
       <div className="container mx-auto p-4 flex-1">
         <Button 
           variant="ghost" 
@@ -1703,4 +1765,134 @@ export default function ListingPage() {
       )}
     </div>
   );
+}
+
+// Server-side policy enforcement for sold listings (30d noindex, 90d 410 Gone)
+export async function getServerSideProps(ctx: any) {
+  try {
+    const { params, req, res } = ctx;
+    const slugParam = params?.slug;
+
+    if (!slugParam || !Array.isArray(slugParam)) {
+      return { props: {} };
+    }
+
+    // Expect /listings/:gameCategory/:slug-1234567
+    if (slugParam.length !== 2) {
+      return { props: {} };
+    }
+
+    const [, slugWithId] = slugParam;
+    const match = slugWithId.match(/(\d{7})$/);
+    const shortId = match ? match[1] : null;
+
+    if (!shortId) {
+      return { props: {} };
+    }
+
+    const protocol = (req.headers['x-forwarded-proto'] as string) || 'https';
+    const host = (req.headers['x-forwarded-host'] as string) || (req.headers.host as string);
+    const baseUrl = `${protocol}://${host}`;
+
+    let fullId: string | null = null;
+    try {
+      const resolveRes = await fetch(`${baseUrl}/api/listings/resolve-short-id?shortId=${shortId}`, {
+        headers: { 'x-internal-gssp': '1' }
+      });
+      if (resolveRes.ok) {
+        const json = await resolveRes.json();
+        if (json?.success && json?.fullId) {
+          fullId = json.fullId as string;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    if (!fullId) {
+      return { props: {} };
+    }
+
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+    getFirebaseAdmin();
+    const adminDb = getFirestore();
+
+    const snap = await adminDb.collection('listings').doc(fullId).get();
+    if (!snap.exists) {
+      return { props: {} };
+    }
+    const data: any = snap.data() || {};
+
+    const toDate = (v: any): Date | null => {
+      if (!v) return null;
+      try {
+        if (v?.toDate) return v.toDate();
+        if (v instanceof Date) return v;
+        if (typeof v === 'number') return new Date(v);
+        if (typeof v === 'string') return new Date(v);
+      } catch {}
+      return null;
+    };
+
+    const status: string = data.status || 'active';
+    const soldAt: Date | null = toDate(data.soldAt);
+    const now = new Date();
+
+    let shouldNoIndex = false;
+
+    if (status === 'sold' && soldAt) {
+      const plus30 = new Date(soldAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const plus90 = new Date(soldAt.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+      if (now >= plus90) {
+        res.statusCode = 410;
+        return { notFound: true };
+      }
+
+      if (now >= plus30) {
+        shouldNoIndex = true;
+      }
+    }
+
+    const initialListing = {
+      id: snap.id,
+      title: data.title || '',
+      description: data.description || '',
+      price: typeof data.price === 'number' ? data.price : 0,
+      condition: data.condition || 'unknown',
+      game: data.game || 'other',
+      imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+      coverImageIndex: typeof data.coverImageIndex === 'number' ? data.coverImageIndex : 0,
+      userId: data.userId || '',
+      username: data.username || 'Unknown User',
+      createdAt: (toDate(data.createdAt) || new Date()).toISOString(),
+      expiresAt: (toDate(data.expiresAt) || new Date()).toISOString(),
+      status,
+      archivedAt: toDate(data.archivedAt)?.toISOString() || null,
+      soldTo: data.soldTo || null,
+      soldAt: soldAt ? soldAt.toISOString() : null,
+      isGraded: !!data.isGraded,
+      gradeLevel: typeof data.gradeLevel === 'number' ? data.gradeLevel : undefined,
+      gradingCompany: data.gradingCompany || undefined,
+      city: data.city || 'Unknown',
+      state: data.state || 'Unknown',
+      favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0,
+      quantity: typeof data.quantity === 'number' ? data.quantity : undefined,
+      offersOnly: data.offersOnly === true,
+      finalSale: data.finalSale === true,
+      minOfferAmount: typeof data.minOfferAmount === 'number' ? data.minOfferAmount : undefined,
+      showOffers: data.showOffers === true,
+      shippingCost: typeof data.shippingCost === 'number' ? data.shippingCost : undefined
+    };
+
+    return {
+      props: {
+        initialListing,
+        shouldNoIndex
+      }
+    };
+  } catch {
+    return { props: {} };
+  }
 }

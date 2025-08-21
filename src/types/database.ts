@@ -6,6 +6,7 @@ export interface Listing {
   condition: string;
   game: string;
   imageUrls: string[];
+  coverImageIndex?: number;
   userId: string;
   username: string;
   createdAt: Date;
@@ -13,6 +14,7 @@ export interface Listing {
   status: 'active' | 'sold' | 'pending' | 'inactive' | 'archived';
   archivedAt?: Date | null;
   soldTo?: string | null;
+  soldAt?: Date | null;
   isGraded: boolean;
   gradeLevel?: number;
   gradingCompany?: string;
