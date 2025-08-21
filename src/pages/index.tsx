@@ -602,7 +602,7 @@ export default function Home() {
               {/* Main Content */}
               <div className="flex-1 min-w-0">
                 {/* Hero Section */}
-                <div className="relative overflow-hidden mb-4 sm:mb-12 sm:rounded-2xl">
+                <div className="relative overflow-hidden mb-4 sm:mb-12 sm:rounded-2xl -mt-4 md:mt-0">
                   <ErrorBoundary fallback={<div className="absolute inset-0 bg-background hidden sm:block" />}>
                     <OptimizedMotion 
                       className="hero-background absolute inset-0 hidden sm:block"
