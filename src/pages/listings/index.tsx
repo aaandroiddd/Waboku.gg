@@ -158,11 +158,26 @@ export default function ListingsPage() {
       }
     }
   }, [mobileGridViewMode]);
+  // Coerce 'single' to 'default' on desktop so only 'default' and 'image-only' are available
+  useEffect(() => {
+    if (!isMobile && mobileGridViewMode === 'single') {
+      setMobileGridViewMode('default');
+    }
+  }, [isMobile, mobileGridViewMode]);
   const cycleGridViewMode = useCallback(() => {
-    setMobileGridViewMode((prev) =>
-      prev === 'default' ? 'image-only' : 'default'
-    );
-  }, []);
+    setMobileGridViewMode((prev) => {
+      if (isMobile) {
+        if (prev === 'default') return 'single';
+        if (prev === 'single') return 'image-only';
+        return 'default';
+      } else {
+        return prev === 'default' ? 'image-only' : 'default';
+      }
+    });
+  }, [isMobile]);
+
+  const effectiveGridViewMode: 'default' | 'single' | 'image-only' =
+    !isMobile && mobileGridViewMode === 'single' ? 'default' : mobileGridViewMode;
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -1445,9 +1460,9 @@ export default function ListingsPage() {
                           className="hidden sm:inline-flex h-10"
                           onClick={cycleGridViewMode}
                           aria-label="Toggle grid view mode"
-                          title={`View: ${mobileGridViewMode}`}
+                          title={`View: ${effectiveGridViewMode}`}
                         >
-                          {mobileGridViewMode === 'default' ? (
+                          {effectiveGridViewMode === 'default' ? (
                             <LayoutGrid className="h-4 w-4" />
                           ) : (
                             <ImageIcon className="h-4 w-4" />
@@ -1557,7 +1572,7 @@ export default function ListingsPage() {
                     displayCount={displayCount}
                     hasMore={filteredListings.length > displayCount}
                     onLoadMore={() => setDisplayCount(prev => prev + 8)}
-                    viewMode={mobileGridViewMode}
+                    viewMode={effectiveGridViewMode}
                     enableAnonGate={true}
                   />
                 ) : (
