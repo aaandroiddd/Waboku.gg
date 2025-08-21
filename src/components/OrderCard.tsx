@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/price';
-import { format, addDays } from 'date-fns';
+import { format, addDays, differenceInCalendarDays } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
 import { Package, ExternalLink, MapPin, RefreshCw, Plus, AlertTriangle, Clock, Info } from 'lucide-react';
@@ -256,6 +256,32 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
 
   // Get attention info for this order
   const attentionInfo = getOrderAttentionInfo(safeOrder, isSale);
+
+  // Review window calculations for buyer (90 days after completion)
+  const normalizeDate = (d: any): Date | null => {
+    if (!d) return null;
+    if (typeof d === 'object' && typeof (d as any).toDate === 'function') return (d as any).toDate();
+    if (typeof d === 'object' && 'seconds' in d) return new Date((d as any).seconds * 1000);
+    try {
+      return new Date(d);
+    } catch {
+      return null;
+    }
+  };
+
+  const completionDate =
+    normalizeDate(order.buyerCompletedAt) ||
+    normalizeDate(order.autoCompletedAt) ||
+    normalizeDate(order.pickupCompletedAt) ||
+    (order.status === 'completed'
+      ? (order.updatedAt instanceof Date ? order.updatedAt : normalizeDate(order.updatedAt))
+      : null);
+
+  const reviewWindowEnd = completionDate ? addDays(completionDate, 90) : null;
+  const now = new Date();
+  const daysLeft = reviewWindowEnd ? Math.max(0, differenceInCalendarDays(reviewWindowEnd, now)) : 0;
+  const isWithinReviewWindow = !!(reviewWindowEnd && now < reviewWindowEnd);
+  const canLeaveReview = !isSale && order.status === 'completed' && !order.reviewSubmitted && isWithinReviewWindow;
 
   // Determine card styling based on attention level - simplified to use single color
   const getCardClassName = () => {
@@ -545,8 +571,13 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </div>
             )}
 
-            {/* Leave Review Button - Only visible for buyers with completed orders that don't have a review yet */}
-            {!isSale && safeOrder.status === 'completed' && !safeOrder.reviewSubmitted && (
+            {/* Review window - message and CTA for buyers within 90-day window */}
+            {canLeaveReview && (
+              <div className="text-xs p-2 rounded-md border bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200 w-full">
+                You can leave a review. {reviewWindowEnd ? <>Ends {format(reviewWindowEnd, 'PPP')} ({daysLeft} day{daysLeft === 1 ? '' : 's'} remaining)</> : null}
+              </div>
+            )}
+            {canLeaveReview && (
               <Button 
                 variant="default" 
                 className="bg-primary hover:bg-primary/90 text-white font-medium w-full"
