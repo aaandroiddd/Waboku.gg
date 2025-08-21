@@ -602,10 +602,10 @@ export default function Home() {
               {/* Main Content */}
               <div className="flex-1 min-w-0">
                 {/* Hero Section */}
-                <div className="relative overflow-hidden mb-12 rounded-2xl">
-                  <ErrorBoundary fallback={<div className="absolute inset-0 bg-background" />}>
+                <div className="relative overflow-hidden mb-12 sm:rounded-2xl">
+                  <ErrorBoundary fallback={<div className="absolute inset-0 bg-background hidden sm:block" />}>
                     <OptimizedMotion 
-                      className="hero-background absolute inset-0"
+                      className="hero-background absolute inset-0 hidden sm:block"
                       variants={animationVariants.heroBackground}
                       initial="hidden"
                       animate="visible"
@@ -616,7 +616,7 @@ export default function Home() {
                     </OptimizedMotion>
                   </ErrorBoundary>
                   
-                  <div className="relative px-8 py-16 sm:text-center">
+                  <div className="relative px-2 py-4 sm:px-8 sm:py-16 sm:text-center">
                     <OptimizedMotion
                       className="max-w-3xl mx-auto space-y-6"
                       variants={animationVariants.container}
@@ -649,26 +649,16 @@ export default function Home() {
                         variants={animationVariants.item}
                         shouldAnimate={shouldAnimate}
                       >
-                        {/* Mobile Search Controls - Extended width with minimal margins */}
-                        <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
-                          <div className="relative w-full">
-                            <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                              <SearchBar
-                                onSelect={handleCardSelect}
-                                onSearch={handleSearchFromBar}
-                                initialValue={searchQuery}
-                                showSearchButton={true}
-                              />
-                            </ErrorBoundary>
-                          </div>
-                          <div className="relative w-full">
-                            <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                              <StateSelect 
-                                value={selectedState || "all"} 
-                                onValueChange={(value) => setSelectedState(value)}
-                              />
-                            </ErrorBoundary>
-                          </div>
+                        {/* Mobile Search Controls - Clean, minimal design */}
+                        <div className="sm:hidden px-2">
+                          <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                            <SearchBar
+                              onSelect={handleCardSelect}
+                              onSearch={handleSearchFromBar}
+                              initialValue={searchQuery}
+                              showSearchButton={true}
+                            />
+                          </ErrorBoundary>
                         </div>
 
                         {/* Desktop Search Controls */}
