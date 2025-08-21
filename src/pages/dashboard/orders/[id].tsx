@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Component, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -35,7 +35,72 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import BuyerCompleteOrderButton from '@/components/BuyerCompleteOrderButton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-export default function OrderDetailsPage() {
+// Error Boundary Component
+class OrderDetailsErrorBoundary extends Component<
+  { children: ReactNode; onError?: (error: Error) => void },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; onError?: (error: Error) => void }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('[OrderDetails] Error caught by boundary:', error, errorInfo);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <DashboardLayout>
+          <Card>
+            <CardHeader>
+              <CardTitle>Something went wrong</CardTitle>
+              <CardDescription>
+                We encountered an error while loading your order details. Please try refreshing the page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  If this problem persists, please contact support with the following error information:
+                </p>
+                <div className="bg-muted p-3 rounded-md text-sm font-mono">
+                  {this.state.error?.message || 'Unknown error occurred'}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="space-x-2">
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="default"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Page
+              </Button>
+              <Button 
+                onClick={() => window.history.back()} 
+                variant="outline"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Go Back
+              </Button>
+            </CardFooter>
+          </Card>
+        </DashboardLayout>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function OrderDetailsPageContent() {
   const router = useRouter();
   const { id } = router.query;
   const { user } = useAuth();
@@ -647,28 +712,57 @@ export default function OrderDetailsPage() {
 
   // Review window calculations (client-side mirror of API enforcement)
   const normalizeDate = (d: any): Date | null => {
-    if (!d) return null;
-    if (typeof d === 'object' && typeof (d as any).toDate === 'function') return (d as any).toDate();
-    if (typeof d === 'object' && 'seconds' in d) return new Date((d as any).seconds * 1000);
     try {
-      return new Date(d);
-    } catch {
+      if (!d) return null;
+      if (typeof d === 'object' && typeof (d as any).toDate === 'function') {
+        return (d as any).toDate();
+      }
+      if (typeof d === 'object' && 'seconds' in d && typeof d.seconds === 'number') {
+        return new Date(d.seconds * 1000);
+      }
+      if (typeof d === 'string' || typeof d === 'number') {
+        const date = new Date(d);
+        return isNaN(date.getTime()) ? null : date;
+      }
+      if (d instanceof Date) {
+        return isNaN(d.getTime()) ? null : d;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error normalizing date:', error, d);
       return null;
     }
   };
 
-  const completionDate =
-    normalizeDate(order.buyerCompletedAt) ||
-    normalizeDate(order.autoCompletedAt) ||
-    normalizeDate(order.pickupCompletedAt) ||
-    (order.status === 'completed' ? order.updatedAt : null);
+  // Safely calculate review window with error handling
+  let completionDate: Date | null = null;
+  let reviewWindowEnd: Date | null = null;
+  let daysLeft = 0;
+  let isWithinReviewWindow = false;
+  let canLeaveReview = false;
 
-  const reviewWindowEnd = completionDate ? addDays(completionDate, 90) : null;
-  const now = new Date();
-  const daysLeft = reviewWindowEnd ? Math.max(0, differenceInCalendarDays(reviewWindowEnd, now)) : 0;
-  const isWithinReviewWindow = !!(reviewWindowEnd && now < reviewWindowEnd);
-  const canLeaveReview =
-    isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && isWithinReviewWindow;
+  try {
+    completionDate =
+      normalizeDate(order?.buyerCompletedAt) ||
+      normalizeDate(order?.autoCompletedAt) ||
+      normalizeDate(order?.pickupCompletedAt) ||
+      (order?.status === 'completed' ? order.updatedAt : null);
+
+    reviewWindowEnd = completionDate ? addDays(completionDate, 90) : null;
+    const now = new Date();
+    daysLeft = reviewWindowEnd ? Math.max(0, differenceInCalendarDays(reviewWindowEnd, now)) : 0;
+    isWithinReviewWindow = !!(reviewWindowEnd && now < reviewWindowEnd);
+    canLeaveReview =
+      isUserBuyer && order?.status === 'completed' && !order?.reviewSubmitted && isWithinReviewWindow;
+  } catch (error) {
+    console.error('Error calculating review window:', error);
+    // Set safe defaults
+    completionDate = null;
+    reviewWindowEnd = null;
+    daysLeft = 0;
+    isWithinReviewWindow = false;
+    canLeaveReview = false;
+  }
 
   // Render payment status badge
   const renderPaymentStatusBadge = () => {
@@ -1591,64 +1685,103 @@ export default function OrderDetailsPage() {
                   <AccordionContent>
                     <div className="space-y-4">
                       {/* Snapshot images */}
-                      {Array.isArray(order.listingSnapshot.images) && order.listingSnapshot.images.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                          {order.listingSnapshot.images.slice(0, 8).map((img, idx) => (
-                            <div key={idx} className="relative w-full aspect-square rounded overflow-hidden bg-muted">
-                              <Image
-                                src={img}
-                                alt={`${order.listingSnapshot.title || 'Listing'} - ${idx + 1}`}
-                                fill
-                                sizes="(max-width: 768px) 50vw, 25vw"
-                                className="object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        try {
+                          const images = order.listingSnapshot?.images;
+                          if (Array.isArray(images) && images.length > 0) {
+                            return (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                {images.slice(0, 8).map((img, idx) => {
+                                  if (typeof img === 'string' && img.trim()) {
+                                    return (
+                                      <div key={idx} className="relative w-full aspect-square rounded overflow-hidden bg-muted">
+                                        <Image
+                                          src={img}
+                                          alt={`${order.listingSnapshot?.title || 'Listing'} - ${idx + 1}`}
+                                          fill
+                                          sizes="(max-width: 768px) 50vw, 25vw"
+                                          className="object-cover"
+                                          onError={(e) => {
+                                            console.error('Error loading snapshot image:', img);
+                                            e.currentTarget.style.display = 'none';
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }).filter(Boolean)}
+                              </div>
+                            );
+                          }
+                          return null;
+                        } catch (error) {
+                          console.error('Error rendering snapshot images:', error);
+                          return null;
+                        }
+                      })()}
 
                       {/* Snapshot facts */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Title</p>
-                          <p className="font-medium">{order.listingSnapshot.title}</p>
+                          <p className="font-medium">{order.listingSnapshot?.title || 'Unknown'}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Seller</p>
-                          <p className="font-medium">{order.listingSnapshot.sellerUsername || 'Unknown'}</p>
+                          <p className="font-medium">{order.listingSnapshot?.sellerUsername || 'Unknown'}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Category / Game</p>
                           <p className="font-medium">
-                            {order.listingSnapshot.category || '—'}{order.listingSnapshot.game ? ` / ${order.listingSnapshot.game}` : ''}
+                            {order.listingSnapshot?.category || '—'}{order.listingSnapshot?.game ? ` / ${order.listingSnapshot.game}` : ''}
                           </p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Condition</p>
-                          <p className="font-medium">{order.listingSnapshot.condition || '—'}</p>
+                          <p className="font-medium">{order.listingSnapshot?.condition || '—'}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Price</p>
-                          <p className="font-medium">{formatPrice(order.listingSnapshot.price || 0)}</p>
+                          <p className="font-medium">
+                            {(() => {
+                              try {
+                                return formatPrice(order.listingSnapshot?.price || 0);
+                              } catch (error) {
+                                console.error('Error formatting snapshot price:', error);
+                                return '$0.00';
+                              }
+                            })()}
+                          </p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Shipping Terms</p>
                           <p className="font-medium">
-                            {order.listingSnapshot.shippingTerms?.isPickup
-                              ? 'Local pickup'
-                              : order.listingSnapshot.shippingTerms?.shippingCost
-                                ? `Buyer pays ${formatPrice(order.listingSnapshot.shippingTerms.shippingCost)}`
-                                : 'Free shipping'}
-                            {order.listingSnapshot.shippingTerms?.shippingMethod ? ` • ${order.listingSnapshot.shippingTerms.shippingMethod}` : ''}
+                            {(() => {
+                              try {
+                                const shippingTerms = order.listingSnapshot?.shippingTerms;
+                                if (shippingTerms?.isPickup) {
+                                  return 'Local pickup';
+                                } else if (shippingTerms?.shippingCost && shippingTerms.shippingCost > 0) {
+                                  return `Buyer pays ${formatPrice(shippingTerms.shippingCost)}`;
+                                } else {
+                                  return 'Free shipping';
+                                }
+                              } catch (error) {
+                                console.error('Error rendering shipping terms:', error);
+                                return 'Unknown';
+                              }
+                            })()}
+                            {order.listingSnapshot?.shippingTerms?.shippingMethod ? ` • ${order.listingSnapshot.shippingTerms.shippingMethod}` : ''}
                           </p>
-                          {order.listingSnapshot.shippingTerms?.shippingNotes && (
+                          {order.listingSnapshot?.shippingTerms?.shippingNotes && (
                             <p className="text-sm text-muted-foreground">{order.listingSnapshot.shippingTerms.shippingNotes}</p>
                           )}
                         </div>
                       </div>
 
                       {/* Snapshot description */}
-                      {order.listingSnapshot.description && (
+                      {order.listingSnapshot?.description && (
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Description</p>
                           <p className="text-sm whitespace-pre-wrap">{order.listingSnapshot.description}</p>
@@ -1656,23 +1789,46 @@ export default function OrderDetailsPage() {
                       )}
 
                       {/* Snapshot attributes */}
-                      {order.listingSnapshot.attributes && Object.keys(order.listingSnapshot.attributes).length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">Attributes</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                            {Object.entries(order.listingSnapshot.attributes).slice(0, 12).map(([k, v]) => (
-                              <div key={k} className="rounded border p-2">
-                                <p className="text-xs text-muted-foreground">{k}</p>
-                                <p className="text-sm break-words">
-                                  {typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
-                                    ? String(v)
-                                    : JSON.stringify(v)}
-                                </p>
+                      {(() => {
+                        try {
+                          const attributes = order.listingSnapshot?.attributes;
+                          if (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) {
+                            return (
+                              <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">Attributes</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                  {Object.entries(attributes).slice(0, 12).map(([k, v]) => {
+                                    try {
+                                      return (
+                                        <div key={k} className="rounded border p-2">
+                                          <p className="text-xs text-muted-foreground">{k}</p>
+                                          <p className="text-sm break-words">
+                                            {typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+                                              ? String(v)
+                                              : JSON.stringify(v)}
+                                          </p>
+                                        </div>
+                                      );
+                                    } catch (error) {
+                                      console.error('Error rendering attribute:', k, v, error);
+                                      return (
+                                        <div key={k} className="rounded border p-2">
+                                          <p className="text-xs text-muted-foreground">{k}</p>
+                                          <p className="text-sm break-words text-muted-foreground">Error displaying value</p>
+                                        </div>
+                                      );
+                                    }
+                                  })}
+                                </div>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                            );
+                          }
+                          return null;
+                        } catch (error) {
+                          console.error('Error rendering snapshot attributes:', error);
+                          return null;
+                        }
+                      })()}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -2058,5 +2214,19 @@ export default function OrderDetailsPage() {
         />
       )}
     </DashboardLayout>
+  );
+}
+
+export default function OrderDetailsPage() {
+  return (
+    <OrderDetailsErrorBoundary
+      onError={(error) => {
+        // Log error for debugging
+        console.error('[OrderDetails] Page error:', error);
+        // You could also send this to an error reporting service
+      }}
+    >
+      <OrderDetailsPageContent />
+    </OrderDetailsErrorBoundary>
   );
 }
