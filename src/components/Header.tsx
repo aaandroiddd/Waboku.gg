@@ -47,6 +47,7 @@ export default function Header({ animate = true }: HeaderProps) {
   const { user, profile, signOut, updateProfile } = useAuth();
   const { theme, setTheme } = useTheme();
   const isAuthPage = router.pathname.startsWith("/auth/");
+  const isHome = router.pathname === "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { recordSearch } = useTrendingSearches();
@@ -566,16 +567,18 @@ export default function Header({ animate = true }: HeaderProps) {
         </div>
 
         {/* Desktop search bar row */}
-        <div className="hidden md:block pb-3 pt-2">
-          <div className="px-2">
-            <SearchBar
-              onSelect={handleMobileCardSelect}
-              onSearch={handleMobileSearch}
-              initialValue={searchQuery}
-              showSearchButton={true}
-            />
+        {!isHome && (
+          <div className="hidden md:block pb-3 pt-2">
+            <div className="px-2">
+              <SearchBar
+                onSelect={handleMobileCardSelect}
+                onSearch={handleMobileSearch}
+                initialValue={searchQuery}
+                showSearchButton={true}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Mobile search bar row */}
         <div className="md:hidden pb-3 pt-2">
