@@ -734,6 +734,20 @@ function OrderDetailsPageContent() {
     }
   };
 
+  // Safe date formatting utility
+  const safeFormatDate = (date: any, formatString: string = 'PPP'): string => {
+    try {
+      const normalizedDate = normalizeDate(date);
+      if (!normalizedDate) {
+        return 'Date unavailable';
+      }
+      return format(normalizedDate, formatString);
+    } catch (error) {
+      console.error('Error formatting date:', error, date);
+      return 'Invalid date';
+    }
+  };
+
   // Safely calculate review window with error handling
   let completionDate: Date | null = null;
   let reviewWindowEnd: Date | null = null;
@@ -1151,14 +1165,14 @@ function OrderDetailsPageContent() {
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      Order Date: {format(order.createdAt, 'PPP')}
+                      Order Date: {safeFormatDate(order.createdAt, 'PPP')}
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      Last Updated: {format(order.updatedAt, 'PPP')}
+                      Last Updated: {safeFormatDate(order.updatedAt, 'PPP')}
                     </span>
                   </div>
                   
@@ -1318,11 +1332,7 @@ function OrderDetailsPageContent() {
                         <div className="flex items-center gap-2 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 mt-2">
                           <CheckCircle className="h-4 w-4 flex-shrink-0" />
                           <p>
-                            Pickup was completed on {order.pickupCompletedAt && 
-                              (typeof order.pickupCompletedAt === 'object' && 'seconds' in order.pickupCompletedAt
-                                ? format(new Date(order.pickupCompletedAt.seconds * 1000), 'PPP')
-                                : format(new Date(order.pickupCompletedAt), 'PPP')
-                              )}
+                            Pickup was completed on {order.pickupCompletedAt && safeFormatDate(order.pickupCompletedAt, 'PPP')}
                           </p>
                         </div>
                       )}
@@ -1510,7 +1520,7 @@ function OrderDetailsPageContent() {
                         <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Requested:</span>
-                            <span>{format(order.refundRequestedAt.toDate ? order.refundRequestedAt.toDate() : new Date(order.refundRequestedAt), 'PPp')}</span>
+                            <span>{safeFormatDate(order.refundRequestedAt, 'PPp')}</span>
                           </div>
                           {order.refundAmount && (
                             <div className="flex justify-between">
@@ -1541,7 +1551,7 @@ function OrderDetailsPageContent() {
                           {order.refundProcessedAt && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Processed:</span>
-                              <span>{format(order.refundProcessedAt.toDate ? order.refundProcessedAt.toDate() : new Date(order.refundProcessedAt), 'PPp')}</span>
+                              <span>{safeFormatDate(order.refundProcessedAt, 'PPp')}</span>
                             </div>
                           )}
                           {order.refundId && (
@@ -1631,7 +1641,7 @@ function OrderDetailsPageContent() {
                               <div>
                                 <span className="font-medium text-gray-700 dark:text-gray-300">Added:</span>{' '}
                                 <span className="text-gray-900 dark:text-gray-100">
-                                  {format(order.trackingInfo.addedAt, 'PPp')}
+                                  {safeFormatDate(order.trackingInfo.addedAt, 'PPp')}
                                 </span>
                               </div>
                             )}
@@ -1845,12 +1855,12 @@ function OrderDetailsPageContent() {
                     {!order.reviewSubmitted && isWithinReviewWindow && reviewWindowEnd ? (
                       <>
                         <span className="font-medium">You can leave a review.</span>{' '}
-                        <span>Review window ends {format(reviewWindowEnd, 'PPP')} ({daysLeft} day{daysLeft === 1 ? '' : 's'} remaining).</span>
+                        <span>Review window ends {safeFormatDate(reviewWindowEnd, 'PPP')} ({daysLeft} day{daysLeft === 1 ? '' : 's'} remaining).</span>
                       </>
                     ) : !order.reviewSubmitted && !isWithinReviewWindow && reviewWindowEnd ? (
                       <>
                         <span className="font-medium">Review window expired.</span>{' '}
-                        <span>It ended on {format(reviewWindowEnd, 'PPP')}.</span>
+                        <span>It ended on {safeFormatDate(reviewWindowEnd, 'PPP')}.</span>
                       </>
                     ) : (
                       <span>Thanks for leaving a review.</span>
