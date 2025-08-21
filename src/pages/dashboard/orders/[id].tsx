@@ -1416,7 +1416,17 @@ export default function OrderDetailsPage() {
                               : 'This item is on its way.'}
                           </span>
                         </div>
-                        <TrackingStatusComponent orderId={order.id} />
+                        {order.trackingInfo?.trackingNumber && order.trackingInfo?.carrier ? (
+                          <TrackingStatusComponent 
+                            carrier={order.trackingInfo.carrier} 
+                            trackingNumber={order.trackingInfo.trackingNumber} 
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Info className="h-4 w-4" />
+                            <p>Tracking information will be available once provided by the seller.</p>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-muted-foreground">
