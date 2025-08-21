@@ -816,6 +816,7 @@ export default function Home() {
                                 hasMore={processedListings.length > displayCount}
                                 onLoadMore={() => setDisplayCount(prev => prev + 8)}
                                 viewMode={mobileViewMode}
+                                enableAnonGate={true}
                               />
                             ) : !isLoading && (
                               <Card>

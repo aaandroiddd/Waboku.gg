@@ -25,6 +25,7 @@ interface ListingGridProps {
   loading?: boolean;
   isFavoritesPage?: boolean;
   viewMode?: 'default' | 'single' | 'image-only';
+  enableAnonGate?: boolean;
 }
 
 // Memoize the condition color mapping
@@ -141,7 +142,8 @@ export function ListingGrid({
   onLoadMore,
   loading: propLoading = false,
   isFavoritesPage = false,
-  viewMode = 'default'
+  viewMode = 'default',
+  enableAnonGate = false
 }: ListingGridProps) {
   // Only use useListings if no listings are provided via props
   const { listings: fetchedListings, isLoading } = useListings({ 
@@ -173,6 +175,8 @@ export function ListingGrid({
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { setLoading } = useLoading();
+  
+  const [showAnonGate, setShowAnonGate] = useState(false);
   
   // Log listings for debugging only in development
   useEffect(() => {
@@ -305,6 +309,31 @@ export function ListingGrid({
 
   // Check if we have any listings after filtering
   const hasListings = displayedListings.length > 0;
+
+  const handleLoadMoreClick = useCallback(() => {
+    if (!onLoadMore) return;
+    // If gate is disabled or user is logged in, proceed to load more
+    if (!enableAnonGate || user) {
+      onLoadMore();
+      return;
+    }
+    try {
+      const key = `anon_load_more_clicks:${router.pathname}`;
+      const current = typeof window !== 'undefined' ? parseInt(sessionStorage.getItem(key) || '0', 10) : 0;
+      const next = current + 1;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(key, String(next));
+      }
+      if (next >= 2) {
+        setShowAnonGate(true);
+        return;
+      }
+      onLoadMore();
+    } catch (e) {
+      // On any error, fall back to default behavior
+      onLoadMore();
+    }
+  }, [onLoadMore, enableAnonGate, user, router.pathname]);
   
   return (
     <ContentLoader 
@@ -350,13 +379,31 @@ export function ListingGrid({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <Button 
-                  onClick={onLoadMore} 
-                  variant="outline"
-                  className="min-w-[200px]"
-                >
-                  Load More
-                </Button>
+                {showAnonGate ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <Button 
+                      onClick={() => router.push('/auth/sign-in')} 
+                      className="min-w-[160px]"
+                    >
+                      Sign in to continue
+                    </Button>
+                    <Button 
+                      onClick={() => router.push('/auth/sign-up')} 
+                      variant="outline"
+                      className="min-w-[160px]"
+                    >
+                      Get started
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={handleLoadMoreClick} 
+                    variant="outline"
+                    className="min-w-[200px]"
+                  >
+                    Load More
+                  </Button>
+                )}
               </motion.div>
             ) : (
               // Show "Create Listing" button when no more listings to load

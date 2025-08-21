@@ -1579,6 +1579,7 @@ export default function ListingsPage() {
                     hasMore={filteredListings.length > displayCount}
                     onLoadMore={() => setDisplayCount(prev => prev + 8)}
                     viewMode={mobileGridViewMode}
+                    enableAnonGate={true}
                   />
                 ) : (
                   <SearchListingList listings={filteredListings} loading={isLoading} />
