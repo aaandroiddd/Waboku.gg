@@ -601,16 +601,8 @@ export default function Home() {
 
               {/* Main Content */}
               <div className="flex-1 min-w-0">
-                {/* Mobile Logo - Show full text on mobile only */}
-                <div className="block sm:hidden text-center mb-4 pt-2">
-                  <h1 className="text-2xl font-bold">
-                    <span className="text-foreground">waboku</span>
-                    <span className="text-sky-400">.gg</span>
-                  </h1>
-                </div>
-
                 {/* Hero Section */}
-                <div className="relative overflow-hidden mb-6 sm:mb-12 sm:rounded-2xl">
+                <div className="relative overflow-hidden mb-4 sm:mb-12 sm:rounded-2xl">
                   <ErrorBoundary fallback={<div className="absolute inset-0 bg-background hidden sm:block" />}>
                     <OptimizedMotion 
                       className="hero-background absolute inset-0 hidden sm:block"

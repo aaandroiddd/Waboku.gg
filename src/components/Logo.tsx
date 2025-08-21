@@ -14,17 +14,11 @@ export const Logo = memo(({ className, href = '/', alwaysShowFull = false }: Log
 
   const LogoContent = (
     <div className={`font-bold cursor-pointer ${className || ''}`}>
-      {/* Mobile Logo Version - only shown when alwaysShowFull is false */}
+      {/* Mobile Logo Version - now shows full text by default */}
       {!alwaysShowFull && (
         <div className="block md:hidden text-2xl">
-          {isDashboard ? (
-            <span className="lowercase text-sky-400">w</span>
-          ) : (
-            <>
-              <span className="lowercase text-sky-400">w</span>
-              <span className="lowercase">.gg</span>
-            </>
-          )}
+          <span className="lowercase">waboku</span>
+          <span className="text-sky-400">.gg</span>
         </div>
       )}
       
