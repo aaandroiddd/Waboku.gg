@@ -572,7 +572,7 @@ export default function Header({ animate = true }: HeaderProps) {
               onSelect={handleMobileCardSelect}
               onSearch={handleMobileSearch}
               initialValue={searchQuery}
-              showSearchButton={false}
+              showSearchButton={true}
             />
           </div>
         </div>
