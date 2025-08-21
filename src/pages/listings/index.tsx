@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import SearchBar from '@/components/SearchBar';
+import { MapPin, Filter, Check, LayoutGrid, List, X, ArrowUpDown, Square, Image as ImageIcon } from 'lucide-react';
 import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
-import { ListingGridWithAnalytics } from '@/components/ListingGridWithAnalytics';
 import { SearchListingList } from '@/components/SearchListingList';
 import Head from 'next/head';
 import Header from '@/components/Header';
@@ -13,20 +12,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Filter, Check, LayoutGrid, List, X, ArrowUpDown, Square, Image as ImageIcon } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { useSearchAnalytics } from '@/hooks/useSearchAnalytics';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MobileSelect } from "@/components/ui/mobile-select";
 import {
   Sheet,
   SheetContent,
@@ -1016,17 +1006,6 @@ export default function ListingsPage() {
             {/* Search Section */}
             <div className="mb-8">
               <div className="space-y-4">
-                {/* Search bar with integrated button */}
-                <div className="relative flex-1">
-                  <SearchBar
-                    showSearchButton={true}
-                    initialValue={searchQuery}
-                    onSearch={(query: string) => {
-                      handleSearch(query);
-                    }}
-                  />
-                </div>
-
                 {/* Controls row */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   {isMobile ? (
