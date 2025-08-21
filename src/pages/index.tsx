@@ -673,30 +673,27 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Mobile Title and Subtitle - Card */}
-                        <div className="md:hidden mt-4">
-                          <Card className="bg-card border rounded-lg shadow-sm ring-1 ring-primary/5 dark:ring-primary/10">
-                            <CardContent className="p-4 text-center space-y-2">
-                              <OptimizedMotion
-                                className="text-3xl font-bold tracking-tight text-foreground"
-                                variants={animationVariants.item}
-                                shouldAnimate={shouldAnimate}
-                              >
-                                Your Local TCG Marketplace
-                              </OptimizedMotion>
-                              <OptimizedMotion
-                                className="text-base text-muted-foreground"
-                                variants={animationVariants.item}
-                                shouldAnimate={shouldAnimate}
-                              >
-                                {randomSubtitle}
-                              </OptimizedMotion>
-                            </CardContent>
-                          </Card>
-                        </div>
+                        {/* Mobile Title and Subtitle with Gradient Background */}
+                        <div className="md:hidden mt-4 -mx-4 px-4 pb-6 bg-gradient-to-b from-background/80 via-background/60 to-background/40">
+                          {/* Title and Subtitle - No Card Background */}
+                          <div className="text-center space-y-2 pt-6 mb-6">
+                            <OptimizedMotion
+                              className="text-3xl font-bold tracking-tight text-foreground"
+                              variants={animationVariants.item}
+                              shouldAnimate={shouldAnimate}
+                            >
+                              Your Local TCG Marketplace
+                            </OptimizedMotion>
+                            <OptimizedMotion
+                              className="text-base text-muted-foreground"
+                              variants={animationVariants.item}
+                              shouldAnimate={shouldAnimate}
+                            >
+                              {randomSubtitle}
+                            </OptimizedMotion>
+                          </div>
 
-                        {/* Mobile Trending Searches - Card */}
-                        <div className="md:hidden mt-4">
+                          {/* Mobile Trending Searches - Keep Card */}
                           <LazySection threshold={0.3}>
                             <Card className="bg-card border rounded-lg shadow-sm ring-1 ring-primary/5 dark:ring-primary/10">
                               <CardContent className="p-3">
