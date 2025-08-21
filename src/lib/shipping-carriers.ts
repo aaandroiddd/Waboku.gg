@@ -15,6 +15,7 @@ export interface TrackingStatus {
     location?: string;
   }>;
   error?: string;
+  isMockData?: boolean;
 }
 
 // Normalized status mapping to ensure consistent status values across carriers
@@ -301,7 +302,7 @@ export class DHLCarrierAPI extends CarrierAPI {
 
 // Shippo API implementation (multi-carrier API service)
 export class ShippoCarrierAPI extends CarrierAPI {
-  private readonly baseUrl = 'https://api.goshippo.com/tracks/';
+  private readonly baseUrl = 'https://api.goshippo.com/tracks';
   
   constructor(apiKey: string) {
     super(apiKey);
@@ -322,44 +323,98 @@ export class ShippoCarrierAPI extends CarrierAPI {
       console.log(`Making Shippo API request for ${carrier} ${trackingNumber}`);
       console.log(`Using Shippo API key: ${this.apiKey.substring(0, 5)}...${this.apiKey.substring(this.apiKey.length - 4)}`);
       
-      const response = await axios.get(`${this.baseUrl}${carrier}/${trackingNumber}`, {
-        headers: {
-          'Authorization': `ShippoToken ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // First, try to get or create a tracking object
+      let trackingResponse;
       
-      if (!response.data) {
+      // Step 1: Try to get existing tracking info
+      try {
+        trackingResponse = await axios.get(`${this.baseUrl}/${carrier}/${trackingNumber}`, {
+          headers: {
+            'Authorization': `ShippoToken ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (getError) {
+        // If tracking doesn't exist, create it
+        if (axios.isAxiosError(getError) && getError.response?.status === 404) {
+          console.log(`Tracking not found, creating new tracking for ${carrier} ${trackingNumber}`);
+          
+          // Step 2: Create tracking object
+          const createResponse = await axios.post(this.baseUrl, {
+            carrier: carrier.toLowerCase(),
+            tracking_number: trackingNumber
+          }, {
+            headers: {
+              'Authorization': `ShippoToken ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          trackingResponse = createResponse;
+        } else {
+          throw getError;
+        }
+      }
+      
+      if (!trackingResponse.data) {
         throw new Error('Empty response from Shippo API');
       }
       
-      const data = response.data;
+      const data = trackingResponse.data;
+      console.log('Shippo API response:', JSON.stringify(data, null, 2));
       
-      // Validate required fields
-      if (!data.tracking_status || !data.tracking_status.status) {
-        throw new Error('Invalid response format from Shippo API');
+      // Handle the response structure - Shippo returns different formats
+      let trackingStatus, trackingHistory, eta;
+      
+      if (data.tracking_status) {
+        // Direct tracking response
+        trackingStatus = data.tracking_status;
+        trackingHistory = data.tracking_history || [];
+        eta = data.eta;
+      } else if (data.status) {
+        // Alternative response format
+        trackingStatus = { status: data.status, status_description: data.status_description };
+        trackingHistory = data.tracking_history || [];
+        eta = data.eta;
+      } else {
+        throw new Error('Invalid response format from Shippo API - no tracking status found');
       }
       
-      // Map Shippo response to our TrackingStatus interface
-      const status = normalizeStatus(data.tracking_status.status, carrier);
+      // Map Shippo status to our normalized status
+      const normalizedStatus = normalizeStatus(trackingStatus.status, carrier);
       
-      // Handle tracking history safely
-      const events = Array.isArray(data.tracking_history) 
-        ? data.tracking_history.map((event: any) => ({
-            timestamp: event.status_date ? new Date(event.status_date).toISOString() : new Date().toISOString(),
-            description: event.status?.description || 'Status update',
-            location: event.location?.city ? `${event.location.city}${event.location.state ? `, ${event.location.state}` : ''}` : undefined
-          }))
+      // Process tracking history
+      const events = Array.isArray(trackingHistory) 
+        ? trackingHistory
+            .map((event: any) => {
+              // Handle different event structures
+              const timestamp = event.status_date || event.datetime || event.timestamp;
+              const description = event.status_details || event.description || event.status || 'Status update';
+              const location = event.location ? 
+                `${event.location.city || ''}${event.location.city && event.location.state ? ', ' : ''}${event.location.state || ''}`.trim() || undefined
+                : undefined;
+              
+              return {
+                timestamp: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString(),
+                description: typeof description === 'string' ? description : 'Status update',
+                location
+              };
+            })
+            .filter(event => event.description !== 'Status update' || event.location) // Filter out empty events
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort by newest first
         : [];
       
+      // Get the most recent event for last update info
+      const mostRecentEvent = events.length > 0 ? events[0] : null;
+      
       return {
-        carrier,
+        carrier: carrier.toLowerCase(),
         trackingNumber,
-        status,
-        statusDescription: data.tracking_status.status_description || status,
-        estimatedDelivery: data.eta ? new Date(data.eta).toISOString() : undefined,
-        lastUpdate: events.length > 0 ? events[0].timestamp : undefined,
-        location: events.length > 0 ? events[0].location : undefined,
+        status: normalizedStatus,
+        statusDescription: trackingStatus.status_description || trackingStatus.status || normalizedStatus,
+        estimatedDelivery: eta ? new Date(eta).toISOString() : undefined,
+        lastUpdate: mostRecentEvent?.timestamp,
+        location: mostRecentEvent?.location,
         events
       };
     } catch (error) {
@@ -368,18 +423,26 @@ export class ShippoCarrierAPI extends CarrierAPI {
       // Provide more detailed error messages
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
           console.error(`Shippo API error ${error.response.status}: ${JSON.stringify(error.response.data)}`);
-          throw new Error(`Shippo API error (${error.response.status}): ${
-            error.response.data?.message || error.message || 'Unknown error'
-          }`);
+          
+          // Handle specific Shippo error cases
+          if (error.response.status === 401) {
+            throw new Error('Shippo API authentication failed - check your API key');
+          } else if (error.response.status === 404) {
+            throw new Error('Tracking number not found or carrier not supported');
+          } else if (error.response.status === 429) {
+            throw new Error('Shippo API rate limit exceeded - please try again later');
+          } else {
+            const errorMessage = error.response.data?.detail || 
+                               error.response.data?.message || 
+                               error.response.data?.error || 
+                               'Unknown API error';
+            throw new Error(`Shippo API error (${error.response.status}): ${errorMessage}`);
+          }
         } else if (error.request) {
-          // The request was made but no response was received
           console.error('No response received from Shippo API');
-          throw new Error('No response received from Shippo API');
+          throw new Error('No response received from Shippo API - network error');
         } else {
-          // Something happened in setting up the request
           throw new Error(`Shippo API request failed: ${error.message}`);
         }
       }
@@ -424,38 +487,54 @@ export function detectCarrier(trackingNumber: string): string {
   // Remove any spaces or special characters
   const cleanTrackingNumber = trackingNumber.replace(/[^a-zA-Z0-9]/g, '');
   
-  // USPS tracking number patterns
+  // USPS tracking number patterns (most comprehensive)
   if (/^94\d{20}$/.test(cleanTrackingNumber) || 
       /^92\d{20}$/.test(cleanTrackingNumber) ||
-      /^9[34]\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{2}$/.test(cleanTrackingNumber) ||
-      /^E\D{1}\d{9}\D{2}$|^9\d{15,21}$/.test(cleanTrackingNumber) ||
-      /^(91|92|93|94|95|96)\d{20}$/.test(cleanTrackingNumber) ||
-      /^(C|P|V|R)\d{9}(US|CN)$/.test(cleanTrackingNumber)) {
+      /^93\d{20}$/.test(cleanTrackingNumber) ||
+      /^91\d{20}$/.test(cleanTrackingNumber) ||
+      /^95\d{20}$/.test(cleanTrackingNumber) ||
+      /^96\d{20}$/.test(cleanTrackingNumber) ||
+      /^E\D{1}\d{9}\D{2}$/.test(cleanTrackingNumber) ||
+      /^9\d{15,21}$/.test(cleanTrackingNumber) ||
+      /^(C|P|V|R)\d{9}(US|CN)$/.test(cleanTrackingNumber) ||
+      /^(LK|LJ|LH|LG|LE|LD|LC|LB|LA)\d{9}US$/.test(cleanTrackingNumber)) {
     return 'usps';
   }
   
   // FedEx tracking number patterns
   if (/^(\d{12}|\d{15})$/.test(cleanTrackingNumber) || 
       /^6\d{11,12}$/.test(cleanTrackingNumber) ||
-      /^7\d{11,12}$/.test(cleanTrackingNumber)) {
+      /^7\d{11,12}$/.test(cleanTrackingNumber) ||
+      /^96\d{20}$/.test(cleanTrackingNumber) ||
+      /^61\d{14}$/.test(cleanTrackingNumber)) {
     return 'fedex';
   }
   
   // UPS tracking number patterns
   if (/^1Z[A-Z0-9]{16}$/.test(cleanTrackingNumber) ||
-      /^(T\d{10}|9\d{17,18})$/.test(cleanTrackingNumber)) {
+      /^(T\d{10}|9\d{17,18})$/.test(cleanTrackingNumber) ||
+      /^K\d{10}$/.test(cleanTrackingNumber) ||
+      /^H\d{10}$/.test(cleanTrackingNumber)) {
     return 'ups';
   }
   
   // DHL tracking number patterns
   if (/^\d{10,11}$/.test(cleanTrackingNumber) ||
       /^[A-Z]{3}\d{7}$/.test(cleanTrackingNumber) ||
-      /^JD\d{18}$/.test(cleanTrackingNumber)) {
+      /^JD\d{18}$/.test(cleanTrackingNumber) ||
+      /^GM\d{16}$/.test(cleanTrackingNumber) ||
+      /^LX\d{9}[A-Z]{2}$/.test(cleanTrackingNumber)) {
     return 'dhl';
   }
   
-  // Default to 'unknown' if no pattern matches
-  return 'unknown';
+  // Amazon Logistics
+  if (/^TBA\d{12}$/.test(cleanTrackingNumber)) {
+    return 'amazon';
+  }
+  
+  // Default to 'usps' for unknown patterns since USPS handles many package types
+  // This gives us the best chance of getting tracking info through Shippo
+  return 'usps';
 }
 
 // Function to get tracking info from any supported carrier
