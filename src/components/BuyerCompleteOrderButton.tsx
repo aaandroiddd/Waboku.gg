@@ -16,6 +16,32 @@ export const BuyerCompleteOrderButton: React.FC<BuyerCompleteOrderButtonProps> =
   const { user } = useAuth();
   const [isCompleting, setIsCompleting] = useState(false);
 
+  // Helpers to choose the most accurate "payment reference" time
+  const normalizeDate = (d: any): Date | null => {
+    if (!d) return null;
+    if (d instanceof Date) return d;
+    if (typeof d === 'object' && typeof (d as any).toDate === 'function') return (d as any).toDate();
+    if (typeof d === 'object' && 'seconds' in d) return new Date((d as any).seconds * 1000);
+    try {
+      return new Date(d);
+    } catch {
+      return null;
+    }
+  };
+
+  const getPaymentReferenceDate = (o: Order): Date | null => {
+    // Prefer explicit scheduling field if present
+    const eligibleAt = normalizeDate((o as any).autoCompletionEligibleAt);
+    if (eligibleAt) return eligibleAt;
+    // If order is paid, updatedAt often reflects post-payment update
+    if (o.paymentStatus === 'paid') {
+      const upd = normalizeDate(o.updatedAt);
+      if (upd) return upd;
+    }
+    // Fallback to createdAt
+    return normalizeDate(o.createdAt);
+  };
+
   // Check if buyer can complete the order
   const canComplete = () => {
     // Must be the buyer
@@ -35,10 +61,12 @@ export const BuyerCompleteOrderButton: React.FC<BuyerCompleteOrderButtonProps> =
 
     // Check if 24 hours have passed since payment
     const now = new Date();
-    const paymentDate = order.createdAt;
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    
-    if (paymentDate > twentyFourHoursAgo) {
+    const paymentRef = getPaymentReferenceDate(order);
+    if (!paymentRef) {
+      return false;
+    }
+    const eligibleAt = new Date(paymentRef.getTime() + 24 * 60 * 60 * 1000);
+    if (now < eligibleAt) {
       return false;
     }
 
@@ -61,9 +89,10 @@ export const BuyerCompleteOrderButton: React.FC<BuyerCompleteOrderButtonProps> =
     }
 
     const now = new Date();
-    const paymentDate = order.createdAt;
-    const completionEligibleTime = new Date(paymentDate.getTime() + 24 * 60 * 60 * 1000);
-    
+    const paymentRef = getPaymentReferenceDate(order);
+    if (!paymentRef) return null;
+    const completionEligibleTime = new Date(paymentRef.getTime() + 24 * 60 * 60 * 1000);
+
     if (now >= completionEligibleTime) {
       return null;
     }
