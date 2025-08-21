@@ -649,17 +649,7 @@ export default function Home() {
                         variants={animationVariants.item}
                         shouldAnimate={shouldAnimate}
                       >
-                        {/* Mobile Search Controls - Clean, minimal design */}
-                        <div className="sm:hidden px-2">
-                          <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
-                            <SearchBar
-                              onSelect={handleCardSelect}
-                              onSearch={handleSearchFromBar}
-                              initialValue={searchQuery}
-                              showSearchButton={true}
-                            />
-                          </ErrorBoundary>
-                        </div>
+                        {/* Mobile Search Controls - Now handled in header, so hide on mobile */}
 
                         {/* Desktop Search Controls */}
                         <div className="hidden sm:flex gap-4">
