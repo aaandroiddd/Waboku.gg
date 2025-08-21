@@ -673,29 +673,38 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Mobile Title and Subtitle */}
-                        <div className="md:hidden mt-4 space-y-4 text-center">
-                          <OptimizedMotion
-                            className="text-3xl font-bold tracking-tight text-foreground"
-                            variants={animationVariants.item}
-                            shouldAnimate={shouldAnimate}
-                          >
-                            Your Local TCG Marketplace
-                          </OptimizedMotion>
-                          
-                          <OptimizedMotion
-                            className="text-base text-muted-foreground"
-                            variants={animationVariants.item}
-                            shouldAnimate={shouldAnimate}
-                          >
-                            {randomSubtitle}
-                          </OptimizedMotion>
+                        {/* Mobile Title and Subtitle - Card */}
+                        <div className="md:hidden mt-4">
+                          <Card className="bg-card border rounded-lg shadow-sm ring-1 ring-primary/5 dark:ring-primary/10">
+                            <CardContent className="p-4 text-center space-y-2">
+                              <OptimizedMotion
+                                className="text-3xl font-bold tracking-tight text-foreground"
+                                variants={animationVariants.item}
+                                shouldAnimate={shouldAnimate}
+                              >
+                                Your Local TCG Marketplace
+                              </OptimizedMotion>
+                              <OptimizedMotion
+                                className="text-base text-muted-foreground"
+                                variants={animationVariants.item}
+                                shouldAnimate={shouldAnimate}
+                              >
+                                {randomSubtitle}
+                              </OptimizedMotion>
+                            </CardContent>
+                          </Card>
+                        </div>
 
-                          {/* Mobile Trending Searches */}
-                          <LazySection className="mt-6 rounded-lg p-1 bg-transparent" threshold={0.3}>
-                            <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
-                              <TrendingSearches />
-                            </ErrorBoundary>
+                        {/* Mobile Trending Searches - Card */}
+                        <div className="md:hidden mt-4">
+                          <LazySection threshold={0.3}>
+                            <Card className="bg-card border rounded-lg shadow-sm ring-1 ring-primary/5 dark:ring-primary/10">
+                              <CardContent className="p-3">
+                                <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
+                                  <TrendingSearches />
+                                </ErrorBoundary>
+                              </CardContent>
+                            </Card>
                           </LazySection>
                         </div>
 
