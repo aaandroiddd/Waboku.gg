@@ -82,12 +82,59 @@ export default function OrderDetailsPage() {
 
       try {
         setLoading(true);
+        setError(null);
+        
+        // Ensure we have a fresh authentication token
+        let token;
+        try {
+          token = await user.getIdToken(true);
+          console.log('[OrderDetails] Got fresh authentication token');
+        } catch (tokenError) {
+          console.error('[OrderDetails] Failed to get authentication token:', tokenError);
+          setError('Authentication failed. Please sign in again.');
+          setLoading(false);
+          return;
+        }
+
         const { db } = getFirebaseServices();
         
-        // Get the order document
-        const orderDoc = await getDoc(doc(db, 'orders', id as string));
+        // Add retry logic for the order fetch
+        let orderDoc;
+        let retryCount = 0;
+        const maxRetries = 3;
         
-        if (!orderDoc.exists()) {
+        while (retryCount < maxRetries) {
+          try {
+            console.log(`[OrderDetails] Fetching order (attempt ${retryCount + 1}/${maxRetries})`);
+            orderDoc = await getDoc(doc(db, 'orders', id as string));
+            break; // Success, exit retry loop
+          } catch (fetchError: any) {
+            console.error(`[OrderDetails] Error fetching order (attempt ${retryCount + 1}):`, fetchError);
+            
+            if (fetchError.code === 'permission-denied' || fetchError.code === 'unauthenticated') {
+              // Authentication issue - try to refresh token
+              try {
+                await user.getIdToken(true);
+                console.log('[OrderDetails] Refreshed token after auth error');
+              } catch (refreshError) {
+                console.error('[OrderDetails] Failed to refresh token:', refreshError);
+                setError('Authentication failed. Please sign in again.');
+                setLoading(false);
+                return;
+              }
+            }
+            
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              throw fetchError; // Re-throw the last error
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+        
+        if (!orderDoc || !orderDoc.exists()) {
           setError('Order not found');
           setLoading(false);
           return;
@@ -131,11 +178,28 @@ export default function OrderDetailsPage() {
         
         setOrder(orderWithDates);
         
-        // Fetch user information after setting the order
-        fetchUserInfo(orderWithDates.buyerId, orderWithDates.sellerId);
-      } catch (error) {
-        console.error('Error fetching order details:', error);
-        setError('Failed to load order details');
+        // Fetch user information after setting the order (with error handling)
+        try {
+          await fetchUserInfo(orderWithDates.buyerId, orderWithDates.sellerId);
+        } catch (userInfoError) {
+          console.error('[OrderDetails] Error fetching user info:', userInfoError);
+          // Don't fail the entire page if user info fetch fails
+          setBuyerName('Unknown User');
+          setSellerName('Unknown User');
+        }
+      } catch (error: any) {
+        console.error('[OrderDetails] Error fetching order details:', error);
+        
+        // Provide more specific error messages
+        if (error.code === 'permission-denied') {
+          setError('You do not have permission to view this order. Please sign in again.');
+        } else if (error.code === 'unauthenticated') {
+          setError('Authentication required. Please sign in again.');
+        } else if (error.code === 'unavailable') {
+          setError('Service temporarily unavailable. Please try again in a moment.');
+        } else {
+          setError('Failed to load order details. Please try refreshing the page.');
+        }
       } finally {
         setLoading(false);
       }
@@ -153,31 +217,57 @@ export default function OrderDetailsPage() {
       const { db } = getFirebaseServices();
       console.log(`[OrderDetails] Fetching user info for buyerId: ${buyerId}, sellerId: ${sellerId}`);
       
-      // Fetch buyer info
-      const buyerDoc = await getDoc(doc(db, 'users', buyerId));
-      if (buyerDoc.exists()) {
-        const buyerData = buyerDoc.data();
-        const name = buyerData.displayName || buyerData.username || 'Unknown User';
-        console.log(`[OrderDetails] Found buyer name: ${name}`);
-        setBuyerName(name);
-      } else {
-        console.warn(`[OrderDetails] Buyer document not found for buyerId: ${buyerId}`);
-        setBuyerName('Unknown User');
-      }
+      // Add retry logic for user info fetching
+      const fetchUserWithRetry = async (userId: string, userType: 'buyer' | 'seller') => {
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        while (retryCount < maxRetries) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const name = userData.displayName || userData.username || 'Unknown User';
+              console.log(`[OrderDetails] Found ${userType} name: ${name}`);
+              return name;
+            } else {
+              console.warn(`[OrderDetails] ${userType} document not found for ${userType}Id: ${userId}`);
+              return 'Unknown User';
+            }
+          } catch (fetchError: any) {
+            console.error(`[OrderDetails] Error fetching ${userType} info (attempt ${retryCount + 1}):`, fetchError);
+            
+            if (fetchError.code === 'permission-denied' || fetchError.code === 'unauthenticated') {
+              // Authentication issue - don't retry, just return unknown
+              console.warn(`[OrderDetails] Authentication error fetching ${userType} info, using fallback`);
+              return 'Unknown User';
+            }
+            
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              console.error(`[OrderDetails] Failed to fetch ${userType} info after ${maxRetries} attempts`);
+              return 'Unknown User';
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+          }
+        }
+        
+        return 'Unknown User';
+      };
       
-      // Fetch seller info
-      const sellerDoc = await getDoc(doc(db, 'users', sellerId));
-      if (sellerDoc.exists()) {
-        const sellerData = sellerDoc.data();
-        const name = sellerData.displayName || sellerData.username || 'Unknown User';
-        console.log(`[OrderDetails] Found seller name: ${name}`);
-        setSellerName(name);
-      } else {
-        console.warn(`[OrderDetails] Seller document not found for sellerId: ${sellerId}`);
-        setSellerName('Unknown User');
-      }
-    } catch (error) {
-      console.error('[OrderDetails] Error fetching user information:', error);
+      // Fetch buyer and seller info concurrently with error handling
+      const [buyerName, sellerName] = await Promise.allSettled([
+        fetchUserWithRetry(buyerId, 'buyer'),
+        fetchUserWithRetry(sellerId, 'seller')
+      ]);
+      
+      setBuyerName(buyerName.status === 'fulfilled' ? buyerName.value : 'Unknown User');
+      setSellerName(sellerName.status === 'fulfilled' ? sellerName.value : 'Unknown User');
+      
+    } catch (error: any) {
+      console.error('[OrderDetails] Error in fetchUserInfo:', error);
       setBuyerName('Unknown User');
       setSellerName('Unknown User');
     } finally {
