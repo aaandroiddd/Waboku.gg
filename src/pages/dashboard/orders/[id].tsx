@@ -30,7 +30,7 @@ import { RefundManagementDialog } from '@/components/RefundManagementDialog';
 import { MessageDialog } from '@/components/MessageDialog';
 import { PickupQRCode } from '@/components/PickupQRCode';
 import { generateListingUrl } from '@/lib/listing-slug';
-import { addDays } from 'date-fns';
+import { addDays, differenceInCalendarDays } from 'date-fns';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import BuyerCompleteOrderButton from '@/components/BuyerCompleteOrderButton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -554,6 +554,31 @@ export default function OrderDetailsPage() {
   }
 
   const isUserBuyer = user?.uid === order.buyerId;
+
+  // Review window calculations (client-side mirror of API enforcement)
+  const normalizeDate = (d: any): Date | null => {
+    if (!d) return null;
+    if (typeof d === 'object' && typeof (d as any).toDate === 'function') return (d as any).toDate();
+    if (typeof d === 'object' && 'seconds' in d) return new Date((d as any).seconds * 1000);
+    try {
+      return new Date(d);
+    } catch {
+      return null;
+    }
+  };
+
+  const completionDate =
+    normalizeDate(order.buyerCompletedAt) ||
+    normalizeDate(order.autoCompletedAt) ||
+    normalizeDate(order.pickupCompletedAt) ||
+    (order.status === 'completed' ? order.updatedAt : null);
+
+  const reviewWindowEnd = completionDate ? addDays(completionDate, 90) : null;
+  const now = new Date();
+  const daysLeft = reviewWindowEnd ? Math.max(0, differenceInCalendarDays(reviewWindowEnd, now)) : 0;
+  const isWithinReviewWindow = !!(reviewWindowEnd && now < reviewWindowEnd);
+  const canLeaveReview =
+    isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && isWithinReviewWindow;
 
   // Render payment status badge
   const renderPaymentStatusBadge = () => {
@@ -1504,6 +1529,28 @@ export default function OrderDetailsPage() {
           )}
           </CardContent>
           <CardFooter>
+            {isUserBuyer && order.status === 'completed' && (
+              <div className={`w-full mb-3 p-3 rounded-md border ${(!order.reviewSubmitted && isWithinReviewWindow) ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-200' : (!order.reviewSubmitted && !isWithinReviewWindow) ? 'bg-muted/50 text-muted-foreground' : 'bg-muted/50 text-muted-foreground'}`}>
+                <div className="flex items-start gap-2">
+                  <Star className="h-4 w-4 mt-0.5" />
+                  <div className="text-sm">
+                    {!order.reviewSubmitted && isWithinReviewWindow && reviewWindowEnd ? (
+                      <>
+                        <span className="font-medium">You can leave a review.</span>{' '}
+                        <span>Review window ends {format(reviewWindowEnd, 'PPP')} ({daysLeft} day{daysLeft === 1 ? '' : 's'} remaining).</span>
+                      </>
+                    ) : !order.reviewSubmitted && !isWithinReviewWindow && reviewWindowEnd ? (
+                      <>
+                        <span className="font-medium">Review window expired.</span>{' '}
+                        <span>It ended on {format(reviewWindowEnd, 'PPP')}.</span>
+                      </>
+                    ) : (
+                      <span>Thanks for leaving a review.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 w-full">
               {/* Buyer Complete Order Button - Always show for buyers with paid orders */}
               {isUserBuyer && order.paymentStatus === 'paid' && order.status !== 'completed' && (
@@ -1516,7 +1563,7 @@ export default function OrderDetailsPage() {
               )}
               
               {/* Buyer actions */}
-              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+              {canLeaveReview && (
                 <Button 
                   variant="default" 
                   onClick={() => setShowReviewDialog(true)}
