@@ -301,6 +301,36 @@ export default async function handler(
                 }
                 
                 // Update the existing order with payment information and shipping address
+                // Build listing snapshot payload for pending order payment
+                const listingSnapshotPayload = {
+                  title: listingData.title || 'Untitled Listing',
+                  description: listingData.description || '',
+                  price: listingData.price || 0,
+                  imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null,
+                  images: Array.isArray(listingData.imageUrls) ? listingData.imageUrls : [],
+                  attributes: listingData.attributes || {},
+                  game: listingData.game || null,
+                  category: listingData.category || null,
+                  condition: listingData.condition || null,
+                  shippingTerms: {
+                    shippingCost: typeof listingData.shippingCost === 'number' ? listingData.shippingCost : null,
+                    isPickup: !!listingData.isPickup,
+                    shippingMethod: listingData.shippingMethod || null,
+                    shippingNotes: listingData.shippingNotes || null,
+                  },
+                  sellerUsername: null as string | null,
+                };
+
+                try {
+                  const sellerDocSnap = await firestoreDb.collection('users').doc(sellerId).get();
+                  const sellerDataForSnapshot = sellerDocSnap.data();
+                  if (sellerDataForSnapshot) {
+                    listingSnapshotPayload.sellerUsername = sellerDataForSnapshot.displayName || sellerDataForSnapshot.username || null;
+                  }
+                } catch (e) {
+                  console.error('[Stripe Webhook] Error fetching seller for snapshot (pending order):', e);
+                }
+
                 const updateData: any = {
                   status: 'awaiting_shipping',
                   paymentStatus: 'paid',
@@ -309,6 +339,9 @@ export default async function handler(
                   platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0,
                   updatedAt: new Date()
                 };
+
+                // Ensure listing snapshot is persisted for pending order payment
+                updateData.listingSnapshot = listingSnapshotPayload;
 
                 // Add payment method if available
                 if (paymentMethod) {
@@ -680,6 +713,18 @@ export default async function handler(
             const autoCompletionEligibleAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
             const autoCompletionScheduledAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
 
+            // Pre-fetch seller username for listing snapshot
+            let sellerUsernameForSnapshot: string | null = null;
+            try {
+              const sellerDocSnap = await firestoreDb.collection('users').doc(sellerId).get();
+              const sellerDataForSnapshot = sellerDocSnap.data();
+              if (sellerDataForSnapshot) {
+                sellerUsernameForSnapshot = sellerDataForSnapshot.displayName || sellerDataForSnapshot.username || null;
+              }
+            } catch (e) {
+              console.error('[Stripe Webhook] Error fetching seller for snapshot:', e);
+            }
+
             // Create an order record
             const orderData = {
               listingId,
@@ -705,8 +750,21 @@ export default async function handler(
               // Add the listing snapshot for display in the orders page
               listingSnapshot: {
                 title: listingData.title || 'Untitled Listing',
+                description: listingData.description || '',
                 price: listingData.price || 0,
-                imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null
+                imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null,
+                images: Array.isArray(listingData.imageUrls) ? listingData.imageUrls : [],
+                attributes: listingData.attributes || {},
+                game: listingData.game || null,
+                category: listingData.category || null,
+                condition: listingData.condition || null,
+                shippingTerms: {
+                  shippingCost: typeof listingData.shippingCost === 'number' ? listingData.shippingCost : null,
+                  isPickup: !!listingData.isPickup,
+                  shippingMethod: listingData.shippingMethod || null,
+                  shippingNotes: listingData.shippingNotes || null,
+                },
+                sellerUsername: sellerUsernameForSnapshot
               }
             };
 

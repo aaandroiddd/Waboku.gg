@@ -33,6 +33,7 @@ import { generateListingUrl } from '@/lib/listing-slug';
 import { addDays } from 'date-fns';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import BuyerCompleteOrderButton from '@/components/BuyerCompleteOrderButton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -1007,10 +1008,10 @@ export default function OrderDetailsPage() {
                       </div>
                     )}
                     {/* Show shipping cost if available */}
-                    {(order.shippingCost !== undefined && order.shippingCost > 0) || (order.listingSnapshot?.shippingCost !== undefined && order.listingSnapshot.shippingCost > 0) ? (
+                    {(order.shippingCost !== undefined && order.shippingCost > 0) || (order.listingSnapshot?.shippingTerms?.shippingCost !== undefined && (order.listingSnapshot?.shippingTerms?.shippingCost || 0) > 0) ? (
                       <div className="flex justify-between">
                         <span>Shipping:</span>
-                        <span>{formatPrice(order.shippingCost || order.listingSnapshot?.shippingCost || 0)}</span>
+                        <span>{formatPrice(order.shippingCost || order.listingSnapshot?.shippingTerms?.shippingCost || 0)}</span>
                       </div>
                     ) : (
                       <div className="flex justify-between">
@@ -1402,6 +1403,105 @@ export default function OrderDetailsPage() {
                 </Card>
               </div>
             )}
+          {/* Listing snapshot (at time of purchase) */}
+          {order.listingSnapshot && (
+            <div className="pt-2">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="listing-snapshot">
+                  <AccordionTrigger>
+                    Listing at time of purchase
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4">
+                      {/* Snapshot images */}
+                      {Array.isArray(order.listingSnapshot.images) && order.listingSnapshot.images.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {order.listingSnapshot.images.slice(0, 8).map((img, idx) => (
+                            <div key={idx} className="relative w-full aspect-square rounded overflow-hidden bg-muted">
+                              <Image
+                                src={img}
+                                alt={`${order.listingSnapshot.title || 'Listing'} - ${idx + 1}`}
+                                fill
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                                className="object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Snapshot facts */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Title</p>
+                          <p className="font-medium">{order.listingSnapshot.title}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Seller</p>
+                          <p className="font-medium">{order.listingSnapshot.sellerUsername || 'Unknown'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Category / Game</p>
+                          <p className="font-medium">
+                            {order.listingSnapshot.category || '—'}{order.listingSnapshot.game ? ` / ${order.listingSnapshot.game}` : ''}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Condition</p>
+                          <p className="font-medium">{order.listingSnapshot.condition || '—'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Price</p>
+                          <p className="font-medium">{formatPrice(order.listingSnapshot.price || 0)}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Shipping Terms</p>
+                          <p className="font-medium">
+                            {order.listingSnapshot.shippingTerms?.isPickup
+                              ? 'Local pickup'
+                              : order.listingSnapshot.shippingTerms?.shippingCost
+                                ? `Buyer pays ${formatPrice(order.listingSnapshot.shippingTerms.shippingCost)}`
+                                : 'Free shipping'}
+                            {order.listingSnapshot.shippingTerms?.shippingMethod ? ` • ${order.listingSnapshot.shippingTerms.shippingMethod}` : ''}
+                          </p>
+                          {order.listingSnapshot.shippingTerms?.shippingNotes && (
+                            <p className="text-sm text-muted-foreground">{order.listingSnapshot.shippingTerms.shippingNotes}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Snapshot description */}
+                      {order.listingSnapshot.description && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Description</p>
+                          <p className="text-sm whitespace-pre-wrap">{order.listingSnapshot.description}</p>
+                        </div>
+                      )}
+
+                      {/* Snapshot attributes */}
+                      {order.listingSnapshot.attributes && Object.keys(order.listingSnapshot.attributes).length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Attributes</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                            {Object.entries(order.listingSnapshot.attributes).slice(0, 12).map(([k, v]) => (
+                              <div key={k} className="rounded border p-2">
+                                <p className="text-xs text-muted-foreground">{k}</p>
+                                <p className="text-sm break-words">
+                                  {typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+                                    ? String(v)
+                                    : JSON.stringify(v)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          )}
           </CardContent>
           <CardFooter>
             <div className="flex flex-wrap gap-2 w-full">

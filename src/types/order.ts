@@ -89,12 +89,30 @@ export interface Order {
   // Completion prevention flags
   hasDispute?: boolean; // Flag to indicate if there's an active dispute
   hasRefundRequest?: boolean; // Flag to indicate if there's an active refund request
+  // Review reminder tracking (idempotency)
+  remindersSent?: {
+    d3?: boolean;
+    d10?: boolean;
+    d30?: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot?: {
     title: string;
+    description?: string;
     price: number;
     imageUrl: string | null;
-    shippingCost?: number; // Shipping cost from the listing snapshot
+    images?: string[];
+    attributes?: Record<string, any>;
+    game?: string | null;
+    category?: string | null;
+    condition?: string | null;
+    shippingTerms?: {
+      shippingCost?: number | null;
+      isPickup?: boolean;
+      shippingMethod?: string | null;
+      shippingNotes?: string | null;
+    };
+    sellerUsername?: string | null;
   };
 }

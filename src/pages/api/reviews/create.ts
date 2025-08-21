@@ -104,6 +104,39 @@ export default async function handler(
         });
       }
       
+      // Enforce 90-day review window from completion date
+      try {
+        const toJsDate = (v: any): Date | null => {
+          if (!v) return null;
+          if (typeof v.toDate === 'function') return v.toDate();
+          if (v instanceof Date) return v;
+          if (typeof v === 'number') return new Date(v);
+          return null;
+        };
+        const completionAt =
+          toJsDate(orderData.buyerCompletedAt) ||
+          toJsDate(orderData.autoCompletedAt) ||
+          toJsDate(orderData.pickupCompletedAt) ||
+          toJsDate(orderData.updatedAt) ||
+          toJsDate(orderData.createdAt);
+
+        if (completionAt) {
+          const diffMs = Date.now() - completionAt.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          if (diffDays > 90) {
+            console.log('[create-review] Review window expired:', { orderId, completionAt: completionAt.toISOString(), diffDays });
+            return res.status(400).json({
+              success: false,
+              message: 'The review window for this order has expired. Reviews can be left within 90 days of order completion.'
+            });
+          }
+        } else {
+          console.warn('[create-review] Could not determine completion date for order, proceeding cautiously');
+        }
+      } catch (windowErr) {
+        console.error('[create-review] Error computing review window:', windowErr);
+      }
+
       // Check if a review already exists for this order
       if (orderData.reviewSubmitted) {
         console.log('[create-review] Review already submitted for order:', orderId);
