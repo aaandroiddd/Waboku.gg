@@ -554,7 +554,7 @@ export default function Home() {
         </ErrorBoundary>
         
         <main className="flex-1">
-          <div className="container mx-auto px-4 py-2 sm:py-8">
+          <div className="container mx-auto px-4 py-0 sm:py-8">
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Left Sidebar */}
               <div className="lg:w-80 flex-shrink-0">
@@ -601,6 +601,14 @@ export default function Home() {
 
               {/* Main Content */}
               <div className="flex-1 min-w-0">
+                {/* Mobile Logo - Show full text on mobile only */}
+                <div className="block sm:hidden text-center mb-4 pt-2">
+                  <h1 className="text-2xl font-bold">
+                    <span className="text-foreground">waboku</span>
+                    <span className="text-sky-400">.gg</span>
+                  </h1>
+                </div>
+
                 {/* Hero Section */}
                 <div className="relative overflow-hidden mb-6 sm:mb-12 sm:rounded-2xl">
                   <ErrorBoundary fallback={<div className="absolute inset-0 bg-background hidden sm:block" />}>
@@ -616,7 +624,7 @@ export default function Home() {
                     </OptimizedMotion>
                   </ErrorBoundary>
                   
-                  <div className="relative px-2 py-2 sm:px-8 sm:py-16 sm:text-center">
+                  <div className="relative px-2 py-0 sm:px-8 sm:py-16 sm:text-center">
                     <OptimizedMotion
                       className="max-w-3xl mx-auto space-y-6"
                       variants={animationVariants.container}
@@ -645,7 +653,7 @@ export default function Home() {
 
                       {/* Search Section */}
                       <OptimizedMotion
-                        className="max-w-2xl mx-auto pt-2 sm:pt-6"
+                        className="max-w-2xl mx-auto pt-0 sm:pt-6"
                         variants={animationVariants.item}
                         shouldAnimate={shouldAnimate}
                       >
@@ -684,7 +692,7 @@ export default function Home() {
                         </div>
 
                         {/* Trending Searches */}
-                        <LazySection className="mt-3 sm:mt-6 rounded-lg p-1 sm:p-2 bg-transparent" threshold={0.3}>
+                        <LazySection className="mt-2 sm:mt-6 rounded-lg p-1 sm:p-2 bg-transparent" threshold={0.3}>
                           <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
                             <TrendingSearches />
                           </ErrorBoundary>
