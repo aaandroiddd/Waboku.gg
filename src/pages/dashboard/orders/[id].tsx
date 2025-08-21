@@ -1397,43 +1397,95 @@ export default function OrderDetailsPage() {
                 </h3>
                 <Card>
                   <CardContent className="pt-6">
-                    {order.status === 'shipped' || order.status === 'completed' ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={order.status === 'completed' ? 'success' : 'info'} 
-                            className={`px-2 py-1 ${
-                              order.status === 'completed' 
-                                ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40' 
-                                : 'bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40'
-                            }`}
-                          >
-                            {order.status === 'completed' ? 'Delivered' : 'Shipped'}
-                          </Badge>
-                          <span className="flex-1">
-                            {order.status === 'completed' 
-                              ? 'This item has been delivered.' 
-                              : 'This item is on its way.'}
-                          </span>
+                    <div className="space-y-4">
+                      {/* Seller-Provided Tracking Information - Always visible */}
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                            Seller-Provided Tracking Information
+                          </h4>
+                          {!isUserBuyer && (order.status === 'awaiting_shipping' || order.status === 'shipped') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (isMobile) {
+                                  handleAddTracking();
+                                } else {
+                                  setShowTrackingDialog(true);
+                                }
+                              }}
+                            >
+                              {order.trackingInfo?.trackingNumber ? 'Update Tracking' : 'Add Tracking'}
+                            </Button>
+                          )}
                         </div>
+                        
                         {order.trackingInfo?.trackingNumber && order.trackingInfo?.carrier ? (
+                          <div className="space-y-2 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">Carrier:</span>{' '}
+                              <span className="text-gray-900 dark:text-gray-100">
+                                {order.trackingInfo.carrier.toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">Tracking Number:</span>{' '}
+                              <span className="text-gray-900 dark:text-gray-100 font-mono">
+                                {order.trackingInfo.trackingNumber}
+                              </span>
+                            </div>
+                            {order.trackingInfo.notes && (
+                              <div>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">Notes:</span>{' '}
+                                <span className="text-gray-900 dark:text-gray-100">
+                                  {order.trackingInfo.notes}
+                                </span>
+                              </div>
+                            )}
+                            {order.trackingInfo.addedAt && (
+                              <div>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">Added:</span>{' '}
+                                <span className="text-gray-900 dark:text-gray-100">
+                                  {format(order.trackingInfo.addedAt, 'PPp')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {!isUserBuyer && (order.status === 'awaiting_shipping' || order.status === 'shipped') 
+                              ? 'Click "Add Tracking" to provide tracking information for the buyer.' 
+                              : 'Tracking information will be available once provided by the seller.'}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Live Tracking Status - Only show when tracking info is available */}
+                      {order.trackingInfo?.trackingNumber && order.trackingInfo?.carrier && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+                            Live Tracking Status
+                          </h4>
                           <TrackingStatusComponent 
                             carrier={order.trackingInfo.carrier} 
                             trackingNumber={order.trackingInfo.trackingNumber} 
                           />
-                        ) : (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Info className="h-4 w-4" />
-                            <p>Tracking information will be available once provided by the seller.</p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Info className="h-4 w-4" />
-                        <p>Shipping information will appear here once the order is processed.</p>
-                      </div>
-                    )}
+                        </div>
+                      )}
+
+                      {/* Status message when no tracking is available */}
+                      {!order.trackingInfo?.trackingNumber && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Info className="h-4 w-4" />
+                          <p>
+                            {order.status === 'shipped' || order.status === 'completed'
+                              ? 'This order was shipped without tracking information.'
+                              : 'Shipping information will appear here once the order is processed.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
