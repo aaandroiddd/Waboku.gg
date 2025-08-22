@@ -34,6 +34,7 @@ import { addDays, differenceInCalendarDays } from 'date-fns';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import BuyerCompleteOrderButton from '@/components/BuyerCompleteOrderButton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { detectCarrier } from '@/lib/shipping-carriers';
 
 // Error Boundary Component
 class OrderDetailsErrorBoundary extends Component<
@@ -1617,12 +1618,52 @@ function OrderDetailsPageContent() {
                         
                         {order.trackingInfo?.trackingNumber && order.trackingInfo?.carrier ? (
                           <div className="space-y-2 text-sm">
-                            <div>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">Carrier:</span>{' '}
-                              <span className="text-gray-900 dark:text-gray-100">
-                                {order.trackingInfo.carrier.toUpperCase()}
-                              </span>
-                            </div>
+                            {(() => {
+                              const tracking = order.trackingInfo;
+                              if (!tracking) return null;
+                              const manualCarrier = (tracking.carrier || '').toLowerCase();
+                              const isAuto =
+                                tracking.autoDetect ||
+                                manualCarrier === 'auto-detect' ||
+                                manualCarrier === 'unknown' ||
+                                !manualCarrier;
+
+                              if (isAuto) {
+                                // Try to detect carrier from tracking number
+                                const detected = detectCarrier(tracking.trackingNumber);
+                                const tn = tracking.trackingNumber.replace(/[^a-zA-Z0-9]/g, '');
+
+                                // Confidence: true if tracking number matches any known pattern
+                                const confidentlyDetected =
+                                  /^94\d{20}$|^92\d{20}$|^93\d{20}$|^91\d{20}$|^95\d{20}$|^96\d{20}$|^E\D{1}\d{9}\D{2}$|^9\d{15,21}$|^(C|P|V|R)\d{9}(US|CN)$|^(LK|LJ|LH|LG|LE|LD|LC|LB|LA)\d{9}US$/.test(tn) || // USPS
+                                  /^(\d{12}|\d{15})$|^6\d{11,12}$|^7\d{11,12}$|^96\d{20}$|^61\d{14}$/.test(tn) || // FedEx
+                                  /^1Z[A-Z0-9]{16}$|^(T\d{10}|9\d{17,18})$|^K\d{10}$|^H\d{10}$/.test(tn) || // UPS
+                                  /^\d{10,11}$|^[A-Z]{3}\d{7}$|^JD\d{18}$|^GM\d{16}$|^LX\d{9}[A-Z]{2}$/.test(tn) || // DHL
+                                  /^TBA\d{12}$/.test(tn); // Amazon
+
+                                // If we don't have a confident match, hide the carrier line entirely
+                                if (!confidentlyDetected) return null;
+
+                                const display = detected.toUpperCase();
+                                return (
+                                  <div>
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">Carrier:</span>{' '}
+                                    <span className="text-gray-900 dark:text-gray-100">
+                                      {display} <span className="text-xs text-muted-foreground">(auto-detected)</span>
+                                    </span>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div>
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">Carrier:</span>{' '}
+                                    <span className="text-gray-900 dark:text-gray-100">
+                                      {manualCarrier.toUpperCase()}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                            })()}
                             <div>
                               <span className="font-medium text-gray-700 dark:text-gray-300">Tracking Number:</span>{' '}
                               <span className="text-gray-900 dark:text-gray-100 font-mono">
