@@ -1982,7 +1982,7 @@ function OrderDetailsPageContent() {
                   </p>
                   <Button 
                     variant="outline" 
-                    className="w-full"
+                    className="w-full h-10 px-8"
                     onClick={() => router.push('/support')}
                   >
                     <HelpCircle className="mr-2 h-4 w-4" />
