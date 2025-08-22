@@ -2024,7 +2024,7 @@ function OrderDetailsPageContent() {
         </div>
 
         {/* Back to Orders Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-start pb-8">
           <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
           </Button>
