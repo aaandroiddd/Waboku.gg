@@ -80,7 +80,6 @@
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
     "resend": "^4.0.0",
-    "styled-jsx": "5.1.1",
     "typesense": "^1.8.2"
   },
   "devDependencies": {
