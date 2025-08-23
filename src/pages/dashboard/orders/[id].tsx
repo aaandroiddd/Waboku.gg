@@ -1112,7 +1112,7 @@ function OrderDetailsPageContent() {
             {/* Order Summary */}
             <div className="flex flex-col md:flex-row gap-6">
               <div 
-                className="relative w-full md:w-1/3 h-48 md:h-64 cursor-pointer"
+                className="w-full md:w-1/3 cursor-pointer"
                 onClick={() => {
                   if (order.listingId && order.listingSnapshot) {
                     // Use the new slug-based URL format
@@ -1129,14 +1129,17 @@ function OrderDetailsPageContent() {
                 }}
               >
                 {order.listingSnapshot?.imageUrl ? (
-                  <Image
-                    src={order.listingSnapshot.imageUrl}
-                    alt={order.listingSnapshot.title || 'Order item'}
-                    fill
-                    className="object-cover rounded-lg hover:opacity-90 transition-opacity"
-                  />
+                  <div className="relative w-full aspect-square max-w-sm mx-auto border-2 border-border rounded-lg overflow-hidden hover:border-primary/50 transition-colors bg-background">
+                    <Image
+                      src={order.listingSnapshot.imageUrl}
+                      alt={order.listingSnapshot.title || 'Order item'}
+                      fill
+                      className="object-contain hover:opacity-90 transition-opacity p-2"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  </div>
                 ) : (
-                  <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center hover:bg-muted/80 transition-colors">
+                  <div className="w-full aspect-square max-w-sm mx-auto bg-muted rounded-lg border-2 border-border flex items-center justify-center hover:bg-muted/80 transition-colors">
                     <span className="text-muted-foreground">No image available</span>
                   </div>
                 )}
