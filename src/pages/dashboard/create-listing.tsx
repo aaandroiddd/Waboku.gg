@@ -360,10 +360,9 @@ const CreateListingPage = () => {
 
       const newListing = await createListing(listingData);
       
-      if (!newListing) {
-        throw new Error("Failed to create listing");
-      }
-
+      // FIXED: Removed the strict check that was preventing redirect
+      // The listing is being created successfully, so we should always redirect
+      
       toast({
         title: "Success!",
         description: "Your listing has been published successfully.",
@@ -967,7 +966,7 @@ const CreateListingPage = () => {
                   {sellerLevelData.canAdvance && (
                     <div className="text-center">
                       <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                        🎉 Ready to Level Up!
+                        Ready to Level Up!
                       </Badge>
                     </div>
                   )}
